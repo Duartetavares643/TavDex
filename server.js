@@ -13,6 +13,7 @@ const express = require('express');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const { pool, linha } = require('./db');
+const { utilizadorAtual } = require('./routes/middleware');
 
 const app = express();
 const PORTA = Number(process.env.PORTA) || 3000;
@@ -35,14 +36,14 @@ app.use((req, res, next) => {
 });
 
 // ---------------------------------------------------------------------
-// 3. Sessões (guardadas na tabela "sessoes" da base de dados)
+// 3. Sessões
+//    O express-session guarda os dados da sessão na tabela sessoes_express
+//    (criada sozinha pela biblioteca). A tabela "sessoes" é nossa e serve
+//    para as sessões ativas por dispositivo (ver routes/middleware.js).
 // ---------------------------------------------------------------------
 const guardaSessoes = new MySQLStore({
-  createDatabaseTable: false,        // a tabela já é criada pelo 01_criar_bd.sql
-  schema: {
-    tableName: 'sessoes',
-    columnNames: { session_id: 'session_id', expires: 'expires', data: 'data' },
-  },
+  createDatabaseTable: true,
+  schema: { tableName: 'sessoes_express' },
 }, pool);
 
 app.use(session({
@@ -100,11 +101,20 @@ app.get('/api/estado', async (req, res) => {
   }
 });
 
-// Fase 2 em diante:
-// app.use('/api/auth', require('./routes/auth'));
-// app.use('/api/utilizadores', require('./routes/utilizadores'));
-// app.use('/api/projetos', require('./routes/projetos'));
-// ...
+// Pedidos sem corpo (ex.: um DELETE simples) ficam com req.body = {}
+app.use('/api', (req, res, next) => { req.body = req.body || {}; next(); });
+
+// Em todos os pedidos à API: descobre quem tem a sessão iniciada (fica em req.u).
+// Só na /api, para os ficheiros CSS, JS e imagens não irem à base de dados.
+app.use('/api', utilizadorAtual);
+
+app.use('/api/auth', require('./routes/auth'));                 // Fase 2
+app.use('/api/utilizadores', require('./routes/utilizadores')); // Fase 2
+app.use('/api/projetos', require('./routes/projetos'));         // Fase 3
+app.use('/api/comunidade', require('./routes/comunidade'));     // Fase 4
+app.use('/api/admin', require('./routes/admin'));               // Fase 4
+app.use('/api/titulos', require('./routes/titulos'));           // Fase 5
+app.use('/api', require('./routes/avaliacoes'));                // Fase 6 (/api/avaliacoes, /api/listas)
 
 // Pedido à API que não existe -> erro 404 em JSON
 app.use('/api', (req, res) => res.status(404).json({ erro: 'Endereço da API não encontrado.' }));
@@ -117,8 +127,14 @@ app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] })
 // Página que não existe -> 404.html
 app.use((req, res) => res.status(404).sendFile(path.join(__dirname, 'public', '404.html')));
 
-// Qualquer erro inesperado: regista na consola e responde sem mostrar detalhes
+// Tratamento de erros:
+//  - erros de validação (lançados com falha() em routes/ajudas.js): mostra a mensagem;
+//  - JSON mal formado: 400;
+//  - qualquer outro erro: regista na consola e responde sem mostrar detalhes.
 app.use((erro, req, res, next) => {
+  if (erro.publico) return res.status(erro.status).json({ erro: erro.message });
+  if (erro.type === 'entity.parse.failed') return res.status(400).json({ erro: 'Dados inválidos.' });
+  if (erro.type === 'entity.too.large') return res.status(413).json({ erro: 'Pedido demasiado grande.' });
   console.error(erro);
   res.status(500).json({ erro: 'Ocorreu um erro no servidor.' });
 });

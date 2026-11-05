@@ -1,0 +1,99 @@
+// =====================================================================
+//  Perfil público de um utilizador (perfil.html?u=nome)
+//  Qualquer visitante vê; seguir pede login. Dados: GET /api/utilizadores/:nome
+// =====================================================================
+(async () => {
+  const u = await sessao;
+  const nome = param('u') || (u && u.nome);
+  if (!nome) return irLogin();
+
+  let d;
+  try {
+    d = await api('/api/utilizadores/' + encodeURIComponent(nome));
+  } catch (e) {
+    return mostrarErro(e.message);
+  }
+  const p = d.perfil;
+  document.title = `${p.nome} – TavDex`;
+  const max = d.generos.length ? d.generos[0].n : 1;
+
+  const listaUtilizadores = (lista, vazio) => !lista.length ? `<p class="empty">${vazio}</p>`
+    : `<div class="ulist">${lista.map(s => `<a class="rv" href="/perfil.html?u=${encodeURIComponent(s.nome)}">${avatar(s)}<b>${esc(s.nome)}</b></a>`).join('')}</div>`;
+
+  const avaliacoes = !d.avaliacoes.length ? '<p class="empty">Ainda não avaliou nenhum título.</p>'
+    : d.avaliacoes.map(a => `<div class="box"><a class="lk" href="/titulo.html?id=${a.titulo_id}"><b>${esc(a.titulo)}</b></a>
+        ${estrelas(a.nota)} <small class="muted">${tempo(a.criado_em)}</small>
+        ${a.review ? (a.spoiler
+          ? `<details class="spoiler-d"><summary>⚠ Contém spoilers – mostrar</summary><p>${paragrafos(a.review)}</p></details>`
+          : `<p>${paragrafos(a.review)}</p>`) : ''}</div>`).join('');
+
+  const botoes = d.meu
+    ? '<a class="btn ghost sm" href="/definicoes.html">✎ Editar perfil</a>'
+    : `<div class="btns"><button class="btn ${d.sigo ? 'ghost' : 'primary'} sm" id="seguir">${d.sigo ? 'A seguir ✓' : '+ Seguir'}</button>
+        ${u ? `<a class="btn ghost sm" href="/chat.html?com=${p.id}">Mensagem</a>` : ''}</div>`;
+
+  mostrar(`<div class="content"><div class="left">
+    <div class="box pbn" style="--h:${p.cor}">
+      ${avatar(p, 'l')}
+      <div class="pinfo">
+        <h2>${esc(p.nome)} ${p.papel === 'admin' ? '<span class="badge" style="--c:330">Admin</span>' : ''}</h2>
+        <small class="hd">@${esc(p.nome)} · Membro desde ${dataCurta(p.criado_em).slice(3)}${p.localizacao ? ' · 📍 ' + esc(p.localizacao) : ''}</small>
+        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
+      </div>
+      ${botoes}
+    </div>
+
+    <div class="pstats">
+      <div class="box ps"><b id="n-seg">${d.seguidores.length}</b><span>Seguidores</span></div>
+      <div class="box ps"><b>${d.aSeguir.length}</b><span>A seguir</span></div>
+      <div class="box ps"><b>${d.avaliacoes.length}</b><span>Avaliações</span></div>
+      <div class="box ps"><b>${d.vistos.length}</b><span>Vistos</span></div>
+      <div class="box ps"><b>${d.projetos.length}</b><span>Projetos</span></div>
+    </div>
+
+    <div class="dcols"><div>
+      <div class="tabsbox">
+        <div class="tabs">
+          <button data-tab="fav" class="on">Favoritos (${d.favoritos.length})</button>
+          <button data-tab="ver">A ver (${d.paraVer.length})</button>
+          <button data-tab="vis">Vistos (${d.vistos.length})</button>
+          <button data-tab="ava">Avaliações</button>
+          <button data-tab="prj">Projetos</button>
+          ${d.meu ? '<button data-tab="recomendados">Recomendados</button>' : ''}
+          <button data-tab="seg">Seguidores</button>
+          <button data-tab="aseg">A seguir</button>
+        </div>
+        <div data-pane="fav">${grelha(d.favoritos, 'Ainda não há favoritos.')}</div>
+        <div data-pane="ver" hidden>${grelha(d.paraVer, 'A lista está vazia.')}</div>
+        <div data-pane="vis" hidden>${grelha(d.vistos, 'Ainda não marcou nada como visto.')}</div>
+        <div data-pane="ava" hidden>${avaliacoes}</div>
+        <div data-pane="prj" hidden>${d.projetos.length ? `<div class="pjc">${d.projetos.map(cartaoProjeto).join('')}</div>` : '<p class="empty">Sem projetos.</p>'}</div>
+        ${d.meu ? `<div data-pane="recomendados" hidden>${grelha(d.recomendados, 'Avalia alguns títulos com 4 ou 5 estrelas para receberes recomendações.')}</div>` : ''}
+        <div data-pane="seg" hidden>${listaUtilizadores(d.seguidores, 'Ainda não tem seguidores.')}</div>
+        <div data-pane="aseg" hidden>${listaUtilizadores(d.aSeguir, 'Ainda não segue ninguém.')}</div>
+      </div>
+    </div><div>
+      <div class="box"><h3>Géneros preferidos</h3>
+        ${d.generos.length ? d.generos.map(g => `<div class="rb"><span class="gname">${esc(g.nome)}</span>
+          <div class="bar"><i style="width:${Math.round(g.n * 100 / max)}%"></i></div><span>${g.n}</span></div>`).join('') : '<p class="empty">Sem dados ainda.</p>'}
+      </div>
+      <div class="box"><h3>Atividade recente</h3><div class="tl">
+        ${d.avaliacoes.slice(0, 4).map(a => `<p>Avaliou ${esc(a.titulo)} com ${a.nota}★<small>${tempo(a.criado_em)}</small></p>`).join('')
+          || `<p>Juntou-se ao TavDex<small>${tempo(p.criado_em)}</small></p>`}
+      </div></div>
+    </div></div>
+  </div></div>`);
+  abrirSeparadorDoEndereco();
+
+  // Seguir / deixar de seguir
+  const b = document.getElementById('seguir');
+  if (b) b.addEventListener('click', async () => {
+    if (!u) return irLogin();
+    const r = await tentar(() => api(`/api/utilizadores/${p.id}/seguir`, 'POST'));
+    if (!r) return;
+    b.textContent = r.sigo ? 'A seguir ✓' : '+ Seguir';
+    b.className = `btn ${r.sigo ? 'ghost' : 'primary'} sm`;
+    const n = document.getElementById('n-seg');
+    n.textContent = Number(n.textContent) + (r.sigo ? 1 : -1);
+  });
+})();

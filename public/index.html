@@ -1,37 +1,20 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-PT">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>TavDex</title>
-  <link rel="icon" href="img/logo.png">
+  <link rel="icon" href="/img/logo.png">
+  <meta name="theme-color" content="#08070b">
+  <script src="/js/tema.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-  <!-- Fase 1: página de teste. Na Fase 2 passa a ser a página inicial verdadeira. -->
-  <main>
-    <div class="content">
-      <div class="left nf">
-        <img src="img/logo.png" alt="Logótipo TavDex" width="96">
-        <h1>Tav<em>Dex</em></h1>
-        <h2>Fase 1 – base de dados e servidor</h2>
-        <p id="estado">A verificar a ligação ao servidor…</p>
-      </div>
-    </div>
-  </main>
-
-  <script src="js/api.js"></script>
-  <script>
-    // Pergunta ao servidor se está tudo a funcionar e mostra o resultado
-    api('/api/estado')
-      .then(d => {
-        document.getElementById('estado').textContent =
-          `Tudo a funcionar: ${d.utilizadores} utilizadores e ${d.titulos} filmes/séries na base de dados.`;
-      })
-      .catch(e => {
-        document.getElementById('estado').textContent = 'Problema: ' + e.message;
-      });
-  </script>
+<body data-menu="Início">
+  <!-- O conteúdo é desenhado por /js/paginas/index.js com os dados da API -->
+  <main id="app"><div class="content"><div class="left"><p class="muted">A carregar…</p></div></div></main>
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/paginas/index.js"></script>
 </body>
 </html>

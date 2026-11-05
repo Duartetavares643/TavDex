@@ -15,6 +15,7 @@ const pool = mysql.createPool({
   database: process.env.BD_NOME || 'TavDex',
   charset: 'utf8mb4',        // acentos e emojis
   dateStrings: true,         // datas chegam como texto "2026-11-05 10:00:00"
+  decimalNumbers: true,      // médias (DECIMAL) chegam como número e não como texto
   connectionLimit: 10,
 });
 

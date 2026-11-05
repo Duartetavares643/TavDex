@@ -1,13 +1,24 @@
 # routes/ – API do TavDex
 
-Cada ficheiro desta pasta trata de uma parte do site e é ligado no `server.js`.
+Cada ficheiro trata de uma parte do site e é ligado no `server.js`. A lista completa de endereços está no topo de cada ficheiro.
 
-| Ficheiro (fase) | Endereço |
+| Ficheiro (fase) | Endereço base | O quê |
+|---|---|---|
+| `auth.js` (2) | `/api/auth` | registo, login, Google, logout, recuperação da palavra-passe |
+| `utilizadores.js` (2) | `/api/utilizadores` | perfil público, seguir, definições, sessões ativas, apagar conta |
+| `projetos.js` (3) | `/api/projetos` | projetos, equipa, vagas, candidaturas, acompanhar, comentários, avaliações |
+| `comunidade.js` (4) | `/api/comunidade` | feed, gostos, comentários, chat, notificações, denúncias |
+| `admin.js` (4) | `/api/admin` | estatísticas, utilizadores, denúncias |
+| `titulos.js` (5) | `/api/titulos` | catálogo, página inicial, pesquisa, página do título, CRUD (admin) |
+| `avaliacoes.js` (6) | `/api/avaliacoes`, `/api/listas`, `/api/recomendacoes` | estrelas e reviews, listas pessoais, recomendações |
+
+Ficheiros de apoio:
+
+| Ficheiro | O quê |
 |---|---|
-| `auth.js` (2) | `/api/auth`: registo, login, Google, logout, recuperação da palavra-passe |
-| `utilizadores.js` (2) | `/api/utilizadores`: perfil público, definições, seguir |
-| `projetos.js` (3) | `/api/projetos`: projetos, candidaturas, avaliações de projetos |
-| `comunidade.js` (4) | `/api/comunidade`: feed, comentários, chat, notificações, denúncias |
-| `admin.js` (4) | `/api/admin`: utilizadores e denúncias |
-| `titulos.js` (5) | `/api/titulos`: catálogo, pesquisa, filtros, temporadas, CRUD (admin) |
-| `avaliacoes.js` (6) | `/api/avaliacoes` e `/api/listas`: estrelas, reviews, listas, recomendações |
+| `middleware.js` | `utilizadorAtual` (confirma a sessão na tabela `sessoes` e que a conta não está bloqueada), `exigirLogin`, `exigirAdmin`, `iniciarSessao`, `terminarSessao` |
+| `ajudas.js` | `falha()` (erro com mensagem), validação (`texto`, `inteiro`, `email`, …), anti-spam, `notificar()`, paginação |
+| `consultas.js` | SQL dos cartões de títulos e projetos, listas pessoais e `recomendacoes()` |
+| `email.js` | envio de emails com o Nodemailer (ou na consola, se o Gmail não estiver configurado) |
+
+**Erros:** uma rota faz `falha(400, 'mensagem')` e o `server.js` responde `{ erro: 'mensagem' }` com esse código.

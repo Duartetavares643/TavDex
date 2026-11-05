@@ -1,16 +1,18 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-PT">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Página não encontrada – TavDex</title>
   <link rel="icon" href="/img/logo.png">
+  <meta name="theme-color" content="#08070b">
+  <script src="/js/tema.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
   <!-- Mostrada pelo server.js quando a página pedida não existe -->
-  <main>
+  <main id="app">
     <div class="content">
       <div class="left nf">
         <h1>404</h1>
@@ -20,5 +22,7 @@
       </div>
     </div>
   </main>
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
 </body>
 </html>
