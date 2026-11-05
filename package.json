@@ -1,0 +1,24 @@
+{
+  "name": "tavdex",
+  "version": "1.0.0",
+  "description": "TavDex – descobrir, organizar e avaliar filmes e séries (PAP de Técnico de Informática – Sistemas)",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-mysql-session": "^3.0.3",
+    "express-session": "^1.18.1",
+    "google-auth-library": "^9.15.0",
+    "mysql2": "^3.11.5",
+    "nodemailer": "^6.9.16"
+  }
+}
