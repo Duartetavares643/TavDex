@@ -10,30 +10,57 @@ require('dotenv').config();
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
+const helmet = require('helmet');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-const { pool, linha } = require('./db');
-const { utilizadorAtual } = require('./routes/middleware');
+const { pool, linha, executar } = require('./db');
+const { utilizadorAtual, exigirLogin, exigirLoginPagina } = require('./routes/middleware');
 
 const app = express();
 const PORTA = Number(process.env.PORTA) || 3000;
+// Em produção o site está em https (ex.: URL_SITE=https://tavdex.pt)
+const HTTPS = (process.env.URL_SITE || '').startsWith('https');
 
 // ---------------------------------------------------------------------
 // 2. Configurações gerais
 // ---------------------------------------------------------------------
 
+// Atrás de um proxy (Render, Railway, Heroku, nginx...) o pedido chega por http
+// ao Node. "trust proxy" faz o Express confiar no cabeçalho X-Forwarded-*:
+// assim req.ip é o IP verdadeiro e os cookies "secure" funcionam.
+app.set('trust proxy', 1);
+
+// Em produção: http -> https
+if (HTTPS) {
+  app.use((req, res, next) => (req.secure ? next() : res.redirect(301, `https://${req.get('host')}${req.originalUrl}`)));
+}
+
+// Cabeçalhos de segurança (helmet). A CSP diz ao browser de onde pode carregar coisas:
+// scripts só do próprio site, letras do Google Fonts e imagens https (cartazes).
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      'default-src': ["'self'"],
+      'script-src': ["'self'"],
+      'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],   // os style="--h:..." precisam de unsafe-inline
+      'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      'img-src': ["'self'", 'data:', 'blob:', 'https:'],   // blob: = pré-visualização da foto antes de a guardar
+      'connect-src': ["'self'"],
+      'form-action': ["'self'"],
+      'frame-ancestors': ["'none'"],
+      // Em http (localhost) não se pode pedir ao browser para passar tudo para https
+      'upgrade-insecure-requests': HTTPS ? [] : null,
+    },
+  },
+  strictTransportSecurity: HTTPS,                     // HSTS só faz sentido em https
+  referrerPolicy: { policy: 'same-origin' },
+}));
+
 // Lê o corpo dos pedidos em JSON (o JavaScript das páginas envia assim)
 // e em formulário normal. O limite evita pedidos gigantes.
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
-
-// Cabeçalhos de segurança simples
-app.use((req, res, next) => {
-  res.set('X-Content-Type-Options', 'nosniff');      // o browser não "adivinha" o tipo dos ficheiros
-  res.set('X-Frame-Options', 'DENY');                // o site não pode ser metido dentro de outro (clickjacking)
-  res.set('Referrer-Policy', 'same-origin');
-  next();
-});
 
 // ---------------------------------------------------------------------
 // 3. Sessões
@@ -55,7 +82,7 @@ app.use(session({
   cookie: {
     httpOnly: true,                  // o JavaScript da página não consegue ler o cookie
     sameSite: 'lax',                 // ajuda contra pedidos vindos de outros sites
-    secure: process.env.URL_SITE?.startsWith('https') || false,
+    secure: HTTPS,                   // em https o cookie só viaja cifrado
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
   },
 }));
@@ -108,8 +135,13 @@ app.use('/api', (req, res, next) => { req.body = req.body || {}; next(); });
 // Só na /api, para os ficheiros CSS, JS e imagens não irem à base de dados.
 app.use('/api', utilizadorAtual);
 
-app.use('/api/auth', require('./routes/auth'));                 // Fase 2
-app.use('/api/utilizadores', require('./routes/utilizadores')); // Fase 2
+const google = require('./routes/google');
+const utilizadores = require('./routes/utilizadores');
+app.use('/api/auth/google', google);                            // Passo 6: login com o Google (OAuth 2.0 + PKCE)
+app.use('/api/auth', require('./routes/auth'));                 // Passos 5 a 8
+app.use('/api/conta', google.conta);                            // POST /api/conta/google/desligar
+app.post('/api/seguir/:id', exigirLogin, utilizadores.seguir);  // Passo 9: seguir / deixar de seguir
+app.use('/api/utilizadores', utilizadores);                     // Passos 9 e 10
 app.use('/api/projetos', require('./routes/projetos'));         // Fase 3
 app.use('/api/comunidade', require('./routes/comunidade'));     // Fase 4
 app.use('/api/admin', require('./routes/admin'));               // Fase 4
@@ -122,6 +154,18 @@ app.use('/api', (req, res) => res.status(404).json({ erro: 'Endereço da API nã
 // ---------------------------------------------------------------------
 // 6. Páginas e ficheiros (HTML, CSS, JS, imagens) da pasta /public
 // ---------------------------------------------------------------------
+const pagina = nome => (req, res) => res.sendFile(path.join(__dirname, 'public', nome));
+
+// Páginas que precisam de sessão: sem sessão vão para o login e voltam depois
+// (os dados verdadeiros estão sempre protegidos na API com exigirLogin)
+const PRIVADAS = ['definicoes', 'listas', 'chat', 'notificacoes', 'admin', 'candidaturas', 'projeto-novo', 'projeto-editar'];
+for (const nome of PRIVADAS) app.get([`/${nome}`, `/${nome}.html`], exigirLoginPagina, pagina(`${nome}.html`));
+
+// Endereços "limpos" que mostram as páginas que já existem
+app.get('/entrar', pagina('login.html'));
+app.get('/nova-palavra-passe', pagina('repor.html'));
+app.get('/perfil/:nome', (req, res) => res.redirect('/perfil.html?u=' + encodeURIComponent(req.params.nome)));
+
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // Página que não existe -> 404.html
@@ -132,13 +176,66 @@ app.use((req, res) => res.status(404).sendFile(path.join(__dirname, 'public', '4
 //  - JSON mal formado: 400;
 //  - qualquer outro erro: regista na consola e responde sem mostrar detalhes.
 app.use((erro, req, res, next) => {
-  if (erro.publico) return res.status(erro.status).json({ erro: erro.message });
+  if (erro.publico) {
+    // 401: { erro: 'login_necessario', mensagem } -> a página abre a janela "Inicia sessão para continuar"
+    if (erro.codigo === 'login_necessario') return res.status(401).json({ erro: 'login_necessario', mensagem: erro.message });
+    const corpo = { erro: erro.message };
+    if (erro.codigo) corpo.codigo = erro.codigo;   // ex.: 'bloqueado', 'link_invalido'
+    if (erro.erros) corpo.erros = erro.erros;      // erros de cada campo do formulário
+    return res.status(erro.status).json(corpo);
+  }
   if (erro.type === 'entity.parse.failed') return res.status(400).json({ erro: 'Dados inválidos.' });
   if (erro.type === 'entity.too.large') return res.status(413).json({ erro: 'Pedido demasiado grande.' });
   console.error(erro);
+  // Problemas com a base de dados: mensagem útil em vez do erro genérico
+  if (['ECONNREFUSED', 'ER_ACCESS_DENIED_ERROR', 'ER_BAD_DB_ERROR'].includes(erro.code)) {
+    return res.status(503).json({ erro: 'Sem ligação à base de dados. Verifica o .env e se o MySQL está ligado.' });
+  }
+  if (erro.code === 'ER_NO_SUCH_TABLE' || erro.code === 'ER_BAD_FIELD_ERROR') {
+    return res.status(503).json({ erro: 'A base de dados está desatualizada. Executa os scripts da pasta database/.' });
+  }
   res.status(500).json({ erro: 'Ocorreu um erro no servidor.' });
 });
 
-app.listen(PORTA, () => {
+// ---------------------------------------------------------------------
+// 7. Limpeza automática (uma vez por dia)
+//    · atividade da conta com mais de 180 dias
+//    · tentativas de login com mais de 1 dia
+//    · links de recuperação expirados há mais de 1 dia
+// ---------------------------------------------------------------------
+async function limpar() {
+  try {
+    await executar('DELETE FROM atividade_conta WHERE criado_em < NOW() - INTERVAL 180 DAY');
+    await executar('DELETE FROM tentativas_login WHERE criado_em < NOW() - INTERVAL 1 DAY');
+    await executar('DELETE FROM recuperacoes WHERE expira_em < NOW() - INTERVAL 1 DAY');
+  } catch (erro) {
+    console.error('Limpeza automática falhou:', erro.message);
+  }
+}
+
+// Um erro inesperado numa tarefa de fundo vai para o log em vez de desligar o servidor
+process.on('unhandledRejection', erro => console.error('Erro não tratado:', erro));
+
+// Exportado para os testes automáticos (tests/) arrancarem o servidor numa porta livre
+module.exports = app;
+if (require.main !== module) return;
+
+app.listen(PORTA, async () => {
   console.log(`TavDex a funcionar em http://localhost:${PORTA}`);
+  setInterval(limpar, 24 * 60 * 60 * 1000).unref();
+  // Testa logo a ligação ao MySQL, para o problema aparecer na consola
+  try {
+    await pool.query('SELECT 1 FROM vw_titulos_avaliacao LIMIT 1');
+    await pool.query('SELECT foto_versao FROM utilizadores LIMIT 1');
+    console.log('Ligação à base de dados: OK');
+    limpar();
+  } catch (erro) {
+    console.error(`\n*** Problema na base de dados (${erro.code}): ${erro.message}`);
+    if (erro.code === 'ER_ACCESS_DENIED_ERROR') console.error('    -> Confirma BD_UTILIZADOR e BD_PASSWORD no ficheiro .env');
+    else if (erro.code === 'ER_BAD_DB_ERROR') console.error('    -> Executa database/01_criar_bd.sql, 02_inserir_dados.sql e extras.sql');
+    else if (erro.code === 'ER_NO_SUCH_TABLE') console.error('    -> Executa database/extras.sql e database/03_contas.sql');
+    else if (erro.code === 'ER_BAD_FIELD_ERROR') console.error('    -> Executa database/03_contas.sql');
+    else if (erro.code === 'ECONNREFUSED') console.error('    -> O MySQL está desligado. Liga-o e reinicia o servidor.');
+    console.error('');
+  }
 });
