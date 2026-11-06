@@ -35,7 +35,7 @@ router.get('/feed', async (req, res) => {
 
   const total = await linha(`SELECT COUNT(*) AS n FROM publicacoes p${onde}`, valores.slice(1));
   const publicacoes = await linhas(`SELECT p.id, p.texto, p.spoiler, p.criado_em,
-        u.id AS utilizador_id, u.nome, u.cor, u.papel,
+        u.id AS utilizador_id, u.nome, u.cor, u.foto_versao, u.papel,
         t.id AS titulo_id, t.nome AS titulo_nome,
         pr.id AS projeto_id, pr.titulo AS projeto_titulo,
         (SELECT COUNT(*) FROM gostos g WHERE g.publicacao_id = p.id) AS gostos,
@@ -50,7 +50,7 @@ router.get('/feed', async (req, res) => {
   // Comentários das publicações desta página (todos de uma vez)
   const ids = publicacoes.map(p => p.id);
   const comentarios = ids.length ? await linhas(`SELECT c.id, c.publicacao_id, c.pai_id, c.texto, c.criado_em,
-        u.id AS utilizador_id, u.nome, u.cor
+        u.id AS utilizador_id, u.nome, u.cor, u.foto_versao
       FROM comentarios c JOIN utilizadores u ON u.id = c.utilizador_id
       WHERE c.publicacao_id IN (${a.marcadores(ids)}) ORDER BY c.criado_em`, ids) : [];
   publicacoes.forEach(p => { p.comentarios = comentarios.filter(c => c.publicacao_id === p.id); });
@@ -136,7 +136,7 @@ router.delete('/comentarios/:id', exigirLogin, async (req, res) => {
 // Lista de conversas privadas (com a última mensagem de cada uma)
 router.get('/chat/conversas', exigirLogin, async (req, res) => {
   const uid = req.u.id;
-  const conversas = await linhas(`SELECT u.id, u.nome, u.cor,
+  const conversas = await linhas(`SELECT u.id, u.nome, u.cor, u.foto_versao,
         (SELECT m.texto FROM mensagens m
           WHERE (m.de_id = ? AND m.para_id = u.id) OR (m.de_id = u.id AND m.para_id = ?)
           ORDER BY m.id DESC LIMIT 1) AS ultima,
@@ -168,7 +168,7 @@ router.get('/chat/:com', exigirLogin, async (req, res) => {
     : 'm.para_id IS NULL';
   const valores = outro ? [uid, outro.id, outro.id, uid] : [];
   const mensagens = await linhas(`SELECT * FROM (
-      SELECT m.id, m.texto, m.editada, m.data_edicao, m.criado_em, u.id AS de_id, u.nome, u.cor
+      SELECT m.id, m.texto, m.editada, m.data_edicao, m.criado_em, u.id AS de_id, u.nome, u.cor, u.foto_versao
       FROM mensagens m JOIN utilizadores u ON u.id = m.de_id
       WHERE ${onde} ORDER BY m.id DESC LIMIT 100) x ORDER BY id`, valores);
   mensagens.forEach(m => { m.minha = m.de_id === uid; });

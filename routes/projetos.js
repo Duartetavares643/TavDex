@@ -121,16 +121,16 @@ router.get('/:id', async (req, res) => {
 
   const [dono, equipa, vagas, avaliacoes, comentarios, nSeg, acompanho] = await Promise.all([
     linha('SELECT id, nome, cor, papel FROM utilizadores WHERE id = ?', [p.dono_id]),
-    linhas(`SELECT e.id, e.funcao, e.nome AS nome_externo, u.id AS utilizador_id, u.nome, u.cor
+    linhas(`SELECT e.id, e.funcao, e.nome AS nome_externo, u.id AS utilizador_id, u.nome, u.cor, u.foto_versao
             FROM projeto_equipa e LEFT JOIN utilizadores u ON u.id = e.utilizador_id
             WHERE e.projeto_id = ? ORDER BY e.id`, [p.id]),
     linhas(`SELECT v.*, (SELECT COUNT(*) FROM candidaturas c WHERE c.vaga_id = v.id AND c.estado = 'pendente') AS pendentes,
               (SELECT c.estado FROM candidaturas c WHERE c.vaga_id = v.id AND c.utilizador_id = ?) AS minha_candidatura
             FROM projeto_vagas v WHERE v.projeto_id = ? ORDER BY v.aberta DESC, v.id`, [uid, p.id]),
-    linhas(`SELECT pa.id, pa.nota, pa.review, pa.criado_em, u.id AS utilizador_id, u.nome, u.cor
+    linhas(`SELECT pa.id, pa.nota, pa.review, pa.criado_em, u.id AS utilizador_id, u.nome, u.cor, u.foto_versao
             FROM projeto_avaliacoes pa JOIN utilizadores u ON u.id = pa.utilizador_id
             WHERE pa.projeto_id = ? ORDER BY pa.criado_em DESC`, [p.id]),
-    linhas(`SELECT c.id, c.texto, c.criado_em, u.id AS utilizador_id, u.nome, u.cor
+    linhas(`SELECT c.id, c.texto, c.criado_em, u.id AS utilizador_id, u.nome, u.cor, u.foto_versao
             FROM comentarios c JOIN utilizadores u ON u.id = c.utilizador_id
             WHERE c.projeto_id = ? ORDER BY c.criado_em`, [p.id]),
     linha('SELECT COUNT(*) AS n FROM projeto_seguidores WHERE projeto_id = ?', [p.id]),
@@ -263,7 +263,7 @@ router.get('/:id/candidaturas', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   exigirGerir(req.u, p);
   const candidaturas = await linhas(`SELECT c.id, c.mensagem, c.estado, c.criado_em, v.id AS vaga_id, v.funcao, v.aberta,
-        u.id AS utilizador_id, u.nome, u.cor
+        u.id AS utilizador_id, u.nome, u.cor, u.foto_versao
       FROM candidaturas c JOIN projeto_vagas v ON v.id = c.vaga_id JOIN utilizadores u ON u.id = c.utilizador_id
       WHERE v.projeto_id = ? ORDER BY c.estado = 'pendente' DESC, c.criado_em DESC`, [p.id]);
   res.json({ projeto: { id: p.id, titulo: p.titulo }, candidaturas });

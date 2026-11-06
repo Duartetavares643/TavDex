@@ -25,6 +25,7 @@ const { SQL_TITULOS, SQL_PROJETOS, recomendacoes } = require('./consultas');
 const router = express.Router();
 const MAX_ID = 2147483647;
 const ANO_MAX = new Date().getFullYear() + 5;
+const GENEROS_INICIO = ['Ação', 'Drama', 'Ficção Científica'];   // filas da página inicial
 
 // Ordenações permitidas. Não se pode pôr "?" no ORDER BY, por isso o
 // utilizador escolhe uma chave e o SQL vem SEMPRE desta lista fixa.
@@ -89,10 +90,19 @@ router.get('/inicio', async (req, res) => {
     linhas(`${SQL_TITULOS} ORDER BY v.total_avaliacoes DESC, v.nome LIMIT 12`),
     linhas(`${SQL_TITULOS} ORDER BY v.ano DESC, v.id DESC LIMIT 12`),
     linhas(`${SQL_PROJETOS} ORDER BY p.criado_em DESC LIMIT 4`),
-    // Os 3 géneros com mais títulos têm uma fila própria
-    linhas(`SELECT g.id, g.nome, COUNT(*) AS n FROM generos g JOIN titulo_generos tg ON tg.genero_id = g.id
-            GROUP BY g.id, g.nome ORDER BY n DESC, g.nome LIMIT 3`),
+    // Uma fila por género: Ação, Drama e Ficção Científica (pela ordem do anteprojeto)
+    linhas(`SELECT g.id, g.nome FROM generos g WHERE g.nome IN (?, ?, ?) ORDER BY FIELD(g.nome, ?, ?, ?)`,
+      [...GENEROS_INICIO, ...GENEROS_INICIO]),
   ]);
+  // Se algum destes géneros não existir, completa com os géneros com mais títulos
+  if (generos.length < GENEROS_INICIO.length) {
+    const extra = await linhas(`SELECT g.id, g.nome, COUNT(*) AS n FROM generos g JOIN titulo_generos tg ON tg.genero_id = g.id
+            GROUP BY g.id, g.nome ORDER BY n DESC, g.nome LIMIT 6`);
+    for (const g of extra) {
+      if (generos.length >= GENEROS_INICIO.length) break;
+      if (!generos.some(x => x.id === g.id)) generos.push(g);
+    }
+  }
   for (const g of generos) {
     g.titulos = await linhas(`${SQL_TITULOS} WHERE v.id IN (SELECT titulo_id FROM titulo_generos WHERE genero_id = ?)
                               ORDER BY v.media DESC LIMIT 12`, [g.id]);
@@ -151,7 +161,7 @@ router.get('/:id', async (req, res) => {
     linhas(`SELECT p.id, p.nome, p.foto, tp.funcao, tp.personagem, tp.ordem FROM titulo_pessoas tp
             JOIN pessoas p ON p.id = tp.pessoa_id WHERE tp.titulo_id = ? ORDER BY tp.funcao = 'ator', tp.ordem, p.nome`, [id]),
     linhas('SELECT * FROM temporadas WHERE titulo_id = ? ORDER BY numero', [id]),
-    linhas(`SELECT a.id, a.nota, a.review, a.spoiler, a.criado_em, a.editado_em, u.id AS utilizador_id, u.nome, u.cor
+    linhas(`SELECT a.id, a.nota, a.review, a.spoiler, a.criado_em, a.editado_em, u.id AS utilizador_id, u.nome, u.cor, u.foto_versao
             FROM avaliacoes a JOIN utilizadores u ON u.id = a.utilizador_id
             WHERE a.titulo_id = ? ORDER BY a.utilizador_id = ? DESC, a.criado_em DESC`, [id, uid]),
     linhas('SELECT nota, COUNT(*) AS n FROM avaliacoes WHERE titulo_id = ? GROUP BY nota', [id]),

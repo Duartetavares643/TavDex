@@ -11,9 +11,10 @@ const SQL_TITULOS = `SELECT v.*,
       WHERE tg.titulo_id = v.id ORDER BY g.nome LIMIT 1) AS genero1
   FROM vw_titulos_avaliacao v`;
 
-// Projetos com o número de membros da equipa
+// Projetos com o número de membros da equipa e o @nome do criador
 const SQL_PROJETOS = `SELECT p.id, p.titulo, p.sinopse, p.tipo, p.genero, p.estado, p.criado_em, p.dono_id,
-    (SELECT COUNT(*) FROM projeto_equipa e WHERE e.projeto_id = p.id) AS membros
+    (SELECT COUNT(*) FROM projeto_equipa e WHERE e.projeto_id = p.id) AS membros,
+    (SELECT d.nome FROM utilizadores d WHERE d.id = p.dono_id) AS dono_nome
   FROM projetos p`;
 
 // Títulos de uma lista pessoal ('favorito', 'ver' ou 'visto')

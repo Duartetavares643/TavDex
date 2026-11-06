@@ -52,7 +52,7 @@ router.get('/utilizadores', async (req, res) => {
   const valores = q ? [`%${q}%`, `%${q}%`] : [];
   const pg = a.paginacao(req, 25);
   const total = await linha(`SELECT COUNT(*) AS n FROM utilizadores${onde}`, valores);
-  const lista = await linhas(`SELECT u.id, u.nome, u.email, u.cor, u.papel, u.bloqueado, u.criado_em,
+  const lista = await linhas(`SELECT u.id, u.nome, u.email, u.cor, u.foto_versao, u.papel, u.bloqueado, u.criado_em,
       (SELECT COUNT(*) FROM avaliacoes a WHERE a.utilizador_id = u.id) AS n_avaliacoes
     FROM utilizadores u${onde} ORDER BY u.criado_em DESC${pg.sql}`, valores);
   res.json({ utilizadores: lista, total: total.n, pagina: pg.pagina, porPagina: pg.porPagina });
