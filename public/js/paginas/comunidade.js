@@ -67,7 +67,7 @@
           <button class="btn primary sm">Publicar</button>
         </div><p class="msg" role="alert"></p></form>`
       : `<div class="box cta"><div><b>Junta-te à conversa</b><p>Entra para publicar, comentar e seguir outros fãs.</p></div>
-          <a class="btn primary sm" href="#" data-login>Entrar</a></div>`;
+          <a class="btn primary sm" href="/login.html" data-requer-login="publicar na comunidade">Entrar</a></div>`;
 
     mostrar(`<div class="content"><div class="left narrow">
       <h1 class="ph">Comunidade</h1>
@@ -92,14 +92,12 @@
   }
 
   document.getElementById('app').addEventListener('click', async e => {
-    if (e.target.closest('[data-login]')) { e.preventDefault(); return irLogin(); }
-
     const pg = e.target.closest('[data-pagina]');
     if (pg) { e.preventDefault(); location.search = `?filtro=${filtro}&p=${pg.dataset.pagina}`; }
 
     const gosto = e.target.closest('[data-gosto]');
     if (gosto) {
-      if (!u) return irLogin();
+      if (!u) return abrirJanelaLogin('gostar de publicações');
       const r = await tentar(() => api(`/api/comunidade/publicacoes/${gosto.dataset.gosto}/gosto`, 'POST'));
       if (r) gosto.innerHTML = `${r.gostei ? '❤️' : '🤍'} <span>${r.gostos}</span>`;
     }

@@ -793,3 +793,109 @@ a.plat:hover { background: rgba(255, 255, 255, .16); }
 
 /* Campo-armadilha contra robôs (fica invisível para as pessoas) */
 .hp { position: absolute !important; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* =====================================================================
+   PASSOS 4 A 10 – contas, visitante, perfil e definições
+   ===================================================================== */
+
+/* Avatar com foto */
+.av.foto { overflow: hidden; }
+.av.foto img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+/* Botão do Google (o "G" colorido oficial) */
+.btn.google { background: var(--surface-2); border-color: var(--line-2); color: var(--text); gap: 10px; }
+.btn.google:hover { background: var(--surface-3); border-color: var(--muted); }
+.g-logo { width: 18px; height: 18px; flex: none; }
+
+/* Separador "ou" entre o Google e o formulário */
+.sep-ou { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; margin: 2px 0; }
+.sep-ou::before, .sep-ou::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }
+.sem-conta { align-self: center; font-size: 13px; color: var(--muted); }
+
+/* Palavra-passe com o botão Ver/Ocultar */
+.campo-pw { position: relative; display: flex; width: 100%; }
+.campo-pw input { padding-right: 78px !important; }
+.ver-pw { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--muted);
+  font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.ver-pw:hover { color: var(--text); background: var(--surface-3); }
+
+/* Barra de força da palavra-passe */
+.forca { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; align-items: center; margin-top: -4px; }
+.forca i { height: 4px; border-radius: 4px; background: var(--line-2); transition: background var(--t); }
+.forca span { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+.forca[data-n="0"] i:nth-child(-n+1), .forca[data-n="1"] i:nth-child(-n+1) { background: var(--red); }
+.forca[data-n="2"] i:nth-child(-n+2) { background: var(--gold); }
+.forca[data-n="3"] i:nth-child(-n+3), .forca[data-n="4"] i:nth-child(-n+4) { background: var(--ok); }
+
+/* Campos com erro (aria-invalid) e a mensagem por baixo */
+[aria-invalid="true"] { border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(255, 45, 85, .14) !important; }
+input[type=checkbox][aria-invalid="true"] { outline: 2px solid var(--red); outline-offset: 2px; }
+.erro-campo { display: block; color: var(--red-2); font-size: 12.5px; font-weight: 500; margin-top: -4px; }
+
+/* Janela "Inicia sessão para continuar" */
+dialog.modal { border: 1px solid var(--line-2); border-radius: 20px; padding: 0; background: var(--surface); color: var(--text);
+  width: min(420px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3px); }
+.modal-in { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 30px 26px 22px; text-align: center; }
+.modal-logo { width: 64px; height: 64px; border-radius: 50%; box-shadow: 0 0 30px rgba(196, 43, 216, .4); }
+.modal-in h2 { font: 400 30px/1.05 "Bebas Neue", "Inter", sans-serif; letter-spacing: .03em; }
+.modal-txt { color: var(--text-2); font-size: 14px; }
+.modal-btns { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 4px; }
+.modal-btns .btn { width: 100%; }
+.modal-fechar { background: none; border: 0; color: var(--muted); font-size: 13px; cursor: pointer; padding: 6px; }
+.modal-fechar:hover { color: var(--text); }
+
+/* Setas das filas de cartazes (no telemóvel faz-se scroll com o dedo) */
+.row-head { gap: 12px; }
+.row-head h2 { margin-right: auto; }
+.row-nav { display: flex; gap: 6px; }
+.row-nav button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface-2);
+  color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; transition: background var(--t); }
+.row-nav button:hover { background: var(--surface-3); }
+@media (hover: none), (max-width: 600px) { .row-nav { display: none; } }
+
+/* Cartão de projeto: criador */
+.pjv-dono { display: block; color: var(--muted); font-size: 12px; margin: 4px 0 8px; }
+
+/* Perfil: cartão de boas-vindas */
+.boas-vindas { flex-wrap: wrap; margin-top: 0; }
+.boas-vindas .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Definições: perfil + pré-visualização lado a lado */
+.def-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.pre-perfil { position: sticky; top: 90px; display: flex; flex-direction: column; gap: 12px; }
+.pre-cab { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.pre-cab b { display: block; font-size: 18px; overflow-wrap: anywhere; }
+.pre-cab small { display: block; overflow-wrap: anywhere; }
+#pre-bio { overflow-wrap: anywhere; }
+.foto-campo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.foto-campo small { flex-basis: 100%; }
+.foto-campo .btn { cursor: pointer; }
+
+/* Proteção da conta */
+.protecao { list-style: none; display: grid; gap: 8px; margin: 0; padding: 0; }
+.protecao li { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--text-2); }
+.protecao b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; flex: none; }
+.protecao .ok b { background: rgba(61, 214, 140, .16); color: var(--ok); }
+.protecao .aviso b { background: rgba(245, 181, 10, .16); color: var(--gold); }
+
+/* Contas ligadas e sessões */
+.conta-ligada .cl-nome { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.conta-ligada .g-logo { width: 26px; height: 26px; }
+.conta-ligada small { overflow-wrap: anywhere; }
+.sessao .agora { color: var(--ok); font-weight: 600; }
+.sessao small { overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  .def-cols { grid-template-columns: 1fr; }
+  .pre-perfil { position: static; order: -1; }
+}
+@media (max-width: 600px) {
+  .boas-vindas .btns .btn { flex: 1 1 100%; }
+  .modal-in { padding: 24px 18px 18px; }
+}
+
+/* Páginas de texto (privacidade, termos) */
+.texto-legal h3 { margin: 18px 0 8px; }
+.texto-legal p { margin-bottom: 8px; line-height: 1.6; }
+.lista-simples { margin: 0 0 8px 20px; color: var(--text-2); line-height: 1.7; }

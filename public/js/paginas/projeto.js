@@ -50,7 +50,7 @@
         <small> · ${tempo(a.criado_em)}</small>${a.review ? `<p>${paragrafos(a.review)}</p>` : ''}</div></div>`).join('')
       || '<p class="empty">Ainda ninguém avaliou.</p>';
 
-    const formAvaliar = !u ? `<p><a class="lk" href="#" data-login>Entra</a> para avaliar este projeto.</p>`
+    const formAvaliar = !u ? `<p><a class="lk" href="/login.html" data-requer-login="avaliar projetos">Entra</a> para avaliar este projeto.</p>`
       : meu ? '' : `<form class="form box" id="f-avaliar"><b>${d.minha_avaliacao ? 'A tua avaliação' : 'Avaliar o projeto'}</b>
           ${campoEstrelas(d.minha_avaliacao?.nota)}
           <textarea name="review" maxlength="1000" placeholder="O que achaste? (opcional)">${esc(d.minha_avaliacao?.review || '')}</textarea>
@@ -80,7 +80,7 @@
           <div data-pane="vagas">${vagas}</div>
           <div data-pane="comentarios" hidden>
             ${u ? `<form class="form box" id="f-comentar"><textarea name="texto" maxlength="1000" required placeholder="Escreve um comentário..."></textarea>
-              <p class="msg" role="alert"></p><button class="btn primary sm">Comentar</button></form>` : `<p><a class="lk" href="#" data-login>Entra</a> para comentar.</p>`}
+              <p class="msg" role="alert"></p><button class="btn primary sm">Comentar</button></form>` : `<p><a class="lk" href="/login.html" data-requer-login="comentar">Entra</a> para comentar.</p>`}
             ${comentarios}</div>
           <div data-pane="avaliacoes" hidden>${formAvaliar}${avaliacoes}</div>
         </div>
@@ -93,15 +93,14 @@
 
   function ligarEventos() {
     const p = d.projeto;
-    document.querySelectorAll('[data-login]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); irLogin(); }));
 
     document.getElementById('acompanhar')?.addEventListener('click', async () => {
-      if (!u) return irLogin();
+      if (!u) return abrirJanelaLogin('acompanhar projetos');
       if (await tentar(() => api(`/api/projetos/${p.id}/acompanhar`, 'POST'))) carregar();
     });
 
     document.querySelectorAll('[data-candidatar]').forEach(f => ligarForm(f, async dados => {
-      if (!u) return irLogin();
+      if (!u) return abrirJanelaLogin('te candidatares a vagas');
       await api(`/api/projetos/vagas/${f.dataset.candidatar}/candidatura`, 'POST', dados);
       aviso('Candidatura enviada! O dono do projeto vai ser notificado.');
       carregar();

@@ -31,7 +31,9 @@
     const totalAval = d.distribuicao.reduce((s, x) => s + x.n, 0);
 
     // Botões das listas pessoais (favorito, a ver, visto)
-    const botaoLista = (tipo, ligado, desligado) => `<button class="btn ghost sm" data-lista="${tipo}" aria-pressed="${d.listas[tipo]}">${d.listas[tipo] ? ligado : desligado}</button>`;
+    // Ação que aparece na janela de login de um visitante
+    const ACOES_LISTA = { favorito: 'guardar favoritos', ver: 'pôr títulos na lista «A ver»', visto: 'marcar títulos como vistos' };
+    const botaoLista = (tipo, ligado, desligado) => `<button class="btn ghost sm" data-lista="${tipo}" data-requer-login="${ACOES_LISTA[tipo]}" aria-pressed="${d.listas[tipo]}">${d.listas[tipo] ? ligado : desligado}</button>`;
 
     const ondeVer = d.plataformas.map(p => {
       const cor = /^#[0-9A-Fa-f]{6}$/.test(p.cor) ? p.cor : '#888888';
@@ -49,7 +51,7 @@
           ${u && a.utilizador_id !== u.id && a.review ? botaoDenunciar('review', a.id) : ''}</div></div></div>`;
 
     const minha = d.minha_avaliacao;
-    const formAvaliar = !u ? `<div class="box cta"><div><b>Já viste?</b><p>Entra para avaliar e escrever uma review.</p></div><a class="btn primary sm" href="#" data-login>Entrar</a></div>`
+    const formAvaliar = !u ? `<div class="box cta"><div><b>Já viste?</b><p>Entra para avaliar e escrever uma review.</p></div><a class="btn primary sm" href="/login.html" data-requer-login="avaliar filmes e séries">Entrar</a></div>`
       : `<form class="box form" id="f-avaliar" novalidate><b>${minha ? 'A tua avaliação' : 'Avaliar'}</b>
           ${campoEstrelas(minha?.nota)}
           <label>Review (opcional)<textarea name="review" maxlength="2000" placeholder="O que achaste?">${esc(minha?.review || '')}</textarea></label>
@@ -118,16 +120,15 @@
     });
 
     document.getElementById('app').onclick = async e => {
-      if (e.target.closest('[data-login]')) { e.preventDefault(); return irLogin(); }
       if (e.target.closest('[data-ir-avaliar]')) {
         e.preventDefault();
-        if (!u) return irLogin();
+        if (!u) return abrirJanelaLogin('avaliar filmes e séries');
         document.querySelector('[data-tab="reviews"]').click();
         document.getElementById('f-avaliar').scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       const lista = e.target.closest('[data-lista]');
       if (lista) {
-        if (!u) return irLogin();
+        if (!u) return abrirJanelaLogin('guardar títulos nas tuas listas');
         if (await tentar(() => api(`/api/listas/${t.id}/${lista.dataset.lista}`, 'POST'))) carregar();
       }
       if (e.target.id === 'apagar-minha' && confirm('Apagar a tua avaliação?') && await tentar(() => api(`/api/avaliacoes/titulo/${t.id}`, 'DELETE'))) carregar('reviews');
