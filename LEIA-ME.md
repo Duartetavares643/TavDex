@@ -13,6 +13,7 @@ Site dinâmico e responsivo para descobrir, organizar e avaliar filmes e séries
    2. `database/02_inserir_dados.sql`: dados de exemplo
    3. `database/extras.sql`: tabelas e colunas das Fases 2 a 6 (sessões, atividade, gostos, elenco, episódios, …)
    4. `database/03_contas.sql`: nome de exibição, foto de perfil, email confirmado, último login e `via` das sessões (Passos 4 a 10)
+   5. `database/04_banner_perfil.sql`: cenário do banner do perfil (`tema_banner`)
 
    > ⚠️ Cuidado com o `TavDex.sql` antigo ("versão 2", que está fora desta pasta): começa com `DROP DATABASE tavdex` e apaga a base de dados do site.
 3. Copiar `.env.example` para `.env` e preencher pelo menos `BD_PASSWORD` e `SEGREDO_SESSAO`.
@@ -105,7 +106,9 @@ routes/              API – ver routes/README.md
   email.js           Nodemailer (smtp / ficheiro / consola) e o modelo HTML dos emails
 public/              páginas .html (uma por ecrã)
   js/api.js          api() (fetch + token CSRF), esc() (contra XSS) e TavDex.pedido()
-  js/main.js         topo, rodapé, tema, cartões, janela "Inicia sessão para continuar", botão Google, formulários
+  js/main.js         topo, rodapé, tema, cartões, janela "Inicia sessão para continuar", botão Google, formulários,
+                     cabecalhoPerfil() (cartão do perfil com o banner)
+  js/banner-perfil.js  banner em pixel art num <canvas> (4 cenários), sem imagens
   js/paginas/        o JavaScript de cada página
   css/style.css      tema escuro vermelho/magenta (e modo claro)
 database/            scripts SQL e modelo ER
@@ -139,6 +142,8 @@ antigo_php/          versão anterior em PHP (só como referência)
 1. **Sem conta:** página inicial → catálogo (filtrar por género, ordenar por nota) → abrir *Breaking Bad* (elenco, temporadas e episódios) → pesquisar "nolan".
 2. **Visitante:** carregar em "+ Seguir" num perfil ou em "Favorito" num filme → abre a janela "Inicia sessão para continuar" → entrar → volta à mesma página.
 3. **Registo:** criar conta (barra de força, Ver/Ocultar, erros todos juntos) → Definições: foto, cor, nome e pré-visualização ao vivo.
+   **Banner do perfil:** escolher um dos 4 cenários (Cidade à chuva, Pôr do sol retro, Beco néon, Montanhas ao anoitecer) e ver o TAVDEX mudar com a cor do avatar.
+   Mudar um campo e carregar num link do topo → aparece "Tens alterações por guardar".
 4. **Login falhado 5 vezes** com a mesma conta → aparece o bloqueio de 15 minutos.
 5. **Recuperar palavra-passe:** o link aparece na consola do servidor (ou no Gmail, se estiver configurado).
 6. **Como lara@mail.pt:** avaliar um filme com review e spoiler, pôr em favoritos, ver as recomendações em "As minhas listas".
