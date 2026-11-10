@@ -14,6 +14,7 @@ Site dinâmico e responsivo para descobrir, organizar e avaliar filmes e séries
    3. `database/extras.sql`: tabelas e colunas das Fases 2 a 6 (sessões, atividade, gostos, elenco, episódios, …)
    4. `database/03_contas.sql`: nome de exibição, foto de perfil, email confirmado, último login e `via` das sessões (Passos 4 a 10)
    5. `database/04_banner_perfil.sql`: cenário do banner do perfil (`tema_banner`)
+   6. `database/05_banner_cinema.sql`: troca os cenários pelos 4 de cinema (fachada, estreia, noir, cartaz)
 
    > ⚠️ Cuidado com o `TavDex.sql` antigo ("versão 2", que está fora desta pasta): começa com `DROP DATABASE tavdex` e apaga a base de dados do site.
 3. Copiar `.env.example` para `.env` e preencher pelo menos `BD_PASSWORD` e `SEGREDO_SESSAO`.
@@ -142,7 +143,7 @@ antigo_php/          versão anterior em PHP (só como referência)
 1. **Sem conta:** página inicial → catálogo (filtrar por género, ordenar por nota) → abrir *Breaking Bad* (elenco, temporadas e episódios) → pesquisar "nolan".
 2. **Visitante:** carregar em "+ Seguir" num perfil ou em "Favorito" num filme → abre a janela "Inicia sessão para continuar" → entrar → volta à mesma página.
 3. **Registo:** criar conta (barra de força, Ver/Ocultar, erros todos juntos) → Definições: foto, cor, nome e pré-visualização ao vivo.
-   **Banner do perfil:** escolher um dos 4 cenários (Cidade à chuva, Pôr do sol retro, Beco néon, Montanhas ao anoitecer) e ver o TAVDEX mudar com a cor do avatar.
+   **Banner do perfil:** escolher um dos 4 cenários (Cinema de bairro, Noite de estreia, Cinema noir, Cartaz vintage) e ver o TAVDEX mudar com a cor do avatar.
    Mudar um campo e carregar num link do topo → aparece "Tens alterações por guardar".
 4. **Login falhado 5 vezes** com a mesma conta → aparece o bloqueio de 15 minutos.
 5. **Recuperar palavra-passe:** o link aparece na consola do servidor (ou no Gmail, se estiver configurado).
