@@ -33,9 +33,9 @@
 
   const botoes = d.meu
     ? '<a class="btn ghost sm" href="/definicoes.html">✎ Editar perfil</a>'
-    : `<div class="btns"><button class="btn ${d.sigo ? 'ghost' : 'primary'} sm" id="seguir" data-requer-login="seguir outras pessoas"
+    : `<button class="btn ${d.sigo ? 'ghost' : 'primary'} sm" id="seguir" data-requer-login="seguir outras pessoas"
           aria-pressed="${d.sigo}">${d.sigo ? 'A seguir ✓' : '+ Seguir'}</button>
-        <a class="btn ghost sm" href="/chat.html?com=${p.id}" data-requer-login="enviar mensagens">Mensagem</a></div>`;
+        <a class="btn ghost sm" href="/chat.html?com=${p.id}" data-requer-login="enviar mensagens">Mensagem</a>`;
 
   // Perfil acabado de criar: cartão de boas-vindas só para o dono
   const vazio = d.meu && !p.bio && !d.avaliacoes.length && !d.favoritos.length && !c.seguidores && !c.a_seguir;
@@ -46,25 +46,11 @@
         <a class="btn ghost sm" href="/comunidade.html">Ver a comunidade</a>
         <a class="btn ghost sm" href="/definicoes.html">Completar o perfil</a></div></div>`;
 
+  // Cabeçalho com o banner em pixel art (cenário e cor escolhidos pelo dono do perfil).
+  // cabecalhoPerfil() (main.js) valida a cor e o cenário e escapa todo o texto.
   mostrar(`<div class="content"><div class="left">
-    <div class="box pbn" style="--h:${Number(p.cor) || 0}">
-      ${avatar(p, 'l')}
-      <div class="pinfo">
-        <h2>${esc(nomeVisivel(p))} ${p.papel === 'admin' ? '<span class="badge" style="--c:330">Admin</span>' : ''}</h2>
-        <small class="hd">@${esc(p.nome)} · Membro desde ${dataCurta(p.criado_em).slice(3)}${p.localizacao ? ' · 📍 ' + esc(p.localizacao) : ''}</small>
-        ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ''}
-      </div>
-      ${botoes}
-    </div>
+    ${cabecalhoPerfil(p, { acoes: botoes, contagens: c })}
     ${boasVindas}
-
-    <div class="pstats">
-      <div class="box ps"><b id="n-seg">${c.seguidores}</b><span>Seguidores</span></div>
-      <div class="box ps"><b>${c.a_seguir}</b><span>A seguir</span></div>
-      <div class="box ps"><b>${c.avaliacoes}</b><span>Avaliações</span></div>
-      <div class="box ps"><b>${c.vistos}</b><span>Vistos</span></div>
-      <div class="box ps"><b>${c.projetos}</b><span>Projetos</span></div>
-    </div>
 
     <div class="dcols"><div>
       <div class="tabsbox">

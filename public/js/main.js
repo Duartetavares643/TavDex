@@ -144,6 +144,68 @@ function avatar(u, tamanho = 's') {
   return `<span class="av ${tamanho}" style="--h:${Number(u.cor) || 0}">${esc(letra)}</span>`;
 }
 
+// =====================================================================
+// CABEÇALHO DO PERFIL COM BANNER (perfil público e pré-visualização nas Definições)
+// O banner é desenhado pelo /js/banner-perfil.js (tem de estar carregado na página).
+// =====================================================================
+
+// Cenários do banner (os mesmos da coluna utilizadores.tema_banner)
+const TEMAS_BANNER = {
+  chuva: 'Cidade à chuva',
+  synthwave: 'Pôr do sol retro',
+  beco: 'Beco néon',
+  montanhas: 'Montanhas ao anoitecer',
+};
+
+// Valores que vêm da API, sempre validados antes de irem para o HTML
+function corValida(cor) {
+  const n = Math.round(Number(cor));
+  return Number.isFinite(n) && n >= 0 && n <= 359 ? n : 330;
+}
+function temaValido(tema) {
+  return Object.prototype.hasOwnProperty.call(TEMAS_BANNER, tema) ? tema : 'chuva';
+}
+
+// Avatar grande, nome, @nome, data, localização, biografia e números.
+//  p         = perfil (id, nome, nome_exibicao, papel, foto_versao, localizacao, bio, criado_em)
+//  acoes     = HTML dos botões (Editar perfil, ou Seguir / Mensagem)
+//  contagens = { seguidores, a_seguir, avaliacoes, vistos, projetos } (ou null para não mostrar)
+//  fotoUrl   = foto escolhida e ainda não guardada (pré-visualização nas Definições)
+function partesPerfil(p, { acoes = '', contagens = null, fotoUrl = null } = {}) {
+  const versao = Number(p.foto_versao) || 0;
+  const foto = fotoUrl || (versao > 0 ? `/api/utilizadores/${Number(p.id)}/foto?v=${versao}` : null);
+  const avatarHtml = foto
+    ? `<img class="phead__av" src="${esc(foto)}" alt="Foto de @${esc(p.nome)}">`
+    : `<div class="phead__av" aria-hidden="true">${esc((nomeVisivel(p) || '?').charAt(0).toUpperCase())}</div>`;
+  const desde = p.criado_em ? `<span>Membro desde ${dataCurta(p.criado_em).slice(3)}</span>` : '';
+  const local = p.localizacao ? `<span>📍 ${esc(p.localizacao)}</span>` : '';
+  const numeros = !contagens ? '' : `<ul class="pnums">
+      <li><b id="n-seg">${Number(contagens.seguidores) || 0}</b>Seguidores</li>
+      <li><b>${Number(contagens.a_seguir) || 0}</b>A seguir</li>
+      <li><b>${Number(contagens.avaliacoes) || 0}</b>Avaliações</li>
+      <li><b>${Number(contagens.vistos) || 0}</b>Vistos</li>
+      <li><b>${Number(contagens.projetos) || 0}</b>Projetos</li>
+    </ul>`;
+  return `<div class="phead">
+      ${avatarHtml}
+      <div class="phead__info">
+        <h1 class="phead__nome">${esc(nomeVisivel(p))}${p.papel === 'admin' ? '<span class="badge" style="--c:330">Admin</span>' : ''}</h1>
+        <p class="phead__meta"><span>@${esc(p.nome)}</span>${desde}${local}</p>
+      </div>
+      <div class="phead__acoes">${acoes}</div>
+    </div>
+    ${p.bio ? `<p class="pbio">${esc(p.bio)}</p>` : ''}
+    ${numeros}`;
+}
+
+// O cartão completo: banner (com o cenário e a cor do dono) + as partes de cima
+function cabecalhoPerfil(p, opcoes = {}) {
+  return `<section class="pperfil cartao-perfil" style="--h:${corValida(p.cor)}">
+    <div class="pbanner" data-tema="${temaValido(p.tema_banner)}" aria-hidden="true"></div>
+    ${partesPerfil(p, opcoes)}
+  </section>`;
+}
+
 // "G" colorido oficial do Google (as regras de marca da Google exigem o logótipo oficial)
 const LOGO_GOOGLE = `<svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
 
