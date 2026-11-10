@@ -50,6 +50,17 @@
             ${d.cores.includes(d.cor) ? '' : `<label><input type="radio" name="cor" value="${d.cor}" checked><i style="background:hsl(${d.cor} 75% 52%)"></i></label>`}
           </div>
 
+          <b id="rot-banner">Banner do perfil</b>
+          <!-- Cada opção mostra uma miniatura viva do cenário, na cor do avatar escolhida -->
+          <div class="temas-banner" role="radiogroup" aria-labelledby="rot-banner" style="--h:${corValida(d.cor)}">
+            ${Object.entries(TEMAS_BANNER).map(([tema, nome]) => `<label class="tema-op">
+                <input type="radio" name="tema_banner" value="${tema}" ${tema === temaValido(d.tema_banner) ? 'checked' : ''}>
+                <span class="tema-op__caixa">
+                  <div class="pbanner pbanner--mini" data-tema="${tema}" style="--h:${corValida(d.cor)}" aria-hidden="true"></div>
+                  <span class="tema-op__nome">${nome}</span>
+                </span></label>`).join('')}
+          </div>
+
           <label>Nome<input name="nome_exibicao" value="${esc(d.nome_exibicao || d.nome)}" required minlength="2" maxlength="50" autocomplete="name"></label>
           <label>@nome de utilizador<input name="nome" value="${esc(d.nome)}" required minlength="3" maxlength="30"
             pattern="[A-Za-z0-9_.]{3,30}" autocapitalize="off" spellcheck="false"></label>
@@ -57,14 +68,16 @@
           <label>Biografia <span class="cc" id="cc-bio"></span><textarea name="bio" id="bio" maxlength="160">${esc(d.bio)}</textarea></label>
           <label class="chk"><input type="checkbox" name="notif_email" ${d.notif_email ? 'checked' : ''}> Receber as notificações também por email</label>
           <p class="msg" role="alert"></p>
-          <button class="btn primary" type="submit">Guardar perfil</button>
+          <button class="btn primary" type="submit">Guardar alterações</button>
         </form>
 
-        <aside class="box pre-perfil" aria-live="polite">
+        <!-- Pré-visualização: a mesma estrutura do perfil público (.pperfil + .pbanner + .phead) -->
+        <aside class="pre-perfil">
           <small class="muted">Assim é que os outros veem o teu perfil</small>
-          <div class="pre-cab"><span id="pre-av"></span>
-            <div><b id="pre-nome"></b><small class="muted" id="pre-meta"></small></div></div>
-          <p id="pre-bio" class="bio"></p>
+          <section class="pperfil cartao-perfil" id="pre-perfil" style="--h:${corValida(d.cor)}">
+            <div class="pbanner" id="pre-banner" data-tema="${temaValido(d.tema_banner)}" aria-hidden="true"></div>
+            <div id="pre-partes"></div>
+          </section>
         </aside>
         </div>
       </div>
@@ -142,28 +155,43 @@
   const campoFoto = document.getElementById('foto');
   const removerFoto = document.getElementById('remover-foto');
   const bio = document.getElementById('bio');
+  const prePerfil = document.getElementById('pre-perfil');
+  const preBanner = document.getElementById('pre-banner');
+  const gradeTemas = fPerfil.querySelector('.temas-banner');
   let urlFotoNova = null;
+  let contagens = null;   // números do perfil público (pedidos à API logo a seguir)
+
+  const corEscolhida = () => corValida(fPerfil.querySelector('[name=cor]:checked')?.value);
+  const temaEscolhido = () => temaValido(fPerfil.querySelector('[name=tema_banner]:checked')?.value);
 
   function preVisualizar() {
     const f = fPerfil.elements;
-    const cor = Number(fPerfil.querySelector('[name=cor]:checked')?.value) || 0;
-    const nomeExibicao = f.nome_exibicao.value.trim() || f.nome.value;
-    const preAv = document.getElementById('pre-av');
-    if (urlFotoNova) {
-      preAv.innerHTML = `<span class="av l foto" style="--h:${cor}"><img src="${urlFotoNova}" alt=""></span>`;
-    } else {
-      const versao = removerFoto && removerFoto.checked ? 0 : d.foto_versao;
-      preAv.innerHTML = avatar({ id: d.id, nome: f.nome.value, nome_exibicao: nomeExibicao, cor, foto_versao: versao }, 'l');
-    }
-    // textContent: o que se escreve nunca é interpretado como HTML
-    document.getElementById('pre-nome').textContent = nomeExibicao;
-    document.getElementById('pre-meta').textContent =
-      `@${f.nome.value.replace(/^@/, '')}${f.localizacao.value.trim() ? ' · 📍 ' + f.localizacao.value.trim() : ''}`;
-    document.getElementById('pre-bio').textContent = bio.value;
+    const cor = corEscolhida();
+    // Cenário e cor: o banner-perfil.js redesenha sozinho quando data-tema ou --h mudam.
+    // A cor vai também para cada miniatura, para mudar logo (mesmo com "reduzir movimento").
+    prePerfil.style.setProperty('--h', cor);
+    preBanner.dataset.tema = temaEscolhido();
+    gradeTemas.style.setProperty('--h', cor);
+    gradeTemas.querySelectorAll('.pbanner').forEach(b => b.style.setProperty('--h', cor));
+
+    // Avatar, nome, @nome, localização e biografia (partesPerfil escapa todo o texto)
+    document.getElementById('pre-partes').innerHTML = partesPerfil({
+      id: d.id, nome: f.nome.value.trim().replace(/^@/, ''), nome_exibicao: f.nome_exibicao.value.trim(),
+      papel: d.papel, criado_em: d.criado_em, localizacao: f.localizacao.value.trim(), bio: bio.value.trim(),
+      foto_versao: removerFoto && removerFoto.checked ? 0 : d.foto_versao,
+    }, {
+      fotoUrl: urlFotoNova,
+      contagens,
+      acoes: '<span class="btn ghost sm" aria-hidden="true">✎ Editar perfil</span>',
+    });
     document.getElementById('cc-bio').textContent = `${bio.value.length}/160`;
   }
   fPerfil.addEventListener('input', preVisualizar);
   fPerfil.addEventListener('change', preVisualizar);
+  // Os números (seguidores, avaliações, ...) vêm do perfil público
+  api('/api/utilizadores/' + encodeURIComponent(d.nome))
+    .then(r => { contagens = r.contagens; preVisualizar(); })
+    .catch(() => {});
 
   campoFoto.addEventListener('change', () => {
     if (urlFotoNova) URL.revokeObjectURL(urlFotoNova);
@@ -184,6 +212,96 @@
   });
   preVisualizar();
 
+  // -------------------------------------------------------------------
+  // Aviso "Tens alterações por guardar"
+  // Ao abrir a página tira-se uma "fotografia" dos valores do separador Perfil.
+  // Se o formulário estiver diferente dela e a pessoa tentar sair, aparece o aviso.
+  // Se as alterações forem desfeitas à mão, volta a ficar igual e o aviso não aparece.
+  // -------------------------------------------------------------------
+  function valoresPerfil() {
+    const f = fPerfil.elements;
+    const ficheiro = campoFoto.files[0];
+    return JSON.stringify({
+      nome_exibicao: f.nome_exibicao.value, nome: f.nome.value, localizacao: f.localizacao.value, bio: bio.value,
+      notif_email: f.notif_email.checked, cor: corEscolhida(), tema: temaEscolhido(),
+      foto: ficheiro ? `${ficheiro.name}|${ficheiro.size}|${ficheiro.lastModified}` : '',
+      remover_foto: !!(removerFoto && removerFoto.checked),
+    });
+  }
+  const fotografia = valoresPerfil();
+  let podeSair = false;   // passa a true depois de guardar (ou de escolher "Sair sem guardar")
+  const temAlteracoes = () => !podeSair && valoresPerfil() !== fotografia;
+
+  // Janela própria, no estilo da "Inicia sessão para continuar"
+  function avisarAlteracoes(sairSemGuardar) {
+    let janela = document.getElementById('janela-alteracoes');
+    if (!janela) {
+      janela = document.createElement('dialog');
+      janela.id = 'janela-alteracoes';
+      janela.className = 'modal modal-aviso';
+      janela.setAttribute('role', 'dialog');
+      janela.setAttribute('aria-modal', 'true');
+      janela.setAttribute('aria-labelledby', 'alteracoes-titulo');
+      janela.innerHTML = `<div class="modal-in">
+          <h2 id="alteracoes-titulo">Tens alterações por guardar</h2>
+          <p class="modal-txt">Queres sair sem guardar?</p>
+          <div class="modal-btns">
+            <button type="button" class="btn primary" data-continuar>Continuar a editar</button>
+            <button type="button" class="btn ghost" data-sair>Sair sem guardar</button>
+          </div>
+        </div>`;
+      document.body.append(janela);
+      // Foco preso dentro da janela: o Tab anda só entre os dois botões
+      janela.addEventListener('keydown', e => {
+        if (e.key !== 'Tab') return;
+        const botoes = [...janela.querySelectorAll('button')];
+        const i = botoes.indexOf(document.activeElement);
+        e.preventDefault();
+        botoes[(i + (e.shiftKey ? botoes.length - 1 : 1)) % botoes.length].focus();
+      });
+      // Esc (evento "cancel" do dialog) = "Continuar a editar": só fecha, não perde nada
+      janela.querySelector('[data-continuar]').addEventListener('click', () => janela.close());
+      // Clicar fora da caixa também fecha (como "Continuar a editar")
+      janela.addEventListener('click', e => { if (e.target === janela) janela.close(); });
+    }
+    janela.querySelector('[data-sair]').onclick = () => {
+      podeSair = true;
+      janela.close();
+      sairSemGuardar();
+    };
+    if (typeof janela.showModal === 'function') janela.showModal(); else janela.setAttribute('open', '');
+    janela.querySelector('[data-continuar]').focus();
+  }
+
+  // 1) Links internos do site (topo, rodapé, página). Corre na fase de captura,
+  //    antes de o browser seguir o link.
+  document.addEventListener('click', e => {
+    const link = e.target.closest('a[href]');
+    if (!link || !temAlteracoes()) return;
+    if (link.target === '_blank' || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    const destino = new URL(link.href, location.href);
+    if (destino.origin !== location.origin) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    avisarAlteracoes(() => { location.href = destino.href; });
+  }, true);
+
+  // 2) Trocar para o separador "Conta e segurança". "Sair sem guardar" recarrega a
+  //    página já nesse separador, para as alterações desaparecerem mesmo.
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.tabs [data-tab="seguranca"]') || !temAlteracoes()) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    avisarAlteracoes(() => { location.href = '/definicoes.html?tab=seguranca'; });
+  }, true);
+
+  // 3) Fechar ou recarregar o separador do browser: aqui só dá para usar o aviso do próprio browser
+  window.addEventListener('beforeunload', e => {
+    if (!temAlteracoes()) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+
   // Guardar o perfil: primeiro a foto (se mudou), depois os outros campos
   ligarForm(fPerfil, async dados => {
     const erros = {};
@@ -203,10 +321,19 @@
     } else if (removerFoto && removerFoto.checked) {
       await api('/api/utilizadores/eu/foto', 'DELETE');
     }
-    const r = await api('/api/utilizadores/eu/perfil', 'PUT', {
-      nome_exibicao: dados.nome_exibicao, nome: dados.nome, cor: dados.cor,
-      localizacao: dados.localizacao, bio: dados.bio, notif_email: dados.notif_email,
-    });
+    let r;
+    try {
+      r = await api('/api/utilizadores/eu/perfil', 'PUT', {
+        nome_exibicao: dados.nome_exibicao, nome: dados.nome, cor: dados.cor, tema_banner: dados.tema_banner,
+        localizacao: dados.localizacao, bio: dados.bio, notif_email: dados.notif_email,
+      });
+    } catch (erro) {
+      // O cenário são vários radios: a mensagem aparece em cima do botão
+      if (erro.erros && erro.erros.tema_banner) erro.message = erro.erros.tema_banner;
+      throw erro;
+    }
+    // Guardado: já pode sair sem aviso
+    podeSair = true;
     location.href = comAviso('/perfil.html?u=' + encodeURIComponent(r.nome), r.mensagem);
   });
 
