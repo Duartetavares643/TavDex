@@ -151,10 +151,10 @@ function avatar(u, tamanho = 's') {
 
 // Cenários do banner (os mesmos da coluna utilizadores.tema_banner)
 const TEMAS_BANNER = {
-  chuva: 'Cidade à chuva',
-  synthwave: 'Pôr do sol retro',
-  beco: 'Beco néon',
-  montanhas: 'Montanhas ao anoitecer',
+  fachada: 'Cinema de bairro',
+  estreia: 'Noite de estreia',
+  noir: 'Cinema noir',
+  cartaz: 'Cartaz vintage',
 };
 
 // Valores que vêm da API, sempre validados antes de irem para o HTML
@@ -163,7 +163,7 @@ function corValida(cor) {
   return Number.isFinite(n) && n >= 0 && n <= 359 ? n : 330;
 }
 function temaValido(tema) {
-  return Object.prototype.hasOwnProperty.call(TEMAS_BANNER, tema) ? tema : 'chuva';
+  return Object.prototype.hasOwnProperty.call(TEMAS_BANNER, tema) ? tema : 'fachada';
 }
 
 // Avatar grande, nome, @nome, data, localização, biografia e números.

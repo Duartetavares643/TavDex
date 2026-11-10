@@ -913,8 +913,8 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
    • O desenho é feito por js/banner-perfil.js num <canvas> pequeno
      (1 "pixel" do desenho = 3 px do ecrã, ou 2 px no telemóvel),
      ampliado sem suavizar (image-rendering: pixelated).
-   • Há 4 cenários, escolhidos com data-tema no banner:
-       chuva | synthwave | beco | montanhas
+   • Há 4 cenários de cinema, escolhidos com data-tema no banner:
+       fachada | estreia | noir | cartaz
    • A cor do letreiro TAVDEX segue a cor do avatar: style="--h: <cor_avatar>".
    • "Container queries": o perfil adapta-se à largura da caixa onde
      está, por isso fica bem no telemóvel e em colunas estreitas.
