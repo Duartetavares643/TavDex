@@ -253,10 +253,18 @@ function corAleatoria() {
   return CORES_AVATAR[Math.floor(Math.random() * CORES_AVATAR.length)];
 }
 
+// Cenários do banner do perfil (coluna utilizadores.tema_banner).
+// O primeiro é o cenário por omissão.
+const TEMAS_BANNER = ['chuva', 'synthwave', 'beco', 'montanhas'];
+// Devolve sempre um cenário válido (se o valor for estranho, usa o primeiro)
+function temaBanner(valor) {
+  return TEMAS_BANNER.includes(valor) ? valor : TEMAS_BANNER[0];
+}
+
 module.exports = {
   falha, Validacao, texto, inteiro, inteiroOuNulo, escolha, booleano, email, urlImagem,
   sha256, tokenAleatorio, ipDe, nomeDispositivo, dispositivoDe, registarAtividade, voltarSeguro,
-  colunasPublicas, CORES_AVATAR, corAleatoria,
+  colunasPublicas, CORES_AVATAR, corAleatoria, TEMAS_BANNER, temaBanner,
   demasiado, nLinks, verificarSpam, notificar, paginacao, marcadores, publico,
   linhas, linha, executar,
 };

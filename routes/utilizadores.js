@@ -55,7 +55,7 @@ router.get('/eu/definicoes', exigirLogin, async (req, res) => {
   const silenciadas = (await linhas('SELECT tipo FROM notif_silenciadas WHERE utilizador_id = ?', [u.id])).map(r => r.tipo);
   res.json({
     id: u.id, nome: u.nome, nome_exibicao: u.nome_exibicao || '', email: u.email, bio: u.bio, localizacao: u.localizacao,
-    cor: u.cor, foto_versao: Number(u.foto_versao) || 0, papel: u.papel, criado_em: u.criado_em,
+    cor: u.cor, tema_banner: a.temaBanner(u.tema_banner), foto_versao: Number(u.foto_versao) || 0, papel: u.papel, criado_em: u.criado_em,
     notif_email: !!u.notif_email, tem_password: !!u.password_hash, google_email: u.google_id ? u.google_email : null,
     // Resumo "Proteção da conta"
     protecao: {
@@ -66,6 +66,7 @@ router.get('/eu/definicoes', exigirLogin, async (req, res) => {
     },
     sessoes, atividade, silenciadas,
     cores: a.CORES_AVATAR,
+    temas_banner: a.TEMAS_BANNER,
   });
 });
 
@@ -74,6 +75,9 @@ router.put('/eu/perfil', exigirLogin, async (req, res) => {
   const nomeExibicao = v.campo('nome_exibicao', () => a.texto(req.body.nome_exibicao, 'Nome', 2, 50));
   const nome = v.campo('nome', () => validarNome(req.body.nome));
   const cor = v.campo('cor', () => a.inteiro(req.body.cor, 'Cor', 0, 359));
+  // Cenário do banner: só um dos 4 valores (se não vier, mantém o atual)
+  const temaBanner = req.body.tema_banner === undefined ? a.temaBanner(req.u.tema_banner) : req.body.tema_banner;
+  if (!a.TEMAS_BANNER.includes(temaBanner)) v.erro('tema_banner', 'Escolhe um dos cenários.');
   const localizacao = v.campo('localizacao', () => a.texto(req.body.localizacao, 'Localização', 0, 40));
   const bio = v.campo('bio', () => a.texto(req.body.bio, 'Biografia', 0, 160));
   const notifEmail = a.booleano(req.body.notif_email) ? 1 : 0;
@@ -83,8 +87,8 @@ router.put('/eu/perfil', exigirLogin, async (req, res) => {
   }
   v.verificar();
 
-  await executar('UPDATE utilizadores SET nome = ?, nome_exibicao = ?, cor = ?, localizacao = ?, bio = ?, notif_email = ? WHERE id = ?',
-    [nome, nomeExibicao, cor, localizacao, bio, notifEmail, req.u.id]);
+  await executar('UPDATE utilizadores SET nome = ?, nome_exibicao = ?, cor = ?, tema_banner = ?, localizacao = ?, bio = ?, notif_email = ? WHERE id = ?',
+    [nome, nomeExibicao, cor, temaBanner, localizacao, bio, notifEmail, req.u.id]);
   if (nome !== req.u.nome) await a.registarAtividade(req, req.u.id, 'nome_alterado', `@nome alterado (de @${req.u.nome} para @${nome})`);
   res.json({ ok: true, nome, mensagem: 'Perfil atualizado.' });
 });
@@ -212,9 +216,10 @@ router.get('/:id/foto', async (req, res) => {
 // Perfil público (qualquer visitante pode ver)
 // ---------------------------------------------------------------------
 router.get('/:nome', async (req, res) => {
-  const p = await linha(`SELECT id, nome, nome_exibicao, cor, foto_versao, papel, bio, localizacao, criado_em
+  const p = await linha(`SELECT id, nome, nome_exibicao, cor, tema_banner, foto_versao, papel, bio, localizacao, criado_em
     FROM utilizadores WHERE nome = ?`, [String(req.params.nome).replace(/^@/, '')]);
   if (!p) a.falha(404, 'Este perfil não existe.');
+  p.tema_banner = a.temaBanner(p.tema_banner);
   const id = p.id;
   const meu = !!req.u && req.u.id === id;
 

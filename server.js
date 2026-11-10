@@ -227,6 +227,11 @@ app.listen(PORTA, async () => {
   try {
     await pool.query('SELECT 1 FROM vw_titulos_avaliacao LIMIT 1');
     await pool.query('SELECT foto_versao FROM utilizadores LIMIT 1');
+    // Coluna do banner do perfil (database/04_banner_perfil.sql)
+    await pool.query('SELECT tema_banner FROM utilizadores LIMIT 1').catch(erro => {
+      if (erro.code === 'ER_BAD_FIELD_ERROR') erro.migracao = '04_banner_perfil.sql';
+      throw erro;
+    });
     console.log('Ligação à base de dados: OK');
     limpar();
   } catch (erro) {
@@ -234,7 +239,7 @@ app.listen(PORTA, async () => {
     if (erro.code === 'ER_ACCESS_DENIED_ERROR') console.error('    -> Confirma BD_UTILIZADOR e BD_PASSWORD no ficheiro .env');
     else if (erro.code === 'ER_BAD_DB_ERROR') console.error('    -> Executa database/01_criar_bd.sql, 02_inserir_dados.sql e extras.sql');
     else if (erro.code === 'ER_NO_SUCH_TABLE') console.error('    -> Executa database/extras.sql e database/03_contas.sql');
-    else if (erro.code === 'ER_BAD_FIELD_ERROR') console.error('    -> Executa database/03_contas.sql');
+    else if (erro.code === 'ER_BAD_FIELD_ERROR') console.error(`    -> Executa database/${erro.migracao || '03_contas.sql'}`);
     else if (erro.code === 'ECONNREFUSED') console.error('    -> O MySQL está desligado. Liga-o e reinicia o servidor.');
     console.error('');
   }
