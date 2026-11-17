@@ -916,17 +916,15 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
 
 /* =====================================================================
    BANNER DO PERFIL
-   Bloco copiado do banner_perfil.html (css-banner), tal como está.
-   Só mudaram os nomes das variáveis de cor, para as do site:
-   --fundo-cartao → --surface, --texto → --text, --texto-2 → --text-2, --linha → --line
+   Começou como o bloco css-banner do banner_perfil.html (com as variáveis de cor
+   do site: --surface, --text, --text-2, --line); o desenho passou depois a SVG.
    ===================================================================== */
 
 /* =====================================================================
-   TavDex — Banner pixel art e cabeçalho do perfil (Passo 9)
+   TavDex — Banner e cabeçalho do perfil (Passo 9)
 
-   • O desenho é feito por js/banner-perfil.js num <canvas> pequeno
-     (1 "pixel" do desenho = 3 px do ecrã, ou 2 px no telemóvel),
-     ampliado sem suavizar (image-rendering: pixelated).
+   • O desenho é uma ilustração em SVG (vetorial, nítida em qualquer ecrã),
+     feita por js/banner-perfil.js com o tamanho da caixa e animada com CSS.
    • Há 5 cenários de cinema, escolhidos com data-tema no banner:
        colina | pipocas | claquete | pelicula | marquise
    • A cor do letreiro TAVDEX segue a cor do avatar: style="--h: <cor_avatar>".
@@ -950,11 +948,12 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
     border-radius: 16px 16px 0 0;
     background: #0b0618;                 /* cor enquanto o JavaScript não desenha */
 }
-.pbanner__pixel {
+.pbanner__arte {
     position: absolute;
-    top: 0;
-    left: 0;
-    image-rendering: pixelated;          /* pixels nítidos, sem desfocar */
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 /* Miniatura (escolha do cenário nas Definições) */
 .pbanner--mini {
@@ -963,7 +962,7 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
     max-height: none;
     border-radius: 10px;
 }
-/* Linhas de ecrã CRT + vinheta por cima do desenho */
+/* Vinheta suave por cima do desenho (escurece um pouco as bordas) */
 .pbanner::after {
     content: "";
     position: absolute;
@@ -971,8 +970,7 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
     z-index: 1;
     pointer-events: none;
     background:
-        repeating-linear-gradient(180deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px),
-        radial-gradient(ellipse at 50% 40%, transparent 55%, rgba(0,0,0,.5));
+        radial-gradient(ellipse at 50% 40%, transparent 62%, rgba(0,0,0,.32));
 }
 
 /* ---------- Cabeçalho: avatar sobreposto ao banner ---------- */

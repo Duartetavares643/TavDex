@@ -1,747 +1,529 @@
 /* =====================================================================
-   TavDex — Banner pixel art do perfil (5 cenários de cinema)
+   TavDex — Banner do perfil (5 cenários de cinema em SVG)
      colina    → "Colina das estrelas": pôr do sol, focos de luz a varrer o céu,
-                 o TAVDEX em letras gigantes na colina, palmeiras e uma câmara
-     pipocas   → "Sessão de pipocas": cortinas de veludo, o TAVDEX dentro dos
-                 fotogramas de uma película, balde de pipocas e confetes a cair
+                 o TAVDEX em letras gigantes na colina, palmeiras e película
+     pipocas   → "Sessão de pipocas": cortinas de veludo, o TAVDEX nos fotogramas
+                 de uma película, balde de pipocas e confetes dourados a cair
      claquete  → "Claquete antiga": papel envelhecido, claquete que abre e fecha,
                  bobines, máquina fotográfica e uma borboleta a voar
-     pelicula  → "Rolo de película": duas películas a correr e um projetor com
-                 o feixe de luz por cima do TAVDEX
-     marquise  → "Cinema à noite": fachada art déco, placa vertical "CINEMA" em
-                 néon e marquise iluminada com lâmpadas a correr
-   Desenhos originais (inspirados em cartazes de cinema), feitos píxel a píxel.
-   O TAVDEX aparece sempre na cor do avatar (style="--h: <cor>").
+     pelicula  → "Rolo de película": películas a correr e um projetor (com as
+                 bobines a rodar) a lançar o feixe de luz sobre o TAVDEX
+     marquise  → "Cinema à noite": fachada art déco, placa "CINEMA" em néon e
+                 marquise iluminada com lâmpadas a correr
+   Ilustrações originais, desenhadas em SVG (vetorial: ficam nítidas em qualquer
+   tamanho) e animadas com CSS. O TAVDEX aparece sempre na cor do avatar:
+   as cores usam var(--h), por isso mudam logo que o --h muda, sem redesenhar.
    Uso: <div class="pbanner" data-tema="colina" aria-hidden="true"></div>
    ===================================================================== */
 (function () {
     'use strict';
 
-    // ---------- Letras ----------
-    // Grandes (5×7), para o TAVDEX
-    var LETRAS = {
-        T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
-        A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'],
-        V: ['10001', '10001', '10001', '10001', '10001', '01010', '00100'],
-        D: ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
-        E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
-        X: ['10001', '10001', '01010', '00100', '01010', '10001', '10001']
-    };
-    // Pequenas (3×5), para os outros textos
-    var MINI = {
-        A: ['010', '101', '111', '101', '101'], B: ['110', '101', '110', '101', '110'],
-        C: ['011', '100', '100', '100', '011'], D: ['110', '101', '101', '101', '110'],
-        E: ['111', '100', '110', '100', '111'], 'É': ['111', '100', '110', '100', '111'],
-        F: ['111', '100', '110', '100', '100'], H: ['101', '101', '111', '101', '101'],
-        I: ['111', '010', '010', '010', '111'], K: ['101', '101', '110', '101', '101'],
-        L: ['100', '100', '100', '100', '111'], M: ['101', '111', '111', '101', '101'],
-        N: ['110', '101', '101', '101', '101'], O: ['111', '101', '101', '101', '111'],
-        P: ['110', '101', '110', '100', '100'], R: ['110', '101', '110', '101', '101'],
-        S: ['011', '100', '010', '001', '110'], T: ['111', '010', '010', '010', '010'],
-        V: ['101', '101', '101', '101', '010'], X: ['101', '101', '010', '101', '101'],
-        Z: ['111', '001', '010', '100', '111']
-    };
-
-    // Matriz de Bayer: mistura duas cores aos pontinhos (degradê "à antiga")
-    var BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    var FONTE_TITULO = "'Bebas Neue', Impact, 'Arial Narrow', sans-serif";
+    var FONTE_TEXTO = "Inter, 'Segoe UI', Arial, sans-serif";
+    var TEMA_POR_OMISSAO = 'colina';
+    var contador = 0;
 
     // ---------- Ajudantes ----------
-    // Número "aleatório" mas sempre igual para o mesmo (x, y)
-    function aleat(x, y) {
-        var n = (x * 374761393 + y * 668265263) | 0;
-        n = Math.imul(n ^ (n >>> 13), 1274126177);
-        n ^= n >>> 16;
-        return (n >>> 0) / 4294967296;
+    // Arredonda a 1 casa decimal (o SVG fica mais pequeno)
+    function n(v) { return Math.round(v * 10) / 10; }
+    // Número "aleatório" mas sempre igual para os mesmos (a, b): o desenho não muda ao redesenhar
+    function aleat(a, b) {
+        var x = (a * 374761393 + b * 668265263) | 0;
+        x = Math.imul(x ^ (x >>> 13), 1274126177);
+        x ^= x >>> 16;
+        return (x >>> 0) / 4294967296;
     }
-    function ret(c, x, y, w, h, cor) { c.fillStyle = cor; c.fillRect(x, y, w, h); }
-    function moldura(c, x, y, w, h, cor) {
-        ret(c, x, y, w, 1, cor); ret(c, x, y + h - 1, w, 1, cor);
-        ret(c, x, y, 1, h, cor); ret(c, x + w - 1, y, 1, h, cor);
+    // Cor na cor do avatar (o --h vem do CSS do perfil)
+    function av(s, l, a) {
+        return a === undefined ? 'hsl(var(--h), ' + s + '%, ' + l + '%)' : 'hsla(var(--h), ' + s + '%, ' + l + '%, ' + a + ')';
     }
-    function hsl(h, s, l, a) { return 'hsla(' + h + ',' + s + '%,' + l + '%,' + (a === undefined ? 1 : a) + ')'; }
-
-    // Cor de um degradê com pontinhos (f vai de 0 a 1)
-    function corD(cores, f, x, y) {
-        if (cores.length === 1) return cores[0];
-        f = Math.max(0, Math.min(1, f)) * (cores.length - 1);
-        var i = Math.min(cores.length - 2, Math.floor(f));
-        return (f - i) > (BAYER[y & 3][x & 3] + 0.5) / 16 ? cores[i + 1] : cores[i];
+    // Texto grande (Bebas Neue) com uma largura exata, para o desenho não depender da letra carregada
+    function titulo(x, y, fs, larg, conteudo, estilo, extra) {
+        return '<text x="' + n(x) + '" y="' + n(y) + '" font-family="' + FONTE_TITULO + '" font-size="' + n(fs) +
+            '" textLength="' + n(larg) + '" lengthAdjust="spacingAndGlyphs" text-anchor="middle" style="' + estilo + '"' +
+            (extra || '') + '>' + conteudo + '</text>';
     }
-    // Uma linha horizontal de degradê (x1 exclusivo)
-    function linhaD(c, x0, x1, y, cores, f) {
-        var ini = x0, cor = null;
-        for (var x = x0; x < x1; x++) {
-            var k = corD(cores, f, x, y);
-            if (k !== cor) { if (cor) ret(c, ini, y, x - ini, 1, cor); cor = k; ini = x; }
-        }
-        if (cor) ret(c, ini, y, x1 - ini, 1, cor);
+    // Texto pequeno (Inter), com espaço entre as letras
+    function legenda(x, y, fs, conteudo, cor, extra) {
+        return '<text x="' + n(x) + '" y="' + n(y) + '" font-family="' + FONTE_TEXTO + '" font-size="' + n(fs) +
+            '" font-weight="700" letter-spacing="' + n(fs * 0.22) + '" text-anchor="middle" fill="' + cor + '"' + (extra || '') + '>' + conteudo + '</text>';
     }
-    // Retângulo com degradê vertical
-    function degrade(c, x0, y0, x1, y1, cores) {
-        for (var y = y0; y < y1; y++) linhaD(c, x0, x1, y, cores, (y - y0) / Math.max(1, y1 - y0 - 1));
-    }
-    // Círculo cheio (só as linhas acima de yMax)
-    function disco(c, cx, cy, r, cor, yMax) {
-        for (var dy = -r; dy <= r; dy++) {
-            var y = cy + dy;
-            if (y >= yMax) continue;
-            var dx = Math.floor(Math.sqrt(r * r - dy * dy));
-            ret(c, cx - dx, y, 2 * dx + 1, 1, cor);
-        }
-    }
-
-    // Texto → lista de "blocos" (pixels) a desenhar
-    function texto(t, fonte, k, esp) {
-        var lista = [], cx = 0, alt = 0;
-        for (var i = 0; i < t.length; i++) {
-            var ch = t[i];
-            if (ch === ' ') { cx += 2 * k + esp; continue; }
-            var g = fonte[ch];
-            if (!g) continue;
-            alt = Math.max(alt, g.length * k);
-            for (var r = 0; r < g.length; r++) for (var c = 0; c < g[r].length; c++) {
-                if (g[r][c] === '1') lista.push({ x: cx + c * k, y: r * k, s: k, i: i });
-            }
-            if (ch === 'É') lista.push({ x: cx + 2 * k, y: -2 * k, s: k, i: i });   // acento
-            cx += g[0].length * k + esp;
-        }
-        lista.largura = cx - esp;
-        lista.altura = alt;
-        return lista;
-    }
-    // Texto na vertical (letras umas por baixo das outras)
-    function textoV(t, fonte, k, esp) {
-        var lista = [], cy = 0;
-        for (var i = 0; i < t.length; i++) {
-            var g = fonte[t[i]];
-            if (!g) continue;
-            for (var r = 0; r < g.length; r++) for (var c = 0; c < g[r].length; c++) {
-                if (g[r][c] === '1') lista.push({ x: c * k, y: cy + r * k, s: k, i: i });
-            }
-            cy += g.length * k + esp;
-        }
-        lista.largura = 3 * k;
-        lista.altura = cy - esp;
-        return lista;
-    }
-    function mover(lista, dx, dy) { lista.forEach(function (b) { b.x += dx; b.y += dy; }); return lista; }
-    function pintar(c, blocos, cor) { blocos.forEach(function (b) { ret(c, b.x, b.y, b.s, b.s, cor); }); }
-
-    // Letras com sombra e "brilho" em cima (topo mais claro, base mais escura).
-    //  dx = função que dá o deslocamento extra de cada letra (para as separar em fotogramas)
-    function letreiro(c, blocos, sombra, cores, y0, alt, dx) {
-        dx = dx || function () { return 0; };
-        if (sombra) blocos.forEach(function (b) { ret(c, b.x + dx(b.i) + 1, b.y + 1, b.s, b.s, sombra); });
-        blocos.forEach(function (b) {
-            for (var r = 0; r < b.s; r++) {
-                var f = (b.y + r - y0) / alt;
-                ret(c, b.x + dx(b.i), b.y + r, b.s, 1, f < 0.3 ? cores[0] : f < 0.7 ? cores[1] : cores[2]);
-            }
-        });
-    }
-
-    // Bobine de filme: aro, 5 furos e o centro
-    function bobine(c, cx, cy, r, aro, fundo, yMax) {
-        yMax = yMax || 9999;
-        disco(c, cx, cy, r, aro, yMax);
-        disco(c, cx, cy, r - 1, fundo, yMax);
-        var rf = Math.max(1, Math.round(r / 4));
+    // Bobine de filme: disco, 5 furos e o centro
+    function bobine(cx, cy, r, aro, furo, classe) {
+        var s = '<g' + (classe ? ' class="' + classe + '" style="transform-origin:' + n(cx) + 'px ' + n(cy) + 'px"' : '') + '>' +
+            '<circle cx="' + n(cx) + '" cy="' + n(cy) + '" r="' + n(r) + '" fill="' + aro + '"/>';
         for (var i = 0; i < 5; i++) {
             var a = -Math.PI / 2 + i * 2 * Math.PI / 5;
-            disco(c, Math.round(cx + Math.cos(a) * r * 0.55), Math.round(cy + Math.sin(a) * r * 0.55), rf, aro, yMax);
+            s += '<circle cx="' + n(cx + Math.cos(a) * r * 0.55) + '" cy="' + n(cy + Math.sin(a) * r * 0.55) + '" r="' + n(r * 0.24) + '" fill="' + furo + '"/>';
         }
-        if (cy < yMax) ret(c, cx, cy, 1, 1, aro);
+        return s + '<circle cx="' + n(cx) + '" cy="' + n(cy) + '" r="' + n(r * 0.13) + '" fill="' + furo + '"/></g>';
     }
-
-    // Palmeira (silhueta): tronco curvo e folhas a cair
-    function palmeira(c, x, yb, alt, cor) {
-        var topo = { x: x, y: yb - alt };
-        for (var i = 0; i < alt; i++) {
-            var px = x + Math.round(Math.sin(i / alt * 1.3) * 3);
-            ret(c, px, yb - i, 2, 1, cor);
-            topo = { x: px, y: yb - i };
-        }
-        [[-1, -0.35], [-1, 0.1], [-0.6, -0.8], [0.6, -0.8], [1, 0.1], [1, -0.35], [0, -1]].forEach(function (d) {
-            var comp = 9 + Math.round(aleat(x, d[0] * 10 + d[1] * 7) * 4);
-            for (var j = 0; j < comp; j++) {
-                ret(c, Math.round(topo.x + 1 + d[0] * j), Math.round(topo.y + d[1] * j + j * j * 0.07), 1, 1, cor);
-                if (j > 2 && j < comp - 2) ret(c, Math.round(topo.x + 1 + d[0] * j), Math.round(topo.y + d[1] * j + j * j * 0.07) + 1, 1, 1, cor);
-            }
+    // Palmeira (silhueta): tronco curvo e folhas
+    function palmeira(x, base, alt, cor) {
+        var tx = x + alt * 0.07, ty = base - alt;
+        var s = '<path d="M' + n(x) + ',' + n(base) + ' Q' + n(x + alt * 0.14) + ',' + n(base - alt * 0.5) + ' ' + n(tx) + ',' + n(ty) +
+            '" stroke="' + cor + '" stroke-width="' + n(alt * 0.05) + '" fill="none" stroke-linecap="round"/>';
+        [[-0.44, 0.22], [-0.38, 0.03], [-0.2, -0.14], [0.2, -0.14], [0.38, 0.03], [0.44, 0.22], [0.02, -0.2]].forEach(function (d) {
+            var ex = tx + d[0] * alt, ey = ty + d[1] * alt, mx = tx + d[0] * alt * 0.5, my = ty + d[1] * alt * 0.5 - alt * 0.12;
+            s += '<path d="M' + n(tx) + ',' + n(ty) + ' Q' + n(mx) + ',' + n(my) + ' ' + n(ex) + ',' + n(ey) +
+                ' Q' + n(mx) + ',' + n(my + alt * 0.08) + ' ' + n(tx) + ',' + n(ty) + 'Z" fill="' + cor + '"/>';
         });
+        return s + '<circle cx="' + n(tx) + '" cy="' + n(ty + alt * 0.03) + '" r="' + n(alt * 0.035) + '" fill="' + cor + '"/>';
     }
-
-    // Faixa de película (horizontal) com perfurações e fotogramas.
-    //  off = deslocamento (para a animação); cores = cor de alguns fotogramas
-    function pelicula(c, W, y, alt, off, fundoFita, furo, fotograma, cores) {
-        ret(c, 0, y, W, alt, fundoFita);
-        var furoA = Math.max(1, Math.floor(alt / 6));
-        for (var x = -off; x < W; x += 6) {
-            ret(c, x + 2, y + 1, 3, furoA, furo);
-            ret(c, x + 2, y + alt - 1 - furoA, 3, furoA, furo);
-        }
-        var ini = y + furoA + 2, h = alt - 2 * furoA - 4;
-        if (h < 2) return;
-        for (var k = 0, fx = -off; fx < W; fx += 24, k++) {
-            ret(c, fx + 1, ini, 21, h, fotograma);
-            var cor = cores[((k % cores.length) + cores.length) % cores.length];
-            if (cor) ret(c, fx + 3, ini + 1, 9, h - 2, cor);
-        }
+    // Brilho (néon, luzes): desfoca uma cópia e põe o original por cima
+    function filtroBrilho(id, forca) {
+        return '<filter id="' + id + '" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="' + n(forca) +
+            '" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
     }
 
     // =====================================================================
     //  OS 5 CENÁRIOS
-    //  preparar → calcula posições | fundo → parte fixa (desenhada 1 vez)
-    //  frame → o que se mexe (10 vezes por segundo) | frente → fixo, por cima do que se mexe
+    //  Cada um recebe E = { W, H, id, estreito } e devolve { defs, corpo, css }.
+    //  estreito = telemóvel ou miniatura (o avatar fica ao centro, em baixo);
+    //  no computador o avatar fica em baixo à esquerda.
+    //  No CSS, "#ID" é o id deste banner (o mesmo cenário pode estar várias vezes na página).
     // =====================================================================
     var TEMAS = {};
 
-    // ---------- 1) Colina das estrelas (pôr do sol) ----------
-    TEMAS.colina = {
-        preparar: function (E) {
-            var W = E.W, H = E.H;
-            E.ly = Math.max(5, Math.round(H * 0.2));
-            E.lx = Math.round((W - E.lw) / 2);
-            E.base = E.ly + 23;                 // linha onde as letras "assentam" na colina
-            E.sy = E.base + 6; E.sx = Math.round((W - E.sw) / 2);
-            E.focos = [0.12, 0.34, 0.66, 0.88].map(function (f, i) {
-                return { x: Math.round(W * f), fase: i * 1.7, base: (i % 2 ? 1 : -1) * 0.22 };
-            });
-            // No computador o avatar tapa o canto de baixo à esquerda: lá vai uma palmeira em vez da câmara
-            E.camara = E.estreito && W > 170;
-            E.palmaEsq = !E.estreito;
-            E.fita = W > 200;
-        },
-        // Altura da colina em cada x (mais alta atrás do letreiro)
-        crista: function (E, x) {
-            var W = E.W, g = Math.exp(-Math.pow((x - W * 0.47) / (W * 0.33), 2));
-            return E.base - 3 - Math.round(9 * g) + Math.round(Math.sin(x * 0.21) * 0.8);
-        },
-        fundo: function (c, E) {
-            var W = E.W, x, y, b;
-            // céu ao pôr do sol: roxo em cima, laranja junto à colina
-            degrade(c, 0, 0, W, E.base + 2, ['#2a1238', '#6a2240', '#b8402e', '#e8702e', '#f8b04a']);
-            // nuvens em faixas (aos pontinhos)
-            [0.12, 0.26, 0.4].forEach(function (f, k) {
-                y = Math.round(E.H * f);
-                for (x = 0; x < W; x++) {
-                    var n = aleat(x >> 3, k + 5);
-                    if (n < 0.5) continue;
-                    ret(c, x, y, 1, 1 + (n > 0.8 ? 1 : 0), 'rgba(70,14,34,.55)');
-                    if (aleat(x, k) < 0.4) ret(c, x, y - 1, 1, 1, 'rgba(255,170,90,.28)');
-                }
-            });
-            // colinas ao longe (roxas)
-            for (x = 0; x < W; x++) {
-                var yl = E.base - 8 - Math.round(4 * Math.sin(x * 0.045 + 1) + 3 * Math.sin(x * 0.13));
-                ret(c, x, yl, 1, E.base + 4 - yl, '#4a1d2c');
-            }
-            b = E.base;
-            ret(c, 0, b + 2, W, E.H - b - 2, '#4a1d2c');
-        },
-        frame: function (ctx, E) {
-            // focos de luz a varrer o céu (ficam por trás da colina, desenhada na "frente")
-            var t = E.t;
-            E.focos.forEach(function (f) {
-                var ang = f.base + 0.32 * Math.sin(t * 0.04 + f.fase), y0 = E.base;
-                for (var y = y0; y >= 0; y--) {
-                    var d = y0 - y, cx = f.x + d * Math.tan(ang), meia = 1 + d * 0.08;
-                    ret(ctx, Math.round(cx - meia), y, Math.max(2, Math.round(meia * 2)), 1, 'rgba(255,236,196,.3)');
-                    ret(ctx, Math.round(cx - meia / 3), y, Math.max(1, Math.round(meia * 2 / 3)), 1, 'rgba(255,250,232,.35)');
-                }
-            });
-        },
-        frente: function (c, E, h) {
-            var W = E.W, H = E.H, x, y, cr;
-            // colina principal com a "borda" iluminada pelo sol
-            for (x = 0; x < W; x++) {
-                cr = TEMAS.colina.crista(E, x);
-                ret(c, x, cr, 1, H - cr, '#1e0e0b');
-                ret(c, x, cr, 1, 1, '#8a3a1a');
-                if (aleat(x, 3) < 0.5) ret(c, x, cr + 1, 1, 1, '#4e2214');
-                for (y = cr + 3; y < H; y += 3) if (aleat(x, y) < 0.18) ret(c, x, y, 1, 1, '#2e160f');
-            }
-            // palmeiras à direita e câmara de filmar à esquerda (silhuetas)
-            palmeira(c, W - 24, H, Math.round(H * 0.6), '#0c0504');
-            if (W > 190) palmeira(c, W - 10, H, Math.round(H * 0.45), '#0c0504');
-            if (E.palmaEsq) palmeira(c, Math.round(W * 0.07), H, Math.round(H * 0.55), '#0c0504');
-            if (E.camara) {
-                var cy = H - 14;
-                bobine(c, 11, cy - 11, 6, '#0c0504', '#3a1a10');
-                bobine(c, 24, cy - 12, 6, '#0c0504', '#3a1a10');
-                ret(c, 5, cy - 5, 22, 10, '#0c0504'); ret(c, 27, cy - 3, 6, 6, '#0c0504'); ret(c, 33, cy - 4, 2, 8, '#0c0504');
-                ret(c, 5, cy - 5, 22, 1, '#5a2614');
-                for (var p = 0; p < 9; p++) { ret(c, 15 - p, cy + 5 + p, 1, 1, '#0c0504'); ret(c, 17 + p, cy + 5 + p, 1, 1, '#0c0504'); }
-            }
-            // película a subir no canto de baixo
-            if (E.fita) {
-                var x0 = Math.round(W * 0.6), x1 = W - 30;
-                for (x = x0; x < x1; x++) {
-                    y = H - 2 - Math.round((x - x0) * 0.16);
-                    ret(c, x, y - 6, 1, 7, '#140a08');
-                    if (x % 4 === 0) { ret(c, x, y - 5, 1, 1, '#c99a58'); ret(c, x, y - 1, 1, 1, '#c99a58'); }
-                }
-            }
-            // TAVDEX gigante na colina (letras claras com um toque da cor do avatar)
-            letreiro(c, E.letreiro, hsl(h, 40, 18), [hsl(h, 30, 94), hsl(h, 28, 86), hsl(h, 26, 74)], E.ly, 21);
-            // estrela, linhas douradas e "FILMES E SÉRIES"
-            var mx = Math.round(W / 2), sy = E.sy;
-            ret(c, mx, sy - 4, 1, 3, '#f0cf86'); ret(c, mx - 1, sy - 3, 3, 1, '#f0cf86');
-            ret(c, E.sx - 16, sy + 2, 12, 1, '#b8904a'); ret(c, E.sx + E.sw + 4, sy + 2, 12, 1, '#b8904a');
-            pintar(c, E.sub, '#f0cf86');
+    // ---------- 1) Colina das estrelas ----------
+    TEMAS.colina = function (E) {
+        var W = E.W, H = E.H, id = E.id, est = E.estreito, i;
+        var hz = H * 0.66;                                   // altura da colina
+        var fs = est ? Math.min(H * 0.34, W * 0.3) : Math.min(H * 0.4, W * 0.22);
+        var cx = W / 2, ty = est ? H * 0.5 : H * 0.56, larg = fs * 2.6;
+        var fs2 = Math.max(6, H * 0.058), sy = ty + (est ? H * 0.15 : H * 0.18), larg2 = fs2 * 12.5;
+        var defs =
+            '<linearGradient id="' + id + '-ceu" x1="0" y1="0" x2="0" y2="' + n(hz) + '" gradientUnits="userSpaceOnUse">' +
+            '<stop offset="0" stop-color="#1c0f30"/><stop offset=".35" stop-color="#521c3e"/><stop offset=".62" stop-color="#ad3a2f"/>' +
+            '<stop offset=".85" stop-color="#ec7c2e"/><stop offset="1" stop-color="#f9b552"/></linearGradient>' +
+            '<radialGradient id="' + id + '-sol" cx="' + n(cx) + '" cy="' + n(hz) + '" r="' + n(Math.max(W * 0.45, H)) + '" gradientUnits="userSpaceOnUse">' +
+            '<stop offset="0" stop-color="#ffd98a" stop-opacity=".75"/><stop offset=".5" stop-color="#ff9a4a" stop-opacity=".25"/><stop offset="1" stop-color="#ff9a4a" stop-opacity="0"/></radialGradient>' +
+            '<linearGradient id="' + id + '-foco" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#fff4d8" stop-opacity=".6"/>' +
+            '<stop offset="1" stop-color="#fff4d8" stop-opacity="0"/></linearGradient>' +
+            '<linearGradient id="' + id + '-colina" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#341710"/><stop offset="1" stop-color="#0c0504"/></linearGradient>' +
+            '<linearGradient id="' + id + '-letras" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:' + av(35, 98) + '"/>' +
+            '<stop offset="1" style="stop-color:' + av(30, 80) + '"/></linearGradient>' +
+            '<filter id="' + id + '-nuvem" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="' + n(H * 0.012) + '"/></filter>';
+
+        var c = '<rect width="' + W + '" height="' + H + '" fill="url(#' + id + '-ceu)"/>' +
+            '<rect width="' + W + '" height="' + n(hz + H * 0.1) + '" fill="url(#' + id + '-sol)"/>';
+        // estrelas a cintilar
+        for (i = 0; i < 16; i++) {
+            c += '<circle class="estrela" cx="' + n(aleat(i, 1) * W) + '" cy="' + n(aleat(i, 2) * hz * 0.4) + '" r="' + n(H * (0.004 + aleat(i, 3) * 0.004)) +
+                '" fill="#fff6e0" style="animation-delay:-' + n(aleat(i, 4) * 3) + 's"/>';
         }
+        // nuvens
+        for (i = 0; i < 8; i++) {
+            c += '<ellipse cx="' + n(aleat(i, 5) * W) + '" cy="' + n(H * (0.12 + aleat(i, 6) * 0.32)) + '" rx="' + n(W * (0.08 + aleat(i, 7) * 0.12)) +
+                '" ry="' + n(H * (0.02 + aleat(i, 8) * 0.025)) + '" fill="' + (i % 2 ? '#62203a' : '#7a2a30') + '" opacity=".55" filter="url(#' + id + '-nuvem)"/>';
+        }
+        // focos de luz a varrer o céu (rodam à volta da base, atrás da colina)
+        [0.13, 0.35, 0.65, 0.87].forEach(function (f, k) {
+            var bx = W * f, by = hz - H * 0.04, abre = H * 0.2;
+            c += '<polygon class="foco" points="' + n(bx - 2) + ',' + n(by) + ' ' + n(bx + 2) + ',' + n(by) + ' ' + n(bx + abre) + ',' + n(-H * 0.15) + ' ' +
+                n(bx - abre) + ',' + n(-H * 0.15) + '" fill="url(#' + id + '-foco)" style="transform-origin:' + n(bx) + 'px ' + n(by) + 'px;animation-duration:' +
+                (6 + k) + 's;animation-delay:-' + n(k * 1.7) + 's"/>';
+        });
+        // colinas ao longe e a colina principal, com a borda iluminada pelo sol
+        c += '<path d="M0,' + n(hz - H * 0.05) + ' Q' + n(W * 0.18) + ',' + n(hz - H * 0.2) + ' ' + n(W * 0.38) + ',' + n(hz - H * 0.07) +
+            ' T' + n(W * 0.78) + ',' + n(hz - H * 0.11) + ' T' + n(W) + ',' + n(hz - H * 0.04) + ' L' + W + ',' + H + ' L0,' + H + 'Z" fill="#4a1c2e"/>';
+        var crista = 'M0,' + n(hz + H * 0.04) + ' C' + n(W * 0.2) + ',' + n(hz - H * 0.02) + ' ' + n(W * 0.3) + ',' + n(hz - H * 0.17) + ' ' +
+            n(W * 0.48) + ',' + n(hz - H * 0.16) + ' S' + n(W * 0.82) + ',' + n(hz + H * 0.02) + ' ' + n(W) + ',' + n(hz - H * 0.02);
+        c += '<path d="' + crista + ' L' + W + ',' + H + ' L0,' + H + 'Z" fill="url(#' + id + '-colina)"/>' +
+            '<path d="' + crista + '" fill="none" stroke="#e0742c" stroke-width="' + n(Math.max(1, H * 0.008)) + '" opacity=".75"/>';
+        // palmeiras, câmara de filmar (no telemóvel, onde o avatar não a tapa) e película
+        c += palmeira(W - W * 0.05, H + 2, H * 0.62, '#0a0403');
+        if (W > 260) c += palmeira(W - W * 0.015, H + 2, H * 0.46, '#0a0403');
+        if (est && W > 250) {
+            var kx = W * 0.05, ky = H * 0.82, k = H * 0.1;
+            c += '<g fill="#0a0403"><circle cx="' + n(kx + k * 0.6) + '" cy="' + n(ky - k * 1.1) + '" r="' + n(k * 0.55) + '"/><circle cx="' + n(kx + k * 1.7) + '" cy="' + n(ky - k * 1.2) + '" r="' + n(k * 0.55) + '"/>' +
+                '<rect x="' + n(kx) + '" y="' + n(ky - k * 0.6) + '" width="' + n(k * 2.4) + '" height="' + n(k) + '" rx="' + n(k * 0.15) + '"/>' +
+                '<polygon points="' + n(kx + k * 2.4) + ',' + n(ky - k * 0.4) + ' ' + n(kx + k * 3.1) + ',' + n(ky - k * 0.7) + ' ' + n(kx + k * 3.1) + ',' + n(ky + k * 0.3) + ' ' + n(kx + k * 2.4) + ',' + n(ky) + '"/>' +
+                '<path d="M' + n(kx + k * 1.2) + ',' + n(ky + k * 0.4) + ' l-' + n(k * 0.8) + ',' + n(k * 1.4) + ' M' + n(kx + k * 1.2) + ',' + n(ky + k * 0.4) + ' l' + n(k * 0.8) + ',' + n(k * 1.4) + '" stroke="#0a0403" stroke-width="' + n(k * 0.15) + '"/></g>';
+        }
+        if (W > 260) {
+            var fita = 'M' + n(W * 0.55) + ',' + n(H + 6) + ' Q' + n(W * 0.75) + ',' + n(H * 0.8) + ' ' + n(W * 0.97) + ',' + n(H * 0.86);
+            var esp = H * 0.024;
+            c += '<path d="' + fita + '" fill="none" stroke="#140906" stroke-width="' + n(H * 0.075) + '"/>' +
+                '<path d="' + fita + '" fill="none" stroke="#d9a55c" stroke-width="' + n(H * 0.012) + '" stroke-dasharray="' + n(H * 0.016) + ' ' + n(H * 0.022) + '" transform="translate(0,-' + n(esp) + ')"/>' +
+                '<path d="' + fita + '" fill="none" stroke="#d9a55c" stroke-width="' + n(H * 0.012) + '" stroke-dasharray="' + n(H * 0.016) + ' ' + n(H * 0.022) + '" transform="translate(0,' + n(esp) + ')"/>';
+        }
+        // TAVDEX gigante na colina: suportes, sombra e as letras (claras, com um toque da cor do avatar)
+        for (i = 0; i < 6; i++) {
+            var lx = cx - larg / 2 + larg * (i + 0.5) / 6;
+            c += '<path d="M' + n(lx - fs * 0.12) + ',' + n(ty) + ' v' + n(fs * 0.16) + ' M' + n(lx + fs * 0.12) + ',' + n(ty) + ' v' + n(fs * 0.16) +
+                '" stroke="#2a120c" stroke-width="' + n(Math.max(1, fs * 0.025)) + '"/>';
+        }
+        c += titulo(cx + fs * 0.04, ty + fs * 0.05, fs, larg, 'TAVDEX', 'fill:' + av(45, 16, 0.85)) +
+            titulo(cx, ty, fs, larg, 'TAVDEX', 'fill:url(#' + id + '-letras);stroke:' + av(35, 28) + ';stroke-width:' + n(fs * 0.012));
+        // estrela, linhas douradas e "FILMES E SÉRIES"
+        c += legenda(cx, sy - fs2 * 1.25, fs2 * 0.95, '★', '#f2cf86') +
+            '<path d="M' + n(cx - larg2 / 2 - fs2 * 4.5) + ',' + n(sy - fs2 * 0.35) + ' h' + n(fs2 * 3.5) + ' M' + n(cx + larg2 / 2 + fs2) + ',' + n(sy - fs2 * 0.35) +
+            ' h' + n(fs2 * 3.5) + '" stroke="#c99a50" stroke-width="' + n(Math.max(1, fs2 * 0.12)) + '"/>' +
+            legenda(cx, sy, fs2, 'FILMES E SÉRIES', '#f2cf86');
+        var css = '#ID .foco{animation:ID-varre 7s ease-in-out infinite alternate}' +
+            '@keyframes ID-varre{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}' +
+            '#ID .estrela{animation:ID-brilha 3s ease-in-out infinite}' +
+            '@keyframes ID-brilha{0%,100%{opacity:.15}50%{opacity:1}}';
+        return { defs: defs, corpo: c, css: css };
     };
 
-    // ---------- 2) Sessão de pipocas (película, cortinas e confetes) ----------
-    // O TAVDEX fica em 3 fotogramas: "TA" "VD" "EX"
-    TEMAS.pipocas = {
-        preparar: function (E) {
-            var W = E.W, H = E.H;
-            E.gap = W >= 160 ? 5 : 3;
-            E.fw = 2 * 15 + 3 + 8;                          // largura de um fotograma (2 letras + margens)
-            var total = 3 * E.fw + 2 * E.gap;
-            E.cort = Math.max(4, Math.min(Math.round(W * 0.08), Math.floor((W - total) / 2) - 1));
-            E.fx0 = Math.round((W - total) / 2);
-            E.fy = 9; E.fh = 29;                            // fotogramas: y de 9 a 38
-            E.lx = E.fx0 + 4; E.ly = E.fy + 4;
-            // cada par de letras salta para o seu fotograma
-            E.passoPar = E.fw + E.gap - 36;
-            E.confetes = [];
-            for (var i = 0; i < 28; i++) E.confetes.push({ u: aleat(i, 61), y: aleat(i, 62), v: 0.006 + aleat(i, 63) * 0.01, f: i });
-            E.balde = { x: Math.round(W / 2), y: E.fy + E.fh + 1 };
-        },
-        fundo: function (c, E, h) {
-            var W = E.W, H = E.H, x, y, i;
-            degrade(c, 0, 0, W, H, ['#2c140c', '#5a301c', '#7a4a2a', '#4a2614']);
-            // brilho de holofote atrás da película
-            for (var r = 5; r >= 1; r--) disco(c, Math.round(W / 2), Math.round(H * 0.45), r * Math.round(W * 0.06), 'rgba(255,200,120,.035)', 9999);
-            // película decorativa a ondular por trás
-            for (x = 0; x < W; x++) {
-                y = Math.round(H * 0.72 + 3 * Math.sin(x * 0.05));
-                ret(c, x, y, 1, 6, '#3a1e12');
-                if (x % 4 === 0) { ret(c, x, y + 1, 1, 1, '#8a5a3a'); ret(c, x, y + 4, 1, 1, '#8a5a3a'); }
-            }
-            // a película principal com os fotogramas creme
-            var by = E.fy - 5, bh = E.fh + 10;
-            ret(c, E.fx0 - 6, by, 3 * E.fw + 2 * E.gap + 12, bh, '#1c1410');
-            for (x = E.fx0 - 4; x < E.fx0 + 3 * E.fw + 2 * E.gap + 4; x += 5) {
-                ret(c, x, by + 1, 2, 2, '#e9dcc0'); ret(c, x, by + bh - 3, 2, 2, '#e9dcc0');
-            }
-            for (i = 0; i < 3; i++) {
-                var fx = E.fx0 + i * (E.fw + E.gap);
-                ret(c, fx, E.fy, E.fw, E.fh, '#f3e6c8');
-                ret(c, fx, E.fy + E.fh - 1, E.fw, 1, '#d9c79f');
-            }
-            // TAVDEX na cor do avatar, com sombra "gravada" no papel
-            var passo = E.passoPar;
-            letreiro(c, E.letreiro, '#cdb88c', [hsl(h, 55, 44), hsl(h, 58, 36), hsl(h, 60, 28)], E.ly, 21,
-                function (i) { return Math.floor(i / 2) * passo; });
-            // cortinas de veludo dos dois lados
-            for (x = 0; x < E.cort; x++) {
-                var s = 0.5 + 0.5 * Math.sin(x * 1.3);
-                var cor = s > 0.7 ? '#b01e40' : s > 0.35 ? '#82122e' : '#560a1e';
-                ret(c, x, 0, 1, H, cor);
-                ret(c, W - 1 - x, 0, 1, H, cor);
-            }
-            ret(c, 0, 0, E.cort + 2, 2, '#3e0614'); ret(c, W - E.cort - 2, 0, E.cort + 2, 2, '#3e0614');
-            // sombra no chão
-            for (y = H - 6; y < H; y++) ret(c, 0, y, W, 1, 'rgba(20,8,4,' + ((y - H + 7) * 0.08).toFixed(2) + ')');
-        },
-        frame: function (ctx, E) {
-            // confetes dourados a cair, a abanar e a rodar
-            var t = E.t, W = E.W, H = E.H;
-            E.confetes.forEach(function (p) {
-                var f = (p.y + t * p.v) % 1, y = Math.round(f * (H + 4)) - 2;
-                var x = Math.round(p.u * W + Math.sin(t * 0.12 + p.f) * 3);
-                var deitado = (Math.floor(t / 3) + p.f) % 2 === 0;
-                ret(ctx, x, y, deitado ? 2 : 1, deitado ? 1 : 2, p.f % 3 ? '#f2c14e' : '#e39a32');
-            });
-            // brilhinhos nas cortinas
-            for (var i = 0; i < 3; i++) {
-                if (aleat(i, t) < 0.4) ret(ctx, Math.floor(aleat(i + 4, t) * E.cort), Math.floor(aleat(i + 8, t) * H), 1, 1, 'rgba(255,230,160,.8)');
-            }
-        },
-        frente: function (c, E) {
-            var W = E.W, H = E.H, x, i;
-            // balde de pipocas às riscas
-            var b = E.balde, topo = b.y + 2, alt = H - topo - 1, larg = 18;
-            if (alt >= 6) {
-                for (var y = 0; y < alt; y++) {
-                    var meia = Math.round(larg / 2 - y * 0.12);
-                    for (x = -meia; x < meia; x++) ret(c, b.x + x, topo + y, 1, 1, (Math.floor((x + meia) / 3) % 2) ? '#f4ead6' : '#c8243a');
-                }
-                ret(c, b.x - larg / 2, topo, larg, 1, '#e8d8b8');
-            }
-            // pipocas em cima do balde
-            for (i = 0; i < 9; i++) {
-                var px = b.x - 8 + Math.round(aleat(i, 31) * 16), py = topo - 1 - Math.round(aleat(i, 32) * 4);
-                disco(c, px, py, 2, '#fff4d6', 9999);
-                ret(c, px - 1, py + 1, 1, 1, '#e8c98a');
-            }
-            // bobine em baixo à esquerda e claquete em baixo à direita
-            bobine(c, E.cort + 11, H - 1, 10, '#8c8278', '#3a2a20', H);
-            var cx = W - E.cort - 24, cy = H - 13;
-            if (cx > b.x + 12) {
-                ret(c, cx, cy + 4, 20, 9, '#1a1716'); moldura(c, cx, cy + 4, 20, 9, '#4a4440');
-                ret(c, cx + 2, cy + 7, 16, 1, '#7a7470'); ret(c, cx + 2, cy + 10, 16, 1, '#7a7470');
-                for (x = 0; x < 20; x++) ret(c, cx + x, cy, 1, 4, (Math.floor(x / 3) % 2) ? '#f2f2f2' : '#1a1716');
-            }
+    // ---------- 2) Sessão de pipocas ----------
+    TEMAS.pipocas = function (E) {
+        var W = E.W, H = E.H, id = E.id, est = E.estreito, i;
+        var cw = est ? W * 0.09 : W * 0.075;                 // largura das cortinas
+        var fh = Math.min(est ? H * 0.42 : H * 0.46, (W - 2 * cw) * 0.82 / (3 * 1.25 + 0.24));   // altura de um fotograma
+        var fw = fh * 1.25, gap = fh * 0.12, total = 3 * fw + 2 * gap;
+        var fx0 = (W - total) / 2, cyF = est ? H * 0.38 : H * 0.42, fy = cyF - fh / 2;
+        var bh = fh * 1.42, by = cyF - bh / 2;                // a faixa preta da película
+        var defs =
+            '<radialGradient id="' + id + '-fundo" cx="50%" cy="42%" r="70%"><stop offset="0" stop-color="#a06a3a"/><stop offset=".55" stop-color="#5a2e16"/><stop offset="1" stop-color="#1e0b05"/></radialGradient>' +
+            '<linearGradient id="' + id + '-veludo" x1="0" y1="0" x2="' + n(Math.max(8, cw * 0.32)) + '" y2="0" gradientUnits="userSpaceOnUse" spreadMethod="reflect">' +
+            '<stop offset="0" stop-color="#4a0716"/><stop offset=".5" stop-color="#a51d3c"/><stop offset="1" stop-color="#6a0c22"/></linearGradient>' +
+            '<linearGradient id="' + id + '-papel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf0d6"/><stop offset="1" stop-color="#ead4a8"/></linearGradient>' +
+            '<radialGradient id="' + id + '-pipoca" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#efcf8e"/></radialGradient>' +
+            '<filter id="' + id + '-suave" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="' + n(H * 0.01) + '"/></filter>';
+        var c = '<rect width="' + W + '" height="' + H + '" fill="url(#' + id + '-fundo)"/>';
+        // raios de luz a sair de cima
+        for (i = 0; i < 5; i++) {
+            var rx = W * (0.3 + i * 0.1);
+            c += '<polygon points="' + n(rx - W * 0.02) + ',0 ' + n(rx + W * 0.02) + ',0 ' + n(rx + W * (i - 2) * 0.12 + W * 0.06) + ',' + H + ' ' +
+                n(rx + W * (i - 2) * 0.12 - W * 0.06) + ',' + H + '" fill="#ffd9a0" opacity=".05"/>';
         }
+        // película a ondular por trás
+        var onda = 'M-5,' + n(H * 0.82) + ' C' + n(W * 0.25) + ',' + n(H * 0.68) + ' ' + n(W * 0.5) + ',' + n(H * 0.98) + ' ' + n(W + 5) + ',' + n(H * 0.76);
+        c += '<path d="' + onda + '" fill="none" stroke="#2e170b" stroke-width="' + n(H * 0.1) + '"/>' +
+            '<path d="' + onda + '" fill="none" stroke="#8a5a36" stroke-width="' + n(H * 0.016) + '" stroke-dasharray="' + n(H * 0.02) + ' ' + n(H * 0.03) + '"/>';
+        // a película principal (ligeiramente inclinada) com os fotogramas: "TA" "VD" "EX"
+        c += '<g transform="rotate(-2 ' + n(W / 2) + ' ' + n(cyF) + ')">' +
+            '<rect x="' + n(fx0 - fh * 0.2) + '" y="' + n(by) + '" width="' + n(total + fh * 0.4) + '" height="' + n(bh) + '" rx="' + n(fh * 0.05) + '" fill="#171110"/>';
+        for (var hx = fx0 - fh * 0.12; hx < fx0 + total + fh * 0.1; hx += fh * 0.19) {
+            c += '<rect x="' + n(hx) + '" y="' + n(by + bh * 0.045) + '" width="' + n(fh * 0.1) + '" height="' + n(fh * 0.07) + '" rx="1" fill="#efe2c4"/>' +
+                '<rect x="' + n(hx) + '" y="' + n(by + bh - bh * 0.045 - fh * 0.07) + '" width="' + n(fh * 0.1) + '" height="' + n(fh * 0.07) + '" rx="1" fill="#efe2c4"/>';
+        }
+        ['TA', 'VD', 'EX'].forEach(function (par, k) {
+            var x = fx0 + k * (fw + gap);
+            c += '<rect x="' + n(x) + '" y="' + n(fy) + '" width="' + n(fw) + '" height="' + n(fh) + '" fill="url(#' + id + '-papel)" stroke="#c9ad78" stroke-width="1"/>' +
+                titulo(x + fw / 2 + fh * 0.03, fy + fh * 0.8 + fh * 0.03, fh * 0.78, fw * 0.74, par, 'fill:rgba(120,80,40,.35)') +
+                titulo(x + fw / 2, fy + fh * 0.8, fh * 0.78, fw * 0.74, par, 'fill:' + av(58, 34) + ';stroke:' + av(62, 22) + ';stroke-width:' + n(fh * 0.012));
+        });
+        c += '</g>';
+        // cortinas de veludo com o drapeado
+        var cort = 'M0,0 L' + n(cw * 1.1) + ',0 Q' + n(cw * 0.6) + ',' + n(H * 0.45) + ' ' + n(cw) + ',' + n(H) + ' L0,' + H + 'Z';
+        c += '<path d="' + cort + '" fill="url(#' + id + '-veludo)"/>' +
+            '<path d="' + cort + '" fill="url(#' + id + '-veludo)" transform="translate(' + W + ',0) scale(-1,1)"/>';
+        for (i = 0; i * H * 0.07 < W; i++) {
+            c += '<circle cx="' + n(i * H * 0.07) + '" cy="0" r="' + n(H * 0.045) + '" fill="#5a0a1c"/>';
+        }
+        c += '<rect width="' + W + '" height="' + n(H * 0.02) + '" fill="#3e0614"/>';
+        // bobine (em baixo à esquerda), claquete (em baixo à direita) e o balde de pipocas
+        c += bobine(cw + H * 0.16, H * 0.98, H * 0.17, '#9a918a', '#3a2a20');
+        var kx = W - cw - H * 0.42, ky = H * 0.8, k = H * 0.34;
+        c += '<g><rect x="' + n(kx) + '" y="' + n(ky) + '" width="' + n(k) + '" height="' + n(k * 0.55) + '" rx="2" fill="#1a1716"/>' +
+            '<path d="M' + n(kx + k * 0.08) + ',' + n(ky + k * 0.22) + ' h' + n(k * 0.84) + ' M' + n(kx + k * 0.08) + ',' + n(ky + k * 0.4) + ' h' + n(k * 0.84) + '" stroke="#77716c" stroke-width="1"/>';
+        for (i = 0; i < 6; i++) c += '<rect x="' + n(kx + i * k / 6) + '" y="' + n(ky - k * 0.16) + '" width="' + n(k / 12) + '" height="' + n(k * 0.14) + '" fill="#f2f2f2"/>';
+        c += '<rect x="' + n(kx) + '" y="' + n(ky - k * 0.16) + '" width="' + n(k) + '" height="' + n(k * 0.14) + '" fill="none" stroke="#1a1716" stroke-width="1"/></g>';
+        // No telemóvel o balde vai para a direita (o avatar fica ao centro) e um pouco mais abaixo, para não tapar o "EX"
+        var bx = est ? W * 0.72 : W * 0.5, topo = by + bh + (est ? H * 0.06 : -H * 0.04), bl = Math.min(H * 0.32, W * 0.16), bb = bl * 0.74;
+        var balde = 'M' + n(bx - bl / 2) + ',' + n(topo) + ' L' + n(bx + bl / 2) + ',' + n(topo) + ' L' + n(bx + bb / 2) + ',' + n(H + 2) + ' L' + n(bx - bb / 2) + ',' + n(H + 2) + 'Z';
+        c += '<clipPath id="' + id + '-balde"><path d="' + balde + '"/></clipPath><g clip-path="url(#' + id + '-balde)"><path d="' + balde + '" fill="#f6ecd8"/>';
+        for (i = 0; i < 7; i += 2) c += '<rect x="' + n(bx - bl / 2 + i * bl / 7) + '" y="' + n(topo) + '" width="' + n(bl / 7) + '" height="' + n(H) + '" fill="#c8243a"/>';
+        c += '<rect x="' + n(bx - bl) + '" y="' + n(topo) + '" width="' + n(bl * 0.6) + '" height="' + n(H) + '" fill="rgba(0,0,0,.12)" transform="skewX(-6)"/></g>' +
+            '<rect x="' + n(bx - bl / 2 - 1) + '" y="' + n(topo - H * 0.012) + '" width="' + n(bl + 2) + '" height="' + n(H * 0.03) + '" rx="2" fill="#f8efdc"/>';
+        for (i = 0; i < 15; i++) {
+            c += '<circle cx="' + n(bx - bl * 0.45 + aleat(i, 31) * bl * 0.9) + '" cy="' + n(topo - H * 0.02 - aleat(i, 32) * H * 0.09) + '" r="' + n(H * (0.03 + aleat(i, 33) * 0.018)) +
+                '" fill="url(#' + id + '-pipoca)" stroke="#e2bf7a" stroke-width=".6"/>';
+        }
+        // confetes dourados a cair (cada um com a sua velocidade e o seu atraso)
+        for (i = 0; i < 34; i++) {
+            c += '<rect class="confete" x="' + n(aleat(i, 41) * W) + '" y="' + n(-H * 0.1) + '" width="' + n(H * 0.022) + '" height="' + n(H * 0.04) +
+                '" fill="' + ['#f5c74e', '#e8a43a', '#ffe08a'][i % 3] + '" style="animation-duration:' + n(4 + aleat(i, 42) * 4) + 's;animation-delay:-' + n(aleat(i, 43) * 8) + 's"/>';
+        }
+        var css = '#ID .confete{transform-box:fill-box;transform-origin:center;animation:ID-cai 6s linear infinite}' +
+            '@keyframes ID-cai{from{transform:translate(0,0) rotate(0)}to{transform:translate(' + n(H * 0.15) + 'px,' + n(H * 1.25) + 'px) rotate(540deg)}}';
+        return { defs: defs, corpo: c, css: css };
     };
 
-    // ---------- 3) Claquete antiga (papel envelhecido) ----------
-    TEMAS.claquete = {
-        preparar: function (E) {
-            var W = E.W, H = E.H;
-            E.compacto = W < E.lw + 80;
-            E.cw = E.compacto ? 28 : 44;                    // largura da claquete
-            E.ch = E.compacto ? 18 : 24;                    // altura do quadro
-            E.cTopo = H - E.ch - 5;                         // topo do quadro
-            // No computador o avatar tapa o canto de baixo à esquerda: a claquete vai para a direita
-            E.direita = !E.estreito && !E.compacto;
-            if (E.direita) {
-                E.cx = W - E.cw - 8;
-                E.lx = Math.max(4, Math.round((E.cx - 40 - E.lw) / 2) + 6);
-                E.extras = E.cx - 36;                       // bobine e máquina fotográfica, à esquerda da claquete
-            } else {
-                E.cx = 5;
-                E.lx = Math.min(Math.max(E.cx + E.cw + 7, Math.round((W + E.cx + E.cw - E.lw) / 2)), W - E.lw - 3);
-                E.extras = null;
-            }
-            E.ly = Math.round((H - 21 - 9) / 2);
-            E.sy = E.ly + 27; E.sx = E.lx + Math.round((E.lw - E.sw) / 2);
-            E.borboleta = { x: E.cx + Math.round(E.cw * 0.4), y: Math.max(6, E.cTopo - 16) };
-            if (!E.compacto) {
-                E.textos = [mover(texto('CENA', MINI, 1, 1), E.cx + 3, E.cTopo + 3),
-                    mover(texto('PLANO', MINI, 1, 1), E.cx + 23, E.cTopo + 3),
-                    mover(texto('TAKE', MINI, 1, 1), E.cx + 3, E.cTopo + 12)];
-            }
-        },
-        fundo: function (c, E, h) {
-            var W = E.W, H = E.H, x, y, i;
-            // papel envelhecido com manchas e as bordas queimadas
-            degrade(c, 0, 0, W, H, ['#e4d4b0', '#d8c49a', '#cdb68a']);
-            for (i = 0; i < W * H / 5; i++) {
-                ret(c, Math.floor(aleat(i, 71) * W), Math.floor(aleat(i, 72) * H), 1, 1, aleat(i, 73) < 0.5 ? '#c2a878' : '#ece0c4');
-            }
-            for (i = 0; i < 6; i++) {
-                var mx = Math.floor(aleat(i, 81) * W), my = Math.floor(aleat(i, 82) * H), r = 6 + Math.floor(aleat(i, 83) * 12);
-                for (y = -r; y <= r; y++) for (x = -r; x <= r; x++) {
-                    if (x * x + y * y <= r * r && aleat(mx + x, my + y) < 0.45) ret(c, mx + x, my + y, 1, 1, 'rgba(120,88,48,.13)');
-                }
-            }
-            for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
-                var borda = Math.min(x, y, W - 1 - x, H - 1 - y);
-                if (borda < 5 && aleat(x, y + 99) < (5 - borda) * 0.16) ret(c, x, y, 1, 1, 'rgba(96,62,30,.35)');
-            }
-            // quadro da claquete (preto, com riscos de giz)
-            var cx = E.cx, ct = E.cTopo, cw = E.cw, ch = E.ch;
-            ret(c, cx + 1, ct + 1, cw, ch, 'rgba(60,40,20,.35)');      // sombra
-            ret(c, cx, ct, cw, ch, '#1c1c1f'); moldura(c, cx, ct, cw, ch, '#3c3c40');
-            ret(c, cx + 1, ct + Math.round(ch * 0.38), cw - 2, 1, '#6e6e72');
-            ret(c, cx + 1, ct + Math.round(ch * 0.72), cw - 2, 1, '#6e6e72');
-            ret(c, cx + Math.round(cw * 0.48), ct + 1, 1, Math.round(ch * 0.72), '#6e6e72');
-            (E.textos || []).forEach(function (t) { pintar(c, t, '#cfcfd2'); });
-            // barra fixa às riscas por cima do quadro
-            for (x = 0; x < cw; x++) for (y = 0; y < 5; y++) {
-                ret(c, cx + x, ct - 5 + y, 1, 1, (Math.floor((x + y) / 4) % 2) ? '#f2f2f2' : '#151517');
-            }
-            // joaninha no quadro
-            ret(c, cx + cw - 7, ct + ch - 4, 3, 2, '#d62a1e'); ret(c, cx + cw - 6, ct + ch - 4, 1, 1, '#1a1010');
-            // TAVDEX carimbado na cor do avatar (com a tinta gasta) e "FILMES E SÉRIES"
-            E.letreiro.forEach(function (b, k) {
-                ret(c, b.x, b.y, b.s, b.s, hsl(h, 62, 30));
-                for (var q = 0; q < b.s * b.s; q++) if (aleat(k * 9 + q, 55) < 0.08) ret(c, b.x + (q % b.s), b.y + Math.floor(q / b.s), 1, 1, '#d8c49a');
-            });
-            ret(c, E.lx, E.ly + 24, E.lw, 1, hsl(h, 50, 40, 0.5));
-            pintar(c, E.sub, '#5a4026');
-        },
-        frame: function (ctx, E) {
-            var t = E.t, cx = E.cx, ct = E.cTopo, cw = E.cw;
-            // braço da claquete: abre devagar e fecha de repente ("Ação!")
-            var p = t % 40, ang;
-            if (p < 18) ang = -0.42;
-            else if (p < 21) ang = -0.42 * (21 - p) / 3;
-            else if (p < 30) ang = 0;
-            else ang = -0.42 * (p - 30) / 10;
-            // (o braço fica por cima da barra fixa, que vai de ct-5 a ct-1)
-            var px = cx, py = ct - 10, d = [Math.cos(ang), Math.sin(ang)], n = [-Math.sin(ang), Math.cos(ang)];
-            // (passos de meio píxel: assim o braço rodado não fica com buracos)
-            for (var s = 0; s < cw; s += 0.5) for (var w = 0; w < 5; w += 0.5) {
-                ret(ctx, Math.round(px + d[0] * s + n[0] * w), Math.round(py + d[1] * s + n[1] * w), 1, 1,
-                    (Math.floor((s + w) / 4) % 2) ? '#151517' : '#f2f2f2');
-            }
-            ret(ctx, px - 1, py + 3, 3, 3, '#8a8a90');                   // dobradiça
-            // borboleta azul a voar perto da claquete
-            var b = E.borboleta, bx = Math.round(b.x + 7 * Math.sin(t * 0.06)), by = Math.round(b.y + 3 * Math.sin(t * 0.13));
-            if (t % 4 < 2) {
-                ret(ctx, bx - 3, by - 2, 3, 3, '#2f96d8'); ret(ctx, bx + 1, by - 2, 3, 3, '#2f96d8');
-                ret(ctx, bx - 2, by + 1, 2, 2, '#58b6ea'); ret(ctx, bx + 1, by + 1, 2, 2, '#58b6ea');
-            } else {
-                ret(ctx, bx - 1, by - 3, 1, 4, '#2f96d8'); ret(ctx, bx + 1, by - 3, 1, 4, '#2f96d8');
-            }
-            ret(ctx, bx, by - 2, 1, 4, '#1a1a1a');
-        },
-        frente: function (c, E) {
-            if (E.extras === null) return;
-            var H = E.H, ex = E.extras;
-            // bobine (com filme enrolado) e máquina fotográfica, ao lado da claquete
-            bobine(c, ex + 8, H - 9, 8, '#c8c8cc', '#5a5a60', H);
-            ret(c, ex + 2, H - 3, 14, 3, '#8a8a90'); ret(c, ex + 2, H - 3, 14, 1, '#d8d8dc');
-            var mx = ex + 18, my = H - 12;
-            ret(c, mx, my, 14, 9, '#1c1c1f'); moldura(c, mx, my, 14, 9, '#4a4a50');
-            disco(c, mx + 7, my + 4, 3, '#5a5a60', 9999); disco(c, mx + 7, my + 4, 1, '#9ad0f0', 9999);
-            ret(c, mx + 2, my - 3, 5, 3, '#2a2a2e'); ret(c, mx + 3, my - 2, 3, 1, '#e8e8ec');
-            ret(c, mx + 10, my - 2, 2, 2, '#d62a1e');                    // outra joaninha
+    // ---------- 3) Claquete antiga ----------
+    TEMAS.claquete = function (E) {
+        var W = E.W, H = E.H, id = E.id, est = E.estreito, i;
+        var bw = Math.min(est ? H * 0.62 : H * 0.55, W * 0.32), bh = bw * 0.62;   // quadro da claquete
+        var by = est ? H * 0.42 : H * 0.4;
+        // No computador o avatar tapa o canto de baixo à esquerda: a claquete vai para a direita
+        var bx = est ? W * 0.05 : W - bw - W * 0.05;
+        var extras = !est && W > 500;                         // bobines e máquina fotográfica
+        var x0 = est ? bx + bw + W * 0.04 : W * 0.04, x1 = est ? W * 0.96 : bx - (extras ? bw * 1.1 : W * 0.04);
+        var fs = Math.min(est ? H * 0.32 : H * 0.36, (x1 - x0) / 2.75), larg = fs * 2.6, cx = (x0 + x1) / 2, ty = H * 0.5 + fs * 0.25;
+        var fs2 = Math.max(6, H * 0.056);
+        var faixa = Math.max(4, bh * 0.22);
+        var defs =
+            '<radialGradient id="' + id + '-papel" cx="55%" cy="45%" r="75%"><stop offset="0" stop-color="#f3e7c9"/><stop offset=".7" stop-color="#dcc69a"/><stop offset="1" stop-color="#b8945e"/></radialGradient>' +
+            '<filter id="' + id + '-textura" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4"/>' +
+            '<feColorMatrix values="0 0 0 0 .35  0 0 0 0 .24  0 0 0 0 .12  0 0 0 .55 0"/></filter>' +
+            '<filter id="' + id + '-mancha" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="' + n(H * 0.04) + '"/></filter>' +
+            '<filter id="' + id + '-carimbo"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="1" seed="2" result="r"/>' +
+            '<feDisplacementMap in="SourceGraphic" in2="r" scale="' + n(Math.max(0.8, fs * 0.022)) + '"/></filter>' +
+            '<pattern id="' + id + '-riscas" width="' + n(faixa) + '" height="' + n(faixa) + '" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)">' +
+            '<rect width="' + n(faixa / 2) + '" height="' + n(faixa) + '" fill="#f4f4f2"/><rect x="' + n(faixa / 2) + '" width="' + n(faixa / 2) + '" height="' + n(faixa) + '" fill="#161618"/></pattern>' +
+            '<radialGradient id="' + id + '-metal" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#f2f2f4"/><stop offset="1" stop-color="#8a8a92"/></radialGradient>' +
+            '<linearGradient id="' + id + '-asa" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7cc8f2"/><stop offset="1" stop-color="#1f74c4"/></linearGradient>' +
+            '<radialGradient id="' + id + '-borda" cx="50%" cy="50%" r="72%"><stop offset=".62" stop-color="#5a3518" stop-opacity="0"/><stop offset="1" stop-color="#5a3518" stop-opacity=".6"/></radialGradient>';
+        var c = '<rect width="' + W + '" height="' + H + '" fill="url(#' + id + '-papel)"/>' +
+            '<rect width="' + W + '" height="' + H + '" filter="url(#' + id + '-textura)" opacity=".5"/>';
+        for (i = 0; i < 6; i++) {
+            c += '<ellipse cx="' + n(aleat(i, 51) * W) + '" cy="' + n(aleat(i, 52) * H) + '" rx="' + n(H * (0.12 + aleat(i, 53) * 0.18)) + '" ry="' + n(H * (0.08 + aleat(i, 54) * 0.12)) +
+                '" fill="#9a7038" opacity=".16" filter="url(#' + id + '-mancha)"/>';
         }
+        c += '<rect width="' + W + '" height="' + H + '" fill="url(#' + id + '-borda)"/>';
+        // bobines empilhadas e máquina fotográfica (no computador, à esquerda da claquete)
+        if (extras) {
+            var rx0 = bx - bw * 0.48, ry0 = by + bh * 0.72, r = bh * 0.42;
+            c += '<ellipse cx="' + n(rx0) + '" cy="' + n(ry0 + r * 0.95) + '" rx="' + n(r * 1.05) + '" ry="' + n(r * 0.28) + '" fill="#6e6e76"/>' +
+                '<ellipse cx="' + n(rx0) + '" cy="' + n(ry0 + r * 0.82) + '" rx="' + n(r * 1.05) + '" ry="' + n(r * 0.28) + '" fill="#b4b4bc"/>' +
+                bobine(rx0, ry0, r, 'url(#' + id + '-metal)', '#4a4a52');
+            var mx = bx - bw * 1.05, my = by + bh * 0.62, ms = bh * 0.5;
+            c += '<rect x="' + n(mx - ms * 0.6) + '" y="' + n(my - ms * 0.35) + '" width="' + n(ms * 1.2) + '" height="' + n(ms * 0.8) + '" rx="' + n(ms * 0.1) + '" fill="#232326"/>' +
+                '<rect x="' + n(mx - ms * 0.45) + '" y="' + n(my - ms * 0.52) + '" width="' + n(ms * 0.4) + '" height="' + n(ms * 0.2) + '" fill="#3a3a3e"/>' +
+                '<circle cx="' + n(mx) + '" cy="' + n(my + ms * 0.05) + '" r="' + n(ms * 0.3) + '" fill="#5a5a62"/><circle cx="' + n(mx) + '" cy="' + n(my + ms * 0.05) + '" r="' + n(ms * 0.18) + '" fill="#8fc8ec"/>' +
+                '<circle cx="' + n(mx + ms * 0.4) + '" cy="' + n(my - ms * 0.42) + '" r="' + n(ms * 0.08) + '" fill="#d62a1e"/>';
+        }
+        // a claquete: sombra, quadro com giz, barra fixa às riscas e o braço que abre e fecha
+        var fT = Math.max(5, bh * 0.13);
+        c += '<rect x="' + n(bx + bh * 0.06) + '" y="' + n(by + bh * 0.08) + '" width="' + n(bw) + '" height="' + n(bh) + '" rx="' + n(bw * 0.03) + '" fill="rgba(70,40,15,.35)"/>' +
+            '<rect x="' + n(bx) + '" y="' + n(by) + '" width="' + n(bw) + '" height="' + n(bh) + '" rx="' + n(bw * 0.03) + '" fill="#1d1d20"/>' +
+            '<path d="M' + n(bx + bw * 0.04) + ',' + n(by + bh * 0.4) + ' h' + n(bw * 0.92) + ' M' + n(bx + bw * 0.04) + ',' + n(by + bh * 0.72) + ' h' + n(bw * 0.92) +
+            ' M' + n(bx + bw * 0.5) + ',' + n(by + bh * 0.06) + ' v' + n(bh * 0.66) + '" stroke="rgba(255,255,255,.5)" stroke-width="1"/>';
+        if (bw > 70) {
+            c += legenda(bx + bw * 0.25, by + bh * 0.3, fT, 'CENA', 'rgba(255,255,255,.8)') + legenda(bx + bw * 0.75, by + bh * 0.3, fT, 'PLANO', 'rgba(255,255,255,.8)') +
+                legenda(bx + bw * 0.25, by + bh * 0.62, fT, 'TAKE', 'rgba(255,255,255,.8)');
+        }
+        c += '<circle cx="' + n(bx + bw * 0.85) + '" cy="' + n(by + bh * 0.86) + '" r="' + n(bh * 0.05) + '" fill="#d62a1e"/>' +
+            '<rect x="' + n(bx) + '" y="' + n(by - faixa) + '" width="' + n(bw) + '" height="' + n(faixa) + '" fill="url(#' + id + '-riscas)" stroke="#161618" stroke-width="1"/>' +
+            '<g class="braco" style="transform-origin:' + n(bx) + 'px ' + n(by - faixa - 1) + 'px">' +
+            '<rect x="' + n(bx) + '" y="' + n(by - 2 * faixa - 1) + '" width="' + n(bw) + '" height="' + n(faixa) + '" fill="url(#' + id + '-riscas)" stroke="#161618" stroke-width="1"/></g>' +
+            '<circle cx="' + n(bx + faixa * 0.3) + '" cy="' + n(by - faixa - 1) + '" r="' + n(faixa * 0.35) + '" fill="#9a9aa2"/>';
+        // borboleta azul a voar perto da claquete
+        var vx = bx + bw * 0.62, vy = by - bh * 0.95, va = Math.max(4, bh * 0.16);
+        c += '<g class="voo" style="transform-origin:' + n(vx) + 'px ' + n(vy) + 'px"><g class="asas" style="transform-origin:' + n(vx) + 'px ' + n(vy) + 'px">' +
+            '<ellipse cx="' + n(vx - va * 0.55) + '" cy="' + n(vy - va * 0.2) + '" rx="' + n(va * 0.55) + '" ry="' + n(va * 0.42) + '" fill="url(#' + id + '-asa)"/>' +
+            '<ellipse cx="' + n(vx + va * 0.55) + '" cy="' + n(vy - va * 0.2) + '" rx="' + n(va * 0.55) + '" ry="' + n(va * 0.42) + '" fill="url(#' + id + '-asa)"/>' +
+            '<ellipse cx="' + n(vx - va * 0.4) + '" cy="' + n(vy + va * 0.35) + '" rx="' + n(va * 0.35) + '" ry="' + n(va * 0.28) + '" fill="#2b8fd6"/>' +
+            '<ellipse cx="' + n(vx + va * 0.4) + '" cy="' + n(vy + va * 0.35) + '" rx="' + n(va * 0.35) + '" ry="' + n(va * 0.28) + '" fill="#2b8fd6"/></g>' +
+            '<ellipse cx="' + n(vx) + '" cy="' + n(vy) + '" rx="' + n(va * 0.1) + '" ry="' + n(va * 0.5) + '" fill="#141414"/></g>';
+        // TAVDEX carimbado na cor do avatar, sublinhado e "FILMES E SÉRIES"
+        c += titulo(cx, ty, fs, larg, 'TAVDEX', 'fill:' + av(58, 30, 0.92), ' filter="url(#' + id + '-carimbo)"') +
+            '<path d="M' + n(cx - larg / 2) + ',' + n(ty + fs * 0.12) + ' h' + n(larg) + '" stroke="' + av(45, 35, 0.45) + '" stroke-width="' + n(Math.max(1, fs * 0.03)) + '"/>' +
+            legenda(cx, ty + fs * 0.12 + fs2 * 1.6, fs2, 'FILMES E SÉRIES', '#5a3c22');
+        var css = '#ID .braco{animation:ID-claque 4s ease-in infinite}' +
+            '@keyframes ID-claque{0%,55%{transform:rotate(-22deg)}62%,88%{transform:rotate(0)}100%{transform:rotate(-22deg)}}' +
+            '#ID .asas{animation:ID-bate .28s ease-in-out infinite alternate}' +
+            '@keyframes ID-bate{from{transform:scaleX(1)}to{transform:scaleX(.25)}}' +
+            '#ID .voo{animation:ID-voa 6s ease-in-out infinite alternate}' +
+            '@keyframes ID-voa{0%{transform:translate(0,0)}50%{transform:translate(' + n(bw * 0.18) + 'px,-' + n(bh * 0.15) + 'px)}100%{transform:translate(-' + n(bw * 0.12) + 'px,' + n(bh * 0.08) + 'px)}}';
+        return { defs: defs, corpo: c, css: css };
     };
 
-    // ---------- 4) Rolo de película (projetor e feixe de luz) ----------
-    TEMAS.pelicula = {
-        preparar: function (E) {
-            var W = E.W, H = E.H;
-            E.fb = Math.max(7, Math.round(H * 0.16));
-            E.y1 = 2 + E.fb + 2; E.y2 = H - 2 - E.fb - 2;
-            E.comSub = E.y2 - E.y1 >= 30;
-            E.cy = Math.round((E.y1 + E.y2) / 2);
-            E.px0 = 4;
-            E.lx = Math.min(Math.max(E.px0 + 34, Math.round((W - E.lw) / 2) + 10), W - E.lw - 4);
-            E.ly = E.comSub ? Math.round(E.cy - 14) : Math.round(E.cy - 10);
-            E.sy = E.ly + 26; E.sx = E.lx + Math.round((E.lw - E.sw) / 2);
-            E.po = [];
-            for (var i = 0; i < 18; i++) E.po.push({ u: aleat(i, 41), v: 0.5 + aleat(i, 42), y: aleat(i, 43) });
-        },
-        fundo: function (c, E, h) {
-            var W = E.W, H = E.H, x, y;
-            degrade(c, 0, 0, W, H, ['#f4ecdb', '#ebdfc8']);
-            // películas "fantasma" na diagonal, ao fundo
-            for (x = 0; x < W; x++) {
-                y = Math.round(x * 0.22) - 6;
-                ret(c, x, y, 1, 8, 'rgba(110,90,60,.07)');
-                y = Math.round(H - x * 0.18);
-                ret(c, x, y, 1, 7, 'rgba(110,90,60,.06)');
-            }
-            // feixe de luz do projetor (cone que abre para a direita)
-            var lx = E.px0 + 31, alvo = (E.y2 - E.y1) / 2 + 3;
-            for (x = lx; x < W; x++) {
-                var meia = 2 + (x - lx) / Math.max(1, W - lx) * alvo;
-                ret(c, x, Math.round(E.cy - meia), 1, Math.round(meia * 2), 'rgba(255,255,255,.55)');
-            }
-            // projetor (silhueta preta com duas bobines)
-            var px = E.px0, cy = E.cy;
-            bobine(c, px + 8, cy - 10, 6, '#16130f', '#efe6d2');
-            bobine(c, px + 21, cy - 11, 6, '#16130f', '#efe6d2');
-            ret(c, px + 2, cy - 4, 24, 10, '#16130f');
-            for (x = 0; x < 6; x++) ret(c, px + 3 + x * 4, cy - 4, 2, 2, '#e8dfca');   // riscas da claquete no corpo
-            ret(c, px + 26, cy - 2, 4, 6, '#16130f'); ret(c, px + 30, cy - 3, 2, 8, '#16130f');
-            ret(c, px + 6, cy + 6, 2, 4, '#16130f'); ret(c, px + 20, cy + 6, 2, 4, '#16130f');
-            // TAVDEX na cor do avatar, dentro do feixe
-            letreiro(c, E.letreiro, 'rgba(60,40,20,.25)', [hsl(h, 62, 40), hsl(h, 62, 33), hsl(h, 64, 26)], E.ly, 21);
-            if (E.comSub) pintar(c, E.sub, '#4a3e30');
-        },
-        frame: function (ctx, E) {
-            var t = E.t, W = E.W, H = E.H;
-            // as duas películas a correr (em cima para a esquerda, em baixo para a direita)
+    // ---------- 4) Rolo de película ----------
+    TEMAS.pelicula = function (E) {
+        var W = E.W, H = E.H, id = E.id, est = E.estreito, i;
+        var fb = H * 0.17, periodo = fb * 1.9;              // altura das películas e tamanho de um fotograma
+        var s = Math.min(H * 0.34, W * 0.12), x0 = W * 0.04, cy = H * 0.5;
+        var lx = x0 + s * 1.85;                              // ponta da lente: começa o feixe
+        var fs = Math.min(H * 0.33, (W - lx - W * 0.06) / 2.7), larg = fs * 2.6;
+        var cx = Math.max(lx + larg / 2 + W * 0.02, (lx + W) / 2), ty = cy + fs * 0.28;
+        var fs2 = Math.max(6, H * 0.055), comSub = H * 0.8 - (ty + fs2 * 1.9) > 0;
+        var defs =
+            '<linearGradient id="' + id + '-fundo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6eedd"/><stop offset="1" stop-color="#e9dcc2"/></linearGradient>' +
+            '<linearGradient id="' + id + '-feixe" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset="1" stop-color="#ffffff" stop-opacity=".35"/></linearGradient>';
+        var c = '<rect width="' + W + '" height="' + H + '" fill="url(#' + id + '-fundo)"/>';
+        // películas "fantasma" na diagonal, ao fundo
+        c += '<g opacity=".07" fill="#5a4630"><rect x="-' + n(W * 0.1) + '" y="' + n(H * 0.3) + '" width="' + n(W * 1.3) + '" height="' + n(fb) + '" transform="rotate(-9 ' + n(W / 2) + ' ' + n(H / 2) + ')"/>' +
+            '<rect x="-' + n(W * 0.1) + '" y="' + n(H * 0.55) + '" width="' + n(W * 1.3) + '" height="' + n(fb * 0.8) + '" transform="rotate(7 ' + n(W / 2) + ' ' + n(H / 2) + ')"/></g>';
+        // feixe de luz do projetor (treme um bocadinho, como num projetor antigo)
+        c += '<polygon class="feixe" points="' + n(lx) + ',' + n(cy - s * 0.08) + ' ' + W + ',' + n(cy - H * 0.32) + ' ' + W + ',' + n(cy + H * 0.32) + ' ' + n(lx) + ',' + n(cy + s * 0.08) +
+            '" fill="url(#' + id + '-feixe)"/>';
+        for (i = 0; i < 12; i++) {
+            var py = cy + (aleat(i, 61) - 0.5) * H * 0.4;
+            c += '<circle class="po" cx="' + n(lx + 8) + '" cy="' + n(py) + '" r="' + n(H * 0.006 + aleat(i, 62) * H * 0.005) + '" fill="#fffdf4" style="animation-duration:' +
+                n(4 + aleat(i, 63) * 4) + 's;animation-delay:-' + n(aleat(i, 64) * 8) + 's"/>';
+        }
+        // duas películas a correr (em cima para a esquerda, em baixo para a direita)
+        function fita(y, classe) {
+            var f = '<g class="' + classe + '"><rect x="-' + n(periodo) + '" y="' + n(y) + '" width="' + n(W + 3 * periodo) + '" height="' + n(fb) + '" fill="#29231f"/>';
             var cores = ['#f2647e', null, '#68c3ea', null, '#f3c95a', null];
-            // (o deslocamento repete-se de 24 em 24 píxeis: o tamanho de um fotograma)
-            pelicula(ctx, W, 2, E.fb, (t % 24), '#2a2420', '#f4ecdb', '#e6dac2', cores);
-            pelicula(ctx, W, H - 2 - E.fb, E.fb, 23 - (t % 24), '#2a2420', '#f4ecdb', '#e6dac2', cores.slice(3).concat(cores.slice(0, 3)));
-            // pó a brilhar dentro do feixe
-            var lx = E.px0 + 31;
-            E.po.forEach(function (p) {
-                var f = (p.u + t * 0.004 * p.v) % 1, x = Math.round(lx + f * (W - lx));
-                var y = Math.round(E.cy + (p.y * 2 - 1) * (2 + f * ((E.y2 - E.y1) / 2)));
-                ret(ctx, x, y, 1, 1, 'rgba(255,250,235,' + (0.9 - f * 0.6).toFixed(2) + ')');
-            });
-            // a luz treme um bocadinho, como num projetor antigo
-            if (aleat(t, 9) < 0.25) ret(ctx, lx, E.y1, W - lx, E.y2 - E.y1, 'rgba(255,255,255,.06)');
+            for (var k = 0, x = -periodo; x < W + 2 * periodo; x += periodo, k++) {
+                f += '<rect x="' + n(x + periodo * 0.06) + '" y="' + n(y + fb * 0.24) + '" width="' + n(periodo * 0.88) + '" height="' + n(fb * 0.52) + '" rx="1.5" fill="#ece1c9"/>';
+                var corF = cores[k % cores.length];
+                if (corF) f += '<rect x="' + n(x + periodo * 0.14) + '" y="' + n(y + fb * 0.3) + '" width="' + n(periodo * 0.36) + '" height="' + n(fb * 0.4) + '" fill="' + corF + '" opacity=".9"/>';
+                for (var q = 0; q < 3; q++) {
+                    var hx = x + periodo * (0.12 + q * 0.32);
+                    f += '<rect x="' + n(hx) + '" y="' + n(y + fb * 0.07) + '" width="' + n(periodo * 0.13) + '" height="' + n(fb * 0.1) + '" rx="1" fill="#f6eedd"/>' +
+                        '<rect x="' + n(hx) + '" y="' + n(y + fb * 0.83) + '" width="' + n(periodo * 0.13) + '" height="' + n(fb * 0.1) + '" rx="1" fill="#f6eedd"/>';
+                }
+            }
+            return f + '</g>';
         }
+        c += fita(H * 0.025, 'fita-cima') + fita(H - fb - H * 0.025, 'fita-baixo');
+        // projetor: bobines a rodar, corpo com as riscas da claquete, lente e pernas
+        var cor = '#17140f';
+        c += bobine(x0 + s * 0.42, cy - s * 0.62, s * 0.36, cor, '#f6eedd', 'roda') + bobine(x0 + s * 1.12, cy - s * 0.68, s * 0.36, cor, '#f6eedd', 'roda') +
+            '<rect x="' + n(x0) + '" y="' + n(cy - s * 0.24) + '" width="' + n(s * 1.45) + '" height="' + n(s * 0.6) + '" rx="' + n(s * 0.06) + '" fill="' + cor + '"/>';
+        for (i = 0; i < 5; i++) c += '<rect x="' + n(x0 + s * (0.08 + i * 0.27)) + '" y="' + n(cy - s * 0.24) + '" width="' + n(s * 0.13) + '" height="' + n(s * 0.12) + '" fill="#ece1c9"/>';
+        c += '<rect x="' + n(x0 + s * 1.45) + '" y="' + n(cy - s * 0.12) + '" width="' + n(s * 0.18) + '" height="' + n(s * 0.3) + '" fill="' + cor + '"/>' +
+            '<polygon points="' + n(x0 + s * 1.6) + ',' + n(cy - s * 0.08) + ' ' + n(lx) + ',' + n(cy - s * 0.2) + ' ' + n(lx) + ',' + n(cy + s * 0.2) + ' ' + n(x0 + s * 1.6) + ',' + n(cy + s * 0.1) + '" fill="' + cor + '"/>' +
+            '<path d="M' + n(x0 + s * 0.4) + ',' + n(cy + s * 0.36) + ' l-' + n(s * 0.25) + ',' + n(s * 0.45) + ' M' + n(x0 + s * 1.05) + ',' + n(cy + s * 0.36) + ' l' + n(s * 0.25) + ',' + n(s * 0.45) +
+            '" stroke="' + cor + '" stroke-width="' + n(s * 0.07) + '" stroke-linecap="round"/>';
+        // TAVDEX na cor do avatar, dentro do feixe
+        c += titulo(cx + fs * 0.03, ty + fs * 0.04, fs, larg, 'TAVDEX', 'fill:rgba(80,60,30,.18)') +
+            titulo(cx, ty, fs, larg, 'TAVDEX', 'fill:' + av(62, 34));
+        if (comSub) c += legenda(cx, ty + fs2 * 1.9, fs2, 'FILMES E SÉRIES', '#4a3e30');
+        var css = '#ID .fita-cima{animation:ID-esq 2.4s linear infinite}#ID .fita-baixo{animation:ID-dir 2.4s linear infinite}' +
+            '@keyframes ID-esq{from{transform:translateX(0)}to{transform:translateX(-' + n(periodo) + 'px)}}' +
+            '@keyframes ID-dir{from{transform:translateX(-' + n(periodo) + 'px)}to{transform:translateX(0)}}' +
+            '#ID .roda{animation:ID-roda 3s linear infinite}@keyframes ID-roda{to{transform:rotate(360deg)}}' +
+            '#ID .feixe{animation:ID-treme 1.7s steps(5) infinite}@keyframes ID-treme{0%,100%{opacity:1}30%{opacity:.86}60%{opacity:.95}80%{opacity:.82}}' +
+            '#ID .po{animation:ID-po 6s linear infinite}@keyframes ID-po{from{transform:translateX(0);opacity:.9}to{transform:translateX(' + n(W - lx) + 'px);opacity:0}}';
+        return { defs: defs, corpo: c, css: css };
     };
 
-    // ---------- 5) Cinema à noite (marquise e néon) ----------
-    TEMAS.marquise = {
-        preparar: function (E) {
-            var W = E.W, H = E.H;
-            E.pw = E.lw + 16; E.px = Math.round((W - E.pw) / 2);
-            E.pTop = 9; E.ly = E.pTop + 4; E.lx = E.px + 8;
-            E.sy = E.ly + 25; E.sx = E.px + Math.round((E.pw - E.sw) / 2);
-            E.pBot = E.sy + 9;
-            E.chao = H - 4;
-            var s = { bl: textoV('CINEMA', MINI, 1, 1), w: 7 };
-            s.h = s.bl.altura + 4;
-            if (E.px >= 12) s.x = E.px - 11;
-            else if (W - E.px - E.pw >= 12) s.x = E.px + E.pw + 4;
-            else s = null;
-            if (s) { s.y = 2; mover(s.bl, s.x + 2, s.y + 2); }
-            E.sinal = s;
-        },
-        fundo: function (c, E, h) {
-            var W = E.W, H = E.H, x, y;
-            // céu noturno com nuvens
-            degrade(c, 0, 0, W, H, ['#04060d', '#0b1220', '#18223a']);
-            for (var k = 0; k < 3; k++) {
-                y = 2 + k * 5;
-                for (x = 0; x < W; x++) if (aleat(x >> 2, k + 20) > 0.55) ret(c, x, y + (x % 3 === 0 ? 1 : 0), 1, 2, 'rgba(60,72,98,.35)');
-            }
-            // prédio art déco
-            var px = E.px, pw = E.pw;
-            ret(c, px - 6, E.pTop - 4, pw + 12, H, '#3a2c22');
-            for (x = px - 4; x < px + pw + 6; x += 6) ret(c, x, E.pTop - 4, 1, H, '#4a3a2c');
-            ret(c, px - 8, E.pTop - 5, pw + 16, 2, '#5a4634');
-            // marquise: caixa escura e painel claro com linhas
-            ret(c, px - 4, E.pTop, pw + 8, E.pBot - E.pTop, '#1a1412');
-            ret(c, px, E.pTop + 2, pw, E.pBot - E.pTop - 4, '#f6eedb');
-            for (y = E.pTop + 7; y < E.pBot - 3; y += 6) ret(c, px, y, pw, 1, '#e8dcc0');
-            // por baixo: luz quente, portas de vidro e um cartaz ao centro
-            var topo = E.pBot + 3, alt = E.chao - topo;
-            if (alt >= 6) {
-                degrade(c, px - 6, topo, px + pw + 6, E.chao, ['#7a5230', '#3a281c']);
-                var dw = 10, cx = Math.round(W / 2);
-                [cx - 30, cx - 18, cx + 9, cx + 21].forEach(function (dx) {
-                    if (dx < px - 4 || dx + dw > px + pw + 4) return;
-                    ret(c, dx, topo + 1, dw, alt - 1, '#2a1c14');
-                    ret(c, dx + 1, topo + 2, dw - 2, alt - 2, '#d8943c');
-                    ret(c, dx + Math.round(dw / 2), topo + 2, 1, alt - 2, '#2a1c14');
-                });
-                ret(c, cx - 5, topo, 10, alt, '#c9a050');
-                ret(c, cx - 4, topo + 1, 8, alt - 2, '#2a160c');
-                disco(c, cx, topo + 3, 1, '#e8782a', 9999);
-                ret(c, cx - 1, topo + 5, 3, alt - 6, '#e8782a');
-            }
-            // passeio com o reflexo da luz
-            ret(c, 0, E.chao, W, H - E.chao, '#24201c');
-            ret(c, px, E.chao, pw, 1, 'rgba(255,190,120,.25)');
-            // placa vertical (a caixa; as letras de néon são desenhadas na animação)
-            if (E.sinal) {
-                var s = E.sinal;
-                ret(c, s.x, s.y, s.w, s.h, '#140c0c'); moldura(c, s.x, s.y, s.w, s.h, '#5a2a20');
-            }
-            // TAVDEX na cor do avatar e "FILMES E SÉRIES"
-            letreiro(c, E.letreiro, null, [hsl(h, 70, 38), hsl(h, 72, 31), hsl(h, 74, 25)], E.ly, 21);
-            pintar(c, E.sub, '#3a2c22');
-        },
-        frame: function (ctx, E) {
-            var t = E.t, px = E.px, pw = E.pw, x;
-            // tubos de néon cor de laranja em cima e em baixo da marquise
-            [E.pTop, E.pBot - 1].forEach(function (y) {
-                ret(ctx, px - 4, y - 1, pw + 8, 3, 'rgba(255,110,50,.22)');
-                ret(ctx, px - 4, y, pw + 8, 1, '#ff7a3a');
-            });
-            // lâmpadas a "correr" por baixo da marquise
-            for (x = px - 3; x < px + pw + 4; x += 3) {
-                var acesa = (Math.floor(x / 3) + t) % 3 !== 0;
-                if (acesa) ret(ctx, x - 1, E.pBot, 3, 3, 'rgba(255,220,140,.35)');
-                ret(ctx, x, E.pBot + 1, 1, 1, acesa ? '#fff1b0' : '#6a4a2a');
-            }
-            // placa CINEMA em néon vermelho: as letras acendem uma a uma (e às vezes uma pisca)
-            var s = E.sinal;
-            if (!s) return;
-            var fase = Math.floor(t / 4) % 12;
-            s.bl.forEach(function (b) {
-                var acesa = (fase > b.i || fase >= 6) && b.i !== E.pisca.letra;
-                if (acesa) ret(ctx, b.x - 1, b.y - 1, 3, 3, 'rgba(255,60,40,.3)');
-            });
-            s.bl.forEach(function (b) {
-                var acesa = (fase > b.i || fase >= 6) && b.i !== E.pisca.letra;
-                ret(ctx, b.x, b.y, 1, 1, acesa ? '#ff4433' : '#5a1a14');
-            });
+    // ---------- 5) Cinema à noite ----------
+    TEMAS.marquise = function (E) {
+        var W = E.W, H = E.H, id = E.id, est = E.estreito, i;
+        var fs = est ? Math.min(H * 0.26, W * 0.2) : Math.min(H * 0.28, W * 0.18), larg = fs * 2.6;
+        var pw = larg + fs * 0.9, px = (W - pw) / 2, py = H * 0.1;
+        var fs2 = Math.max(6, H * 0.052), ph = fs * 1.05 + fs2 * 2.4;
+        var cx = W / 2, ty = py + fs * 0.98, pBot = py + ph;
+        var sw = Math.max(9, H * 0.11), sh = Math.min(H * 0.84, sw * 6.4);   // placa vertical
+        var sx = px - sw - H * 0.05 >= 2 ? px - sw - H * 0.05 : (px + pw + H * 0.05 + sw <= W - 2 ? px + pw + H * 0.05 : null);
+        var dTopo = pBot + H * 0.06, dBase = H * 0.93;
+        var defs =
+            '<linearGradient id="' + id + '-ceu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#03050c"/><stop offset=".6" stop-color="#0f1830"/><stop offset="1" stop-color="#1c2742"/></linearGradient>' +
+            '<linearGradient id="' + id + '-predio" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2e221b"/><stop offset="1" stop-color="#6a4a30"/></linearGradient>' +
+            '<linearGradient id="' + id + '-painel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#efe1c0"/></linearGradient>' +
+            '<linearGradient id="' + id + '-vidro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c06a"/><stop offset="1" stop-color="#a8621f"/></linearGradient>' +
+            '<radialGradient id="' + id + '-luz" cx="50%" cy="0%" r="80%"><stop offset="0" stop-color="#ffb860" stop-opacity=".5"/><stop offset="1" stop-color="#ffb860" stop-opacity="0"/></radialGradient>' +
+            filtroBrilho(id + '-neon', Math.max(1.2, H * 0.014)) +
+            '<filter id="' + id + '-nuvem" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="' + n(H * 0.02) + '"/></filter>';
+        var c = '<rect width="' + W + '" height="' + H + '" fill="url(#' + id + '-ceu)"/>';
+        for (i = 0; i < 18; i++) {
+            c += '<circle class="estrela" cx="' + n(aleat(i, 71) * W) + '" cy="' + n(aleat(i, 72) * H * 0.5) + '" r="' + n(H * 0.005) + '" fill="#dfe6ff" style="animation-delay:-' + n(aleat(i, 73) * 3) + 's"/>';
         }
+        for (i = 0; i < 6; i++) {
+            c += '<ellipse cx="' + n(aleat(i, 74) * W) + '" cy="' + n(H * (0.08 + aleat(i, 75) * 0.25)) + '" rx="' + n(W * (0.1 + aleat(i, 76) * 0.12)) + '" ry="' + n(H * 0.05) +
+                '" fill="#26304a" opacity=".7" filter="url(#' + id + '-nuvem)"/>';
+        }
+        // prédio art déco
+        var ex = px - H * 0.12, ew = pw + H * 0.24;
+        c += '<rect x="' + n(ex) + '" y="' + n(H * 0.03) + '" width="' + n(ew) + '" height="' + H + '" fill="url(#' + id + '-predio)"/>' +
+            '<rect x="' + n(ex - H * 0.02) + '" y="' + n(H * 0.02) + '" width="' + n(ew + H * 0.04) + '" height="' + n(H * 0.03) + '" fill="#4a3628"/>';
+        for (var vx = ex + H * 0.05; vx < ex + ew; vx += H * 0.1) c += '<rect x="' + n(vx) + '" y="' + n(H * 0.05) + '" width="1" height="' + H + '" fill="#5a4432" opacity=".7"/>';
+        // por baixo da marquise: luz quente, portas de vidro e o cartaz ao centro
+        if (dBase - dTopo > H * 0.08) {
+            var dh = dBase - dTopo, dw = Math.min(dh * 0.55, pw * 0.12);
+            c += '<rect x="' + n(ex) + '" y="' + n(pBot) + '" width="' + n(ew) + '" height="' + n(H - pBot) + '" fill="url(#' + id + '-luz)"/>';
+            [-2.7, -1.6, 0.6, 1.7].forEach(function (k) {
+                var x = cx + k * dw * 1.08;
+                c += '<rect x="' + n(x) + '" y="' + n(dTopo) + '" width="' + n(dw) + '" height="' + n(dh) + '" fill="#2a1a10"/>' +
+                    '<rect x="' + n(x + dw * 0.1) + '" y="' + n(dTopo + dw * 0.1) + '" width="' + n(dw * 0.8) + '" height="' + n(dh - dw * 0.2) + '" fill="url(#' + id + '-vidro)"/>' +
+                    '<rect x="' + n(x + dw * 0.48) + '" y="' + n(dTopo) + '" width="' + n(dw * 0.06) + '" height="' + n(dh) + '" fill="#2a1a10"/>';
+            });
+            var cw2 = dw * 1.1;
+            c += '<rect x="' + n(cx - cw2 / 2) + '" y="' + n(dTopo - dh * 0.05) + '" width="' + n(cw2) + '" height="' + n(dh * 1.02) + '" fill="#c9a050"/>' +
+                '<rect x="' + n(cx - cw2 / 2 + 2) + '" y="' + n(dTopo - dh * 0.05 + 2) + '" width="' + n(cw2 - 4) + '" height="' + n(dh * 1.02 - 4) + '" fill="#2a140a"/>' +
+                '<g filter="url(#' + id + '-neon)" fill="#f08a2c"><circle cx="' + n(cx) + '" cy="' + n(dTopo + dh * 0.25) + '" r="' + n(cw2 * 0.13) + '"/>' +
+                '<path d="M' + n(cx - cw2 * 0.28) + ',' + n(dTopo + dh * 0.9) + ' Q' + n(cx) + ',' + n(dTopo + dh * 0.3) + ' ' + n(cx + cw2 * 0.28) + ',' + n(dTopo + dh * 0.9) + 'Z"/></g>';
+        }
+        // passeio com o reflexo da luz
+        c += '<rect y="' + n(dBase) + '" width="' + W + '" height="' + n(H - dBase) + '" fill="#1d1916"/>' +
+            '<ellipse cx="' + n(cx) + '" cy="' + n(dBase + 2) + '" rx="' + n(pw * 0.6) + '" ry="' + n(H * 0.04) + '" fill="#ffb860" opacity=".18"/>';
+        // marquise: caixa escura, painel claro com linhas, tubos de néon e lâmpadas
+        c += '<rect x="' + n(px - H * 0.035) + '" y="' + n(py - H * 0.03) + '" width="' + n(pw + H * 0.07) + '" height="' + n(ph + H * 0.06) + '" rx="' + n(H * 0.015) + '" fill="#191210"/>' +
+            '<rect x="' + n(px) + '" y="' + n(py) + '" width="' + n(pw) + '" height="' + n(ph) + '" fill="url(#' + id + '-painel)"/>';
+        for (var ly = py + ph * 0.25; ly < pBot - 2; ly += ph * 0.25) c += '<rect x="' + n(px) + '" y="' + n(ly) + '" width="' + n(pw) + '" height="1" fill="#e4d4ae"/>';
+        c += '<g filter="url(#' + id + '-neon)" stroke="#ff7b3a" stroke-width="' + n(Math.max(1.2, H * 0.012)) + '">' +
+            '<path d="M' + n(px - H * 0.03) + ',' + n(py - H * 0.015) + ' h' + n(pw + H * 0.06) + ' M' + n(px - H * 0.03) + ',' + n(pBot + H * 0.015) + ' h' + n(pw + H * 0.06) + '"/></g>';
+        var nb = Math.floor((pw + H * 0.04) / (H * 0.045));
+        for (i = 0; i <= nb; i++) {
+            c += '<circle class="lampada" cx="' + n(px - H * 0.02 + i * H * 0.045) + '" cy="' + n(pBot + H * 0.045) + '" r="' + n(Math.max(1, H * 0.011)) +
+                '" fill="#ffe9a8" style="animation-delay:' + n((i % 3) * 0.25) + 's"/>';
+        }
+        // TAVDEX na cor do avatar e "FILMES E SÉRIES"
+        c += titulo(cx, ty, fs, larg, 'TAVDEX', 'fill:' + av(70, 33)) + legenda(cx, ty + fs2 * 1.75, fs2, 'FILMES E SÉRIES', '#3a2c22');
+        // placa vertical "CINEMA" em néon vermelho: as letras acendem uma a uma
+        if (sx !== null) {
+            var sy0 = H * 0.03;
+            c += '<rect x="' + n(sx) + '" y="' + n(sy0) + '" width="' + n(sw) + '" height="' + n(sh) + '" rx="' + n(sw * 0.2) + '" fill="#1a0b0a" stroke="#6a2a20" stroke-width="1.5"/>' +
+                '<g filter="url(#' + id + '-neon)">';
+            'CINEMA'.split('').forEach(function (l, k) {
+                c += '<text class="letra-neon" x="' + n(sx + sw / 2) + '" y="' + n(sy0 + sh * (0.15 + k * 0.148)) + '" font-family="' + FONTE_TITULO + '" font-size="' + n(sw * 0.78) +
+                    '" text-anchor="middle" fill="#ff4433" style="animation-delay:' + n(k * 0.35) + 's">' + l + '</text>';
+            });
+            c += '</g>';
+        }
+        var css = '#ID .estrela{animation:ID-brilha 3s ease-in-out infinite}@keyframes ID-brilha{0%,100%{opacity:.2}50%{opacity:1}}' +
+            '#ID .lampada{animation:ID-corre .75s steps(1) infinite}@keyframes ID-corre{0%{opacity:1}33%{opacity:.25}66%{opacity:1}}' +
+            '#ID .letra-neon{animation:ID-acende 6s steps(1) infinite}' +
+            '@keyframes ID-acende{0%{fill:#4a1410}6%{fill:#ff4433}70%{fill:#ff4433}72%{fill:#4a1410}74%{fill:#ff4433}96%{fill:#ff4433}100%{fill:#4a1410}}';
+        return { defs: defs, corpo: c, css: css };
     };
-
-    var TEMA_POR_OMISSAO = 'colina';
 
     // =====================================================================
-    //  MOTOR: tamanho, animação e troca de cenário
+    //  O SVG completo de um cenário (W×H em píxeis do ecrã)
+    // =====================================================================
+    function svg(tema, W, H, id, estreito) {
+        var T = TEMAS[tema] || TEMAS[TEMA_POR_OMISSAO];
+        var r = T({ W: W, H: H, id: id, estreito: estreito });
+        // As regras de CSS só valem para este banner (#id) e respeitam "reduzir movimento"
+        var css = r.css.replace(/ID/g, id) +
+            '#' + id + '.pausado *{animation-play-state:paused!important}' +
+            '@media (prefers-reduced-motion:reduce){#' + id + ' *{animation:none!important}}';
+        return '<svg class="pbanner__arte" id="' + id + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H +
+            '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true" focusable="false"><defs>' + r.defs + '</defs><style>' + css + '</style>' + r.corpo + '</svg>';
+    }
+
+    // =====================================================================
+    //  MOTOR: desenha o SVG com o tamanho da caixa e troca de cenário
     // =====================================================================
     function iniciar(banner) {
         if (banner.dataset.bannerIniciado) return;   // nunca iniciar o mesmo banner duas vezes
         banner.dataset.bannerIniciado = '1';
-        var tela = document.createElement('canvas');
-        tela.className = 'pbanner__pixel';
-        banner.appendChild(tela);
-        var ctx = tela.getContext('2d');
-        var fundo = document.createElement('canvas'), fctx = fundo.getContext('2d');
-        var frente = document.createElement('canvas'), gctx = frente.getContext('2d');
-        var E = { W: 0, H: 0, estreito: false, t: 0, pisca: { letra: -1, n: 0 } };
-        var chave = '', relogio = null, visivel = false;
-        var semAnimacao = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var id = 'pbanner-' + (++contador);
+        var chave = '', visivel = true;
 
         function nomeTema() { return TEMAS[banner.getAttribute('data-tema')] ? banner.getAttribute('data-tema') : TEMA_POR_OMISSAO; }
-        function hue() { return Math.round(parseFloat(getComputedStyle(banner).getPropertyValue('--h')) || 330); }
 
-        function preparar() {
-            E = { W: E.W, H: E.H, estreito: E.estreito, t: E.t, pisca: E.pisca };
-            if (!E.W) return;
-            E.letreiro = texto('TAVDEX', LETRAS, 3, 3);
-            E.sub = texto('FILMES E SÉRIES', MINI, 1, 1);
-            E.lw = E.letreiro.largura; E.sw = E.sub.largura;
-            E.lx = Math.round((E.W - E.lw) / 2); E.ly = 6;
-            TEMAS[nomeTema()].preparar(E);
-            if (E.sx === undefined) { E.sx = E.lx + Math.round((E.lw - E.sw) / 2); E.sy = E.ly + 26; }
-            mover(E.letreiro, E.lx, E.ly);
-            mover(E.sub, E.sx, E.sy);
-            chave = '';
-        }
-
+        // Só redesenha quando muda o tamanho ou o cenário.
+        // (A cor do avatar não obriga a redesenhar: as cores usam var(--h).)
         function desenhar() {
-            if (!E.W || !E.letreiro) return;
-            var h = hue(), nome = nomeTema(), T = TEMAS[nome], k = E.W + 'x' + E.H + ':' + h + ':' + nome;
-            if (k !== chave) {
-                fundo.width = E.W; fundo.height = E.H; T.fundo(fctx, E, h);
-                frente.width = E.W; frente.height = E.H; if (T.frente) T.frente(gctx, E, h);
-                chave = k;
-            }
-            ctx.drawImage(fundo, 0, 0);
-            T.frame(ctx, E, h);
-            if (T.frente) ctx.drawImage(frente, 0, 0);
-        }
-
-        function passo() {
-            if (!banner.isConnected) { parar(); return; }   // a página redesenhou-se e o banner saiu
-            E.t++;
-            if (E.pisca.n > 0) E.pisca.n--;
-            else {
-                E.pisca.letra = -1;
-                if (Math.random() < 0.04) { E.pisca.letra = Math.floor(Math.random() * 6); E.pisca.n = 1 + Math.floor(Math.random() * 4); }
-            }
-            desenhar();
-        }
-
-        function medir() {
+            if (!banner.isConnected) { parar(); return; }
             var caixa = banner.getBoundingClientRect();
             if (!caixa.width) return;
-            E.estreito = caixa.width <= 600;
-            // tamanho de cada "pixel" no ecrã (1 nas miniaturas, para o TAVDEX caber)
-            var S = caixa.width < 300 ? 1 : (E.estreito ? 2 : 3);
-            E.W = Math.ceil(caixa.width / S);
-            E.H = Math.ceil(caixa.height / S);
-            tela.width = E.W; tela.height = E.H;
-            tela.style.width = E.W * S + 'px';
-            tela.style.height = E.H * S + 'px';
-            preparar();
-            desenhar();
+            var W = Math.round(caixa.width), H = Math.round(caixa.height), tema = nomeTema();
+            var k = W + 'x' + H + ':' + tema;
+            if (k === chave) return;
+            chave = k;
+            var antigo = banner.querySelector('.pbanner__arte');
+            if (antigo) antigo.remove();
+            // O SVG é feito só com valores do próprio programa (nada escrito pelos utilizadores)
+            banner.insertAdjacentHTML('beforeend', svg(tema, W, H, id, W <= 600));
+            atualizarPausa();
+        }
+        // Fora do ecrã as animações param (não gastam bateria)
+        function atualizarPausa() {
+            var arte = banner.querySelector('.pbanner__arte');
+            if (arte) arte.classList.toggle('pausado', !visivel);
         }
 
-        function ligar() { if (!relogio && !semAnimacao) relogio = setInterval(passo, 100); }   // 10 imagens/segundo
-        function desligar() { clearInterval(relogio); relogio = null; }
-
-        var ro = new ResizeObserver(medir);
+        var ro = new ResizeObserver(desenhar);
         ro.observe(banner);
-        // só anima quando o banner está visível no ecrã
-        var io = new IntersectionObserver(function (e) {
-            visivel = e[0].isIntersecting;
-            if (visivel && banner.isConnected) ligar(); else desligar();
-        });
+        var io = new IntersectionObserver(function (e) { visivel = e[0].isIntersecting; atualizarPausa(); });
         io.observe(banner);
-        // troca de cenário (data-tema) ou de cor do avatar (style) sem recarregar
-        var obs = new MutationObserver(function () { preparar(); desenhar(); });
-        obs.observe(banner, { attributes: true, attributeFilter: ['data-tema', 'style'] });
-        if (banner.parentElement) obs.observe(banner.parentElement, { attributes: true, attributeFilter: ['style'] });
-        var perfil = banner.closest('.pperfil');
-        if (perfil && perfil !== banner.parentElement) obs.observe(perfil, { attributes: true, attributeFilter: ['style'] });
+        // troca de cenário (data-tema) sem recarregar
+        var obs = new MutationObserver(desenhar);
+        obs.observe(banner, { attributes: true, attributeFilter: ['data-tema'] });
 
-        // limpa tudo quando o banner sai da página (para não ficar a gastar recursos)
-        function parar() { desligar(); ro.disconnect(); io.disconnect(); obs.disconnect(); }
-        medir();
+        function parar() { ro.disconnect(); io.disconnect(); obs.disconnect(); }
+        desenhar();
     }
 
     // Inicia os banners que estão dentro de "raiz" (por omissão, a página toda).
@@ -753,16 +535,19 @@
         if (raiz.querySelectorAll) raiz.querySelectorAll('.pbanner').forEach(iniciar);
     }
     window.iniciarBanners = iniciarBanners;
+    // Para pré-visualizar ou testar um cenário sem página (ex.: TavDexBanner.svg('colina', 900, 214, 'x', false))
+    window.TavDexBanner = { svg: svg, temas: Object.keys(TEMAS) };
 
     function arrancar() {
         iniciarBanners(document);
         // banners que aparecem mais tarde (páginas desenhadas pelo JavaScript)
         new MutationObserver(function (lista) {
             lista.forEach(function (m) {
-                m.addedNodes.forEach(function (n) { if (n.nodeType === 1) iniciarBanners(n); });
+                m.addedNodes.forEach(function (no) { if (no.nodeType === 1) iniciarBanners(no); });
             });
         }).observe(document.body, { childList: true, subtree: true });
     }
+    if (typeof document === 'undefined') return;
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
     else arrancar();
 })();

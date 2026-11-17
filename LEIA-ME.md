@@ -117,7 +117,7 @@ public/              páginas .html (uma por ecrã)
   js/api.js          api() (fetch + token CSRF), esc() (contra XSS) e TavDex.pedido()
   js/main.js         topo, rodapé, tema, cartões, janela "Inicia sessão para continuar", botão Google, formulários,
                      cabecalhoPerfil() (cartão do perfil com o banner)
-  js/banner-perfil.js  banner em pixel art num <canvas> (5 cenários de cinema), sem imagens
+  js/banner-perfil.js  banner do perfil: 5 ilustrações de cinema em SVG, animadas com CSS, sem imagens
   js/regras-palavra-passe.js  regras das palavras-passe (o MESMO ficheiro no browser e no servidor)
   js/regras-email.js formato do email e "Querias dizer …?" (também partilhado com o servidor)
   js/paginas/        o JavaScript de cada página
