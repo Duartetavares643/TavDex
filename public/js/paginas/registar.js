@@ -4,9 +4,12 @@
 //  e devolve todos os erros juntos; o que foi escrito nunca se perde.
 //  · palavra-passe: lista de requisitos ao vivo e o botão só fica ativo
 //    com todos cumpridos (regras em /js/regras-palavra-passe.js);
-//  · email: ao sair do campo, formato e "Querias dizer …?" (/js/regras-email.js);
-//  · @nome: "✓ Disponível" / "Já está a ser usado" enquanto se escreve.
-//  Depois de criar a conta, NÃO entra logo: vai para "Confirma o teu email".
+//  · email: enquanto se escreve, formato, "Querias dizer …?" (/js/regras-email.js) e se já tem conta;
+//  · @nome: caracteres proibidos a vermelho logo, e "✓ Disponível" / "Já está a ser usado";
+//  · nome: números ou símbolos a vermelho logo.
+//  Tudo o que está errado fica a vermelho (borda + mensagem) enquanto se escreve.
+//  Depois de criar a conta, NÃO entra logo: vai para o login, com o aviso
+//  "Conta criada! Confirma o teu email" (e o botão para reenviar o link).
 // =====================================================================
 (async () => {
   const voltar = voltarDoEndereco();
@@ -57,7 +60,8 @@
     const nome = dados.nome.trim().replace(/^@/, '');
     const erroNome = erroNomePessoa(nomeExibicao);
     if (erroNome) erros.nome_exibicao = erroNome;
-    if (!/^[A-Za-z0-9_.]{3,30}$/.test(nome)) erros.nome = 'O @nome tem de ter 3 a 30 letras, números, _ ou .';
+    const erroArroba = erroFormatoNome(nome);
+    if (erroArroba) erros.nome = erroArroba;
     const erroEmail = RegrasEmail.erroFormato(dados.email);
     if (erroEmail) erros.email = erroEmail;
     const analise = RegrasPalavraPasse.analisar(dados.password, dadosPessoais());
@@ -70,7 +74,9 @@
       nome_exibicao: nomeExibicao, nome, email: dados.email, password: dados.password,
       password2: dados.password2, aceito: dados.aceito, website: dados.website,
     });
-    // A conta foi criada mas ainda não entrou: "Quase pronto! Enviámos um link para …"
-    location.href = '/confirmar-email';
+    // A conta foi criada mas ainda não entrou: vai para o login, com o aviso
+    // "Conta criada! Confirma o teu email" e o @nome já escrito
+    try { sessionStorage.setItem('tavdex-conta-criada', nome); } catch (erro) { /* ignora */ }
+    location.href = '/login.html?criada=1&voltar=' + encodeURIComponent(voltar);
   });
 })();

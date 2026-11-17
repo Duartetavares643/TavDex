@@ -58,6 +58,12 @@
           </div>
 
           <b id="rot-banner">Banner do perfil</b>
+          <!-- Imagem própria: fica por cima do cenário; escolher um cenário tira a imagem -->
+          <div class="foto-campo">
+            <label class="btn ghost sm">${d.banner_versao ? 'Trocar a imagem' : 'Carregar imagem'}<input type="file" id="banner-ficheiro" accept="image/jpeg,image/png,image/webp" hidden></label>
+            ${d.banner_versao ? '<label class="chk"><input type="checkbox" id="remover-banner"> Remover a imagem</label>' : ''}
+            <small class="muted">Usa uma imagem tua (JPG, PNG ou WebP, até 5 MB) ou escolhe um dos cenários abaixo.</small>
+          </div>
           <!-- Cada opção mostra uma miniatura viva do cenário, na cor do avatar escolhida -->
           <div class="temas-banner" role="radiogroup" aria-labelledby="rot-banner" style="--h:${corValida(d.cor)}">
             ${Object.entries(TEMAS_BANNER).map(([tema, nome]) => `<label class="tema-op">
@@ -96,7 +102,7 @@
         <aside class="pre-perfil">
           <small class="muted">Assim é que os outros veem o teu perfil</small>
           <section class="pperfil cartao-perfil" id="pre-perfil" style="--h:${corValida(d.cor)}">
-            <div class="pbanner" id="pre-banner" data-tema="${temaValido(d.tema_banner)}" aria-hidden="true"></div>
+            <div class="pbanner" id="pre-banner" data-tema="${temaValido(d.tema_banner)}" aria-hidden="true">${imagemBanner(d)}</div>
             <div id="pre-partes"></div>
           </section>
         </aside>
@@ -195,6 +201,11 @@
   const gradeTemas = fPerfil.querySelector('.temas-banner');
   let urlFotoNova = null;
   let contagens = null;   // números do perfil público (pedidos à API logo a seguir)
+  const campoBanner = document.getElementById('banner-ficheiro');
+  const removerBanner = document.getElementById('remover-banner');
+  let bannerRecortado = null;   // Blob JPEG 1500×500 (ou null)
+  let urlBannerNovo = null;
+  let versaoBanner = 0;         // muda a cada recorte (para o aviso de alterações por guardar)
 
   const corEscolhida = () => corValida(fPerfil.querySelector('[name=cor]:checked')?.value);
   const temaEscolhido = () => temaValido(fPerfil.querySelector('[name=tema_banner]:checked')?.value);
@@ -206,6 +217,10 @@
     // A cor vai também para cada miniatura, para mudar logo (mesmo com "reduzir movimento").
     prePerfil.style.setProperty('--h', cor);
     preBanner.dataset.tema = temaEscolhido();
+    // Imagem do banner: a nova (ainda não guardada), a guardada, ou nenhuma (fica o cenário)
+    preBanner.querySelector('.pbanner__foto')?.remove();
+    const comImagem = urlBannerNovo || (d.banner_versao && !(removerBanner && removerBanner.checked));
+    if (comImagem) preBanner.insertAdjacentHTML('afterbegin', imagemBanner(d, urlBannerNovo));
     gradeTemas.style.setProperty('--h', cor);
     gradeTemas.querySelectorAll('.pbanner').forEach(b => b.style.setProperty('--h', cor));
 
@@ -248,6 +263,29 @@
     if (removerFoto) removerFoto.checked = false;
     preVisualizar();
   });
+
+  // Imagem do banner: escolher -> recortar em 3:1 -> aparece logo na pré-visualização
+  campoBanner.addEventListener('change', async () => {
+    const ficheiro = campoBanner.files[0];
+    campoBanner.value = '';
+    if (!ficheiro) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(ficheiro.type)) return aviso('A imagem tem de ser JPG, PNG ou WebP.', 'erro');
+    if (ficheiro.size > 5 * 1024 * 1024) return aviso('A imagem do banner tem de ter no máximo 5 MB.', 'erro');
+    const recorte = await recortarFoto(ficheiro, 'banner');
+    if (!recorte) return;
+    if (urlBannerNovo) URL.revokeObjectURL(urlBannerNovo);
+    bannerRecortado = recorte;
+    versaoBanner++;
+    urlBannerNovo = URL.createObjectURL(recorte);
+    if (removerBanner) removerBanner.checked = false;
+    preVisualizar();
+  });
+  // Escolher um cenário tira a imagem (senão o cenário escolhido não se via)
+  gradeTemas.addEventListener('change', () => {
+    if (urlBannerNovo) { URL.revokeObjectURL(urlBannerNovo); urlBannerNovo = null; bannerRecortado = null; versaoBanner++; }
+    if (removerBanner) removerBanner.checked = true;
+    preVisualizar();
+  });
   preVisualizar();
 
   // Géneros favoritos: no máximo 3 (os outros ficam desativados quando já há 3)
@@ -263,18 +301,21 @@
   // @nome disponível ao vivo (se ainda puder mudar)
   if (d.pode_mudar_nome) ligarNomeDisponivel(document.getElementById('def-nome'), d.nome);
 
-  // Mensagens por campo ao sair de cada campo (o servidor volta a verificar tudo ao guardar)
+  // Verificações de cada campo (o servidor volta a verificar tudo ao guardar)
   const verificacoes = {
     nome_exibicao: erroNomePessoa,   // só letras, espaços, hífen e apóstrofo (main.js)
-    nome: v => /^@?[A-Za-z0-9_.]{3,30}$/.test(v.trim()) ? '' : 'O @nome tem de ter 3 a 30 letras, números, _ ou .',
+    nome: erroFormatoNome,           // letras sem acentos, números, _ e . (main.js)
     localizacao: v => v.trim().length > 40 ? 'A localização tem no máximo 40 caracteres.' : '',
     bio: v => v.length > 160 ? 'A biografia tem no máximo 160 caracteres.' : '',
   };
-  // (Ao sair do campo não se mexe no foco: a pessoa continua para o campo seguinte.)
+  // O nome fica a vermelho logo enquanto se escreve (o @nome já tem o "Disponível" ao vivo)
+  ligarVerificacaoCampo(fPerfil.nome_exibicao, erroNomePessoa);
+  const aoVivo = ['nome_exibicao', ...(d.pode_mudar_nome ? ['nome'] : [])];
+  // Os outros campos: mensagem ao sair do campo (sem mexer no foco)
   fPerfil.addEventListener('focusout', e => {
     const campo = e.target;
     const verificar = verificacoes[campo.name];
-    if (!verificar) return;
+    if (!verificar || aoVivo.includes(campo.name)) return;
     const erro = verificar(campo.value);
     const id = `erro-f-perfil-${campo.name}`;
     document.getElementById(id)?.remove();
@@ -300,6 +341,7 @@
       nome_exibicao: f.nome_exibicao.value, nome: f.nome.value, localizacao: f.localizacao.value, bio: bio.value,
       notif_email: f.notif_email.checked, cor: corEscolhida(), tema: temaEscolhido(),
       foto: versaoFoto, remover_foto: !!(removerFoto && removerFoto.checked),
+      banner: bannerRecortado ? versaoBanner : 0, remover_banner: !!(removerBanner && removerBanner.checked),
       generos: generosEscolhidos().sort((a, b) => a - b),
       mostrar_listas: f.mostrar_listas.checked, mostrar_seguidores: f.mostrar_seguidores.checked,
     });
@@ -399,6 +441,14 @@
     } else if (removerFoto && removerFoto.checked) {
       await api('/api/utilizadores/eu/foto', 'DELETE');
     }
+    // Banner: a imagem nova, ou tirar a imagem (volta ao cenário escolhido)
+    if (bannerRecortado) {
+      const envio = new FormData();
+      envio.append('banner', bannerRecortado, 'banner.jpg');
+      await api('/api/utilizadores/eu/banner', 'POST', envio);
+    } else if (removerBanner && removerBanner.checked) {
+      await api('/api/utilizadores/eu/banner', 'DELETE');
+    }
     let r;
     try {
       r = await api('/api/utilizadores/eu/perfil', 'PUT', {
@@ -486,12 +536,25 @@
   });
 
   // -------------------------------------------------------------------
-  // Recortar a foto antes de enviar: a imagem num <canvas> com um círculo de recorte.
-  // Arrastar (rato ou dedo) move a foto; a barra (ou a roda do rato, ou + e −) faz zoom;
-  // as setas do teclado também movem. "Usar esta foto" devolve um JPEG quadrado (512×512).
-  // O servidor continua a validar o conteúdo e a reduzir a foto com o sharp.
+  // Recortar uma imagem antes de enviar: a imagem num <canvas> com a zona de recorte.
+  //  · foto   → círculo, devolve um JPEG quadrado (512×512)
+  //  · banner → retângulo 3:1, devolve um JPEG 1500×500
+  // Arrastar (rato ou dedo) move a imagem; a barra (ou a roda do rato, ou + e −) faz zoom;
+  // as setas do teclado também movem. O servidor continua a validar o conteúdo e a
+  // reduzir a imagem com o sharp.
   // -------------------------------------------------------------------
-  function recortarFoto(ficheiro) {
+  const RECORTES = {
+    foto: {
+      titulo: 'Recortar a foto', texto: 'Arrasta a foto para a acertar no círculo e usa o zoom.', usar: 'Usar esta foto',
+      tela: [320, 320], zona: [140, 140], circulo: true, saida: [512, 512], classe: '',
+    },
+    banner: {
+      titulo: 'Recortar o banner', texto: 'Arrasta a imagem para escolher a parte que aparece no banner e usa o zoom.', usar: 'Usar esta imagem',
+      tela: [360, 200], zona: [170, 170 / 3], circulo: false, saida: [1500, 500], classe: 'banner',
+    },
+  };
+  function recortarFoto(ficheiro, tipo = 'foto') {
+    const cfg = RECORTES[tipo];
     return new Promise(resolve => {
       const url = URL.createObjectURL(ficheiro);
       const img = new Image();
@@ -503,50 +566,58 @@
       img.onload = () => {
         let resultado = null;
         const janela = abrirJanela(`<div class="modal-in">
-            <h2>Recortar a foto</h2>
-            <p class="modal-txt">Arrasta a foto para a acertar no círculo e usa o zoom.</p>
-            <canvas class="recorte-tela" width="320" height="320" tabindex="0"
-              aria-label="Foto a recortar. Usa as setas para mover e as teclas + e − para o zoom."></canvas>
+            <h2>${cfg.titulo}</h2>
+            <p class="modal-txt">${cfg.texto}</p>
+            <canvas class="recorte-tela ${cfg.classe ? 'recorte-tela--' + cfg.classe : ''}" width="${cfg.tela[0]}" height="${cfg.tela[1]}" tabindex="0"
+              aria-label="Imagem a recortar. Usa as setas para mover e as teclas + e − para o zoom."></canvas>
             <label class="recorte-zoom">Zoom <input type="range" min="1" max="4" step="0.01" value="1"></label>
             <div class="modal-btns">
-              <button type="button" class="btn primary" data-usar>Usar esta foto</button>
+              <button type="button" class="btn primary" data-usar>${cfg.usar}</button>
               <button type="button" class="btn ghost" data-cancelar>Cancelar</button>
             </div>
-          </div>`, { classe: 'modal-aviso modal-recorte', aoFechar: () => { URL.revokeObjectURL(url); resolve(resultado); } });
+          </div>`, {
+          classe: 'modal-aviso modal-recorte' + (cfg.classe ? ' modal-recorte--' + cfg.classe : ''),
+          aoFechar: () => { URL.revokeObjectURL(url); resolve(resultado); },
+        });
 
         const tela = janela.querySelector('canvas');
         const ctx = tela.getContext('2d');
         const zoomCampo = janela.querySelector('[type=range]');
-        const T = tela.width;                 // tamanho do canvas (320)
-        const R = 140;                        // raio do círculo de recorte
-        const base = Math.max(2 * R / img.width, 2 * R / img.height);   // com zoom 1 a foto cobre o círculo
+        const [TL, TA] = cfg.tela;            // tamanho do canvas
+        const [RX, RY] = cfg.zona;            // metade da largura e da altura da zona de recorte
+        const base = Math.max(2 * RX / img.width, 2 * RY / img.height);   // com zoom 1 a imagem cobre a zona
         let zoom = 1;
-        let cx = 0;                           // deslocamento do centro da foto (px do canvas)
+        let cx = 0;                           // deslocamento do centro da imagem (px do canvas)
         let cy = 0;
 
-        // A foto nunca pode deixar o círculo com partes vazias
+        // A imagem nunca pode deixar a zona de recorte com partes vazias
         function limitar() {
           const meiaL = img.width * base * zoom / 2;
           const meiaA = img.height * base * zoom / 2;
-          cx = Math.max(-(meiaL - R), Math.min(meiaL - R, cx));
-          cy = Math.max(-(meiaA - R), Math.min(meiaA - R, cy));
+          cx = Math.max(-(meiaL - RX), Math.min(meiaL - RX, cx));
+          cy = Math.max(-(meiaA - RY), Math.min(meiaA - RY, cy));
+        }
+        // Desenha a forma da zona de recorte (círculo ou retângulo) no caminho atual
+        function zona() {
+          if (cfg.circulo) ctx.arc(TL / 2, TA / 2, RX, 0, Math.PI * 2);
+          else ctx.rect(TL / 2 - RX, TA / 2 - RY, 2 * RX, 2 * RY);
         }
         function desenhar() {
           limitar();
           const l = img.width * base * zoom;
           const a = img.height * base * zoom;
-          ctx.clearRect(0, 0, T, T);
-          ctx.drawImage(img, T / 2 + cx - l / 2, T / 2 + cy - a / 2, l, a);
-          // Escurece tudo menos o círculo (regra "evenodd": o círculo fica como um buraco)
+          ctx.clearRect(0, 0, TL, TA);
+          ctx.drawImage(img, TL / 2 + cx - l / 2, TA / 2 + cy - a / 2, l, a);
+          // Escurece tudo menos a zona (regra "evenodd": a zona fica como um buraco)
           ctx.fillStyle = 'rgba(8, 7, 11, .6)';
           ctx.beginPath();
-          ctx.rect(0, 0, T, T);
-          ctx.arc(T / 2, T / 2, R, 0, Math.PI * 2);
+          ctx.rect(0, 0, TL, TA);
+          zona();
           ctx.fill('evenodd');
           ctx.strokeStyle = 'rgba(255, 255, 255, .85)';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(T / 2, T / 2, R, 0, Math.PI * 2);
+          zona();
           ctx.stroke();
         }
         function mudarZoom(novo) {
@@ -563,7 +634,7 @@
         });
         tela.addEventListener('pointermove', e => {
           if (!arrasto) return;
-          const escala = T / tela.getBoundingClientRect().width;   // o canvas pode estar mais pequeno no ecrã
+          const escala = TL / tela.getBoundingClientRect().width;   // o canvas pode estar mais pequeno no ecrã
           cx += (e.clientX - arrasto.x) * escala;
           cy += (e.clientY - arrasto.y) * escala;
           arrasto = { x: e.clientX, y: e.clientY };
@@ -583,17 +654,17 @@
 
         janela.querySelector('[data-cancelar]').addEventListener('click', () => janela.close());
         janela.querySelector('[data-usar]').addEventListener('click', () => {
-          // Recorta o quadrado do círculo, na resolução original da foto
+          // Recorta a zona (o quadrado do círculo, ou o retângulo), na resolução original da imagem
           const escala = base * zoom;
           const l = img.width * escala;
           const a = img.height * escala;
-          const sx = (l / 2 - cx - R) / escala;
-          const sy = (a / 2 - cy - R) / escala;
-          const lado = 2 * R / escala;
+          const sx = (l / 2 - cx - RX) / escala;
+          const sy = (a / 2 - cy - RY) / escala;
+          const [SL, SA] = cfg.saida;
           const saida = document.createElement('canvas');
-          saida.width = 512;
-          saida.height = 512;
-          saida.getContext('2d').drawImage(img, sx, sy, lado, lado, 0, 0, 512, 512);
+          saida.width = SL;
+          saida.height = SA;
+          saida.getContext('2d').drawImage(img, sx, sy, 2 * RX / escala, 2 * RY / escala, 0, 0, SL, SA);
           saida.toBlob(blob => {
             resultado = blob;
             janela.close();

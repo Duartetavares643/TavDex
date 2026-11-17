@@ -98,16 +98,25 @@ function ligarBarraForca(campo, barra, { dados = () => ({}), confirmar = null } 
     barra.querySelector('span').textContent = campo.value
       ? `Força: ${R.NOMES_FORCA[a.forca]}`
       : 'Pelo menos 10 caracteres, com maiúsculas, minúsculas, números e símbolos';
-    // ✓ verde quando cumprido, ○ cinzento quando falta (o texto escondido ajuda os leitores de ecrã)
-    let html = a.requisitos.map(r => `<li class="${r.ok ? 'ok' : ''}"><span aria-hidden="true">${r.ok ? '✓' : '○'}</span>
-      ${esc(r.texto)}<span class="sr">${r.ok ? ' – cumprido' : ' – em falta'}</span></li>`).join('');
+    // ✓ verde quando cumprido; quando falta: ○ cinzento com o campo vazio,
+    // ✗ vermelho assim que se começa a escrever (o texto escondido ajuda os leitores de ecrã)
+    const escrito = !!campo.value;
+    let html = a.requisitos.map(r => {
+      const estado = r.ok ? 'ok' : escrito ? 'falta' : '';
+      return `<li class="${estado}"><span aria-hidden="true">${r.ok ? '✓' : escrito ? '✗' : '○'}</span>
+      ${esc(r.texto)}<span class="sr">${r.ok ? ' – cumprido' : ' – em falta'}</span></li>`;
+    }).join('');
     // Regras que não estão na lista (repetidos, sequências, tamanho em bytes)
     const extra = a.requisitos.every(r => r.ok) && !a.valida ? a.erros[0] : '';
     if (extra) html += `<li class="falta"><span aria-hidden="true">!</span> ${esc(extra)}</li>`;
     lista.innerHTML = html;
+    // O campo fica a vermelho enquanto a palavra-passe escrita não cumprir tudo
+    // (se o servidor deu um erro a este campo no último envio, esse erro fica até se corrigir)
+    if (!document.getElementById(`erro-${form ? form.id : ''}-${campo.name}`)) marcarCampo(campo, escrito && !a.valida);
 
     const coincidem = !confirmar || !confirmar.value || confirmar.value === campo.value;
     if (notaConfirmar) notaConfirmar.textContent = coincidem ? '' : 'As palavras-passe não coincidem.';
+    if (confirmar) marcarCampo(confirmar, !coincidem);
     if (botao) botao.disabled = !(a.valida && (!confirmar || confirmar.value === campo.value));
   };
   // Ouve o formulário todo (o nome e o email também contam para "não contém o teu nome")
@@ -116,7 +125,7 @@ function ligarBarraForca(campo, barra, { dados = () => ({}), confirmar = null } 
 }
 
 // =====================================================================
-// EMAIL: ao sair do campo mostra se o formato está errado e sugere a
+// EMAIL: enquanto se escreve (e ao sair do campo) mostra a vermelho se o formato está errado e sugere a
 // correção de erros de escrita ("Querias dizer duarte@gmail.com?").
 // É só uma ajuda: quem decide é o servidor. Usa /js/regras-email.js.
 // =====================================================================
@@ -129,16 +138,35 @@ function ligarCampoEmail(campo, { verificar = false } = {}) {
   nota.className = 'nota-campo';
   nota.setAttribute('aria-live', 'polite');
   campo.after(nota);
-  // Ao voltar a escrever, a nota antiga desaparece
-  campo.addEventListener('input', () => { nota.textContent = ''; nota.className = 'nota-campo'; });
-  campo.addEventListener('blur', async () => {
+  // Verifica enquanto se escreve (depois de uma pausa de 0,6 s) e logo ao sair do campo.
+  // "verificado" evita perguntar duas vezes ao servidor pelo mesmo email.
+  let relogio = null;
+  let verificado = null;
+  campo.addEventListener('input', () => {
+    clearTimeout(relogio);
+    verificado = null;
+    // Espaços ou dois @ estão sempre errados: aparece logo
+    const erroLogo = /\s/.test(campo.value.trim()) || (campo.value.match(/@/g) || []).length > 1;
+    if (erroLogo) return verificarAgora();
     nota.textContent = '';
     nota.className = 'nota-campo';
+    marcarCampo(campo, false);
+    relogio = setTimeout(verificarAgora, 600);
+  });
+  campo.addEventListener('blur', () => { clearTimeout(relogio); verificarAgora(); });
+
+  async function verificarAgora() {
+    if (verificado === campo.value) return;
+    verificado = campo.value;
+    nota.textContent = '';
+    nota.className = 'nota-campo';
+    marcarCampo(campo, false);
     if (!campo.value.trim()) return;
     const erro = R.erroFormato(campo.value);
     if (erro) {
       nota.classList.add('erro');
       nota.textContent = erro;
+      marcarCampo(campo, true);
       return;
     }
     const sugestao = R.sugestao(campo.value);
@@ -151,6 +179,7 @@ function ligarCampoEmail(campo, { verificar = false } = {}) {
         if (campo.value.trim() !== valor) return;   // entretanto mudou: esta resposta já não interessa
         nota.className = 'nota-campo ' + (r.valido ? 'ok' : 'erro');
         nota.textContent = r.mensagem;
+        marcarCampo(campo, !r.valido);
         if (r.existe) {
           const link = document.createElement('a');
           link.className = 'lk';
@@ -176,7 +205,7 @@ function ligarCampoEmail(campo, { verificar = false } = {}) {
       campo.focus();
     });
     nota.append(botao, '?');
-  });
+  }
 }
 
 // =====================================================================
@@ -194,20 +223,28 @@ function erroNomePessoa(valor) {
   return '';
 }
 
-// Mostra o erro de um campo enquanto se escreve (sem mexer no foco).
+// Campo a vermelho (borda + aria-invalid) ou não. Usado por todas as verificações ao vivo.
+function marcarCampo(campo, errado) {
+  if (errado) campo.setAttribute('aria-invalid', 'true'); else campo.removeAttribute('aria-invalid');
+}
+
+// Mostra o erro de um campo a vermelho logo enquanto se escreve (sem mexer no foco).
+// Espera um instante depois da última tecla para não piscar a cada letra; ao sair do campo é logo.
 //  verificar = função que devolve a mensagem de erro, ou '' se estiver bem
-function ligarVerificacaoCampo(campo, verificar) {
+function ligarVerificacaoCampo(campo, verificar, espera = 350) {
   if (!campo) return;
   const nota = document.createElement('small');
   nota.className = 'nota-campo erro';
   nota.setAttribute('aria-live', 'polite');
   campo.after(nota);
+  let relogio = null;
   const atualizar = () => {
+    clearTimeout(relogio);
     const erro = campo.value ? verificar(campo.value) : '';
     nota.textContent = erro;
-    if (erro) campo.setAttribute('aria-invalid', 'true'); else campo.removeAttribute('aria-invalid');
+    marcarCampo(campo, !!erro);
   };
-  campo.addEventListener('input', atualizar);
+  campo.addEventListener('input', () => { clearTimeout(relogio); relogio = setTimeout(atualizar, espera); });
   campo.addEventListener('blur', atualizar);
 }
 
@@ -216,6 +253,15 @@ function ligarVerificacaoCampo(campo, verificar) {
 // tecla) pergunta ao servidor e mostra "✓ Disponível" ou "Já está a ser usado".
 //  atual = @nome atual da conta (nas Definições), que conta como disponível
 // =====================================================================
+// Erro do formato do @nome ('' se estiver bem)
+function erroFormatoNome(valor) {
+  const nome = String(valor || '').trim().replace(/^@/, '');
+  if (/[^A-Za-z0-9_.]/.test(nome)) return 'O @nome só pode ter letras sem acentos, números, _ e . (sem espaços).';
+  if (nome.length < 3) return 'O @nome tem de ter pelo menos 3 caracteres.';
+  if (nome.length > 30) return 'O @nome tem no máximo 30 caracteres.';
+  return '';
+}
+
 function ligarNomeDisponivel(campo, atual = '') {
   if (!campo) return;
   const nota = document.createElement('small');
@@ -224,22 +270,35 @@ function ligarNomeDisponivel(campo, atual = '') {
   campo.after(nota);
   let relogio = null;
   let pedido = 0;
-  campo.addEventListener('input', () => {
+  const mostrarNota = (tipo, texto) => {
+    nota.className = 'nota-campo' + (tipo ? ' ' + tipo : '');
+    nota.textContent = texto;
+    marcarCampo(campo, tipo === 'erro');
+  };
+  // rapido = ao sair do campo (sem esperar)
+  const verificar = (rapido = false) => {
     clearTimeout(relogio);
-    nota.textContent = '';
-    nota.className = 'nota-campo';
     const nome = campo.value.trim().replace(/^@/, '');
-    if (nome.length < 3 || nome === atual) return;
+    if (!nome || nome === atual) return mostrarNota('', '');
+    const erro = erroFormatoNome(nome);
+    // Caracteres proibidos aparecem logo; "pelo menos 3" só depois de uma pausa (ou ao sair)
+    if (erro && (rapido || /[^A-Za-z0-9_.@]/.test(campo.value.trim()))) return mostrarNota('erro', erro);
+    mostrarNota('', '');
     relogio = setTimeout(async () => {
+      if (erro) return mostrarNota('erro', erro);
       const este = ++pedido;   // só conta a resposta do último pedido
+      mostrarNota('', 'A verificar…');
       try {
         const r = await api('/api/utilizadores/disponivel?nome=' + encodeURIComponent(nome));
         if (este !== pedido) return;
-        nota.className = 'nota-campo ' + (r.disponivel ? 'ok' : 'erro');
-        nota.textContent = r.mensagem;
-      } catch (erro) { /* demasiados pedidos ou sem rede: o servidor verifica ao guardar */ }
-    }, 400);
-  });
+        mostrarNota(r.disponivel ? 'ok' : 'erro', r.mensagem);
+      } catch (erroPedido) {
+        if (este === pedido) mostrarNota('', '');   // demasiados pedidos ou sem rede: o servidor verifica ao guardar
+      }
+    }, rapido ? 0 : 400);
+  };
+  campo.addEventListener('input', () => verificar(false));
+  campo.addEventListener('blur', () => { if (erroFormatoNome(campo.value) && campo.value.trim()) verificar(true); });
 }
 
 // =====================================================================
@@ -497,10 +556,18 @@ function partesPerfil(p, { acoes = '', contagens = null, fotoUrl = null, segueTe
     ${numeros}`;
 }
 
-// O cartão completo: banner (com o cenário e a cor do dono) + as partes de cima
+// Imagem própria do banner (se a pessoa carregou uma), por cima do cenário desenhado.
+//  url = imagem escolhida e ainda não guardada (pré-visualização nas Definições)
+function imagemBanner(p, url = null) {
+  const versao = Number(p.banner_versao) || 0;
+  const src = url || (versao > 0 ? `/api/utilizadores/${Number(p.id)}/banner?v=${versao}` : null);
+  return src ? `<img class="pbanner__foto" src="${esc(src)}" alt="">` : '';
+}
+
+// O cartão completo: banner (imagem própria ou cenário, na cor do dono) + as partes de cima
 function cabecalhoPerfil(p, opcoes = {}) {
   return `<section class="pperfil cartao-perfil" style="--h:${corValida(p.cor)}">
-    <div class="pbanner" data-tema="${temaValido(p.tema_banner)}" aria-hidden="true"></div>
+    <div class="pbanner" data-tema="${temaValido(p.tema_banner)}" aria-hidden="true">${imagemBanner(p)}</div>
     ${partesPerfil(p, opcoes)}
   </section>`;
 }
@@ -664,28 +731,34 @@ function marcarErrosCampos(form, erros) {
     const campo = form.elements[nome];
     if (!campo || !campo.tagName) continue;
     campo.setAttribute('aria-invalid', 'true');
+    primeiro = primeiro || campo;
+    // A verificação ao vivo já mostra esta mensagem a vermelho: não a repete
+    const caixa = campo.closest('.campo-pw, .chk, .foto-campo') || campo;
+    const aoVivo = [...caixa.parentElement.querySelectorAll('.nota-campo.erro')].some(n => n.textContent.trim() === mensagem);
+    if (aoVivo) continue;
     const nota = document.createElement('small');
     nota.className = 'erro-campo';
     nota.id = `erro-${form.id}-${nome}`;
     nota.textContent = mensagem;
     campo.setAttribute('aria-describedby', nota.id);
     // Põe a mensagem depois do campo (ou depois da caixa do campo, se existir)
-    (campo.closest('.campo-pw, .chk, .foto-campo') || campo).after(nota);
-    primeiro = primeiro || campo;
+    caixa.after(nota);
   }
   if (primeiro) primeiro.focus();
 }
 
 function ligarForm(form, funcao) {
   if (!form) return;
-  // Ao corrigir um campo, a marca de erro desaparece
+  // Ao corrigir um campo, a marca de erro do último envio desaparece.
+  // Corre na fase de captura (antes das verificações ao vivo de cada campo), para
+  // essas verificações poderem voltar a pôr o campo a vermelho se ainda estiver errado.
   form.addEventListener('input', e => {
     if (e.target.getAttribute && e.target.getAttribute('aria-invalid')) {
       e.target.removeAttribute('aria-invalid');
       const nota = document.getElementById(e.target.getAttribute('aria-describedby') || '');
       if (nota && nota.classList.contains('erro-campo')) nota.remove();
     }
-  });
+  }, true);
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const botao = form.querySelector('button[type=submit], button:not([type])');

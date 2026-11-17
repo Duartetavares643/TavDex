@@ -6,6 +6,8 @@
 //  PUT    /eu/perfil              alterar perfil (devolve os erros de todos os campos)
 //  POST   /eu/foto                carregar foto de perfil (multipart, campo "foto")
 //  DELETE /eu/foto                remover a foto
+//  POST   /eu/banner              carregar imagem própria para o banner (multipart, campo "banner")
+//  DELETE /eu/banner              tirar a imagem (volta ao cenário escolhido)
 //  PUT    /eu/email               mudar email
 //  PUT    /eu/password            alterar ou definir palavra-passe
 //  DELETE /eu/google              desligar a conta Google (igual a POST /api/conta/google/desligar)
@@ -13,6 +15,7 @@
 //  DELETE /eu/sessoes             terminar todas as outras sessões
 //  DELETE /eu                     apagar a conta
 //  GET    /:id/foto               a foto de perfil (JPEG)
+//  GET    /:id/banner             a imagem do banner (JPEG)
 //  GET    /:nome                  perfil público
 //  POST   /:id/seguir             seguir / deixar de seguir (também em POST /api/seguir/:id)
 // =====================================================================
@@ -27,7 +30,7 @@ const { compararPassword, validarPassword, validarNome, avisarPalavraPasseAltera
 const { dadosPessoais } = require('./palavras-passe');
 const { enviarConfirmacao, limiteEnvios } = require('./confirmacao-email');
 const { desligarGoogle } = require('./google');
-const { receberFoto, processarFoto } = require('./fotos');
+const { receberFoto, processarFoto, receberBanner, processarBanner } = require('./fotos');
 
 const router = express.Router();
 const MAX_ID = 2147483647;
@@ -62,6 +65,7 @@ router.get('/eu/definicoes', exigirLogin, async (req, res) => {
   res.json({
     id: u.id, nome: u.nome, nome_exibicao: u.nome_exibicao || '', email: u.email, bio: u.bio, localizacao: u.localizacao,
     cor: u.cor, tema_banner: a.temaBanner(u.tema_banner), foto_versao: Number(u.foto_versao) || 0, papel: u.papel, criado_em: u.criado_em,
+    banner_versao: Number(u.banner_versao) || 0,
     notif_email: !!u.notif_email, tem_password: !!u.password_hash, google_email: u.google_id ? u.google_email : null,
     email_pendente: u.email_pendente || null,
     // @nome: só muda uma vez a cada 30 dias (pode_mudar_nome / nome_livre_em)
@@ -186,6 +190,20 @@ router.post('/eu/foto', exigirLogin, receberFoto, async (req, res) => {
 router.delete('/eu/foto', exigirLogin, async (req, res) => {
   await executar('UPDATE utilizadores SET foto = NULL, foto_versao = 0 WHERE id = ?', [req.u.id]);
   res.json({ ok: true, mensagem: 'Foto removida.' });
+});
+
+// Banner com uma imagem própria: validada pelo conteúdo e guardada em 1500×500 JPEG.
+// Enquanto houver imagem, ela aparece no lugar do cenário desenhado.
+router.post('/eu/banner', exigirLogin, receberBanner, async (req, res) => {
+  const banner = await processarBanner(req.file && req.file.buffer);
+  const versao = Math.floor(Date.now() / 1000);
+  await executar('UPDATE utilizadores SET banner = ?, banner_versao = ? WHERE id = ?', [banner, versao, req.u.id]);
+  res.json({ ok: true, banner_versao: versao, mensagem: 'Banner atualizado.' });
+});
+
+router.delete('/eu/banner', exigirLogin, async (req, res) => {
+  await executar('UPDATE utilizadores SET banner = NULL, banner_versao = 0 WHERE id = ?', [req.u.id]);
+  res.json({ ok: true, mensagem: 'Imagem do banner removida.' });
 });
 
 // Mudar o email: o novo NÃO substitui logo o antigo. Fica em email_pendente e
@@ -320,6 +338,16 @@ router.get('/:id/foto', async (req, res) => {
   res.send(r.foto);
 });
 
+// Imagem do banner (pública), com a mesma cache da foto
+router.get('/:id/banner', async (req, res) => {
+  const id = a.inteiro(req.params.id, 'Utilizador', 1, MAX_ID);
+  const r = await linha('SELECT banner FROM utilizadores WHERE id = ?', [id]);
+  if (!r || !r.banner) return res.status(404).end();
+  res.set('Content-Type', 'image/jpeg');
+  res.set('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'no-cache');
+  res.send(r.banner);
+});
+
 // ---------------------------------------------------------------------
 // Perfil público (qualquer visitante pode ver)
 // ---------------------------------------------------------------------
@@ -334,7 +362,7 @@ function listaSeguidores(id, tipo, pagina = 1) {
 
 // Procura o perfil pelo @nome (sem distinguir maiúsculas: /perfil/duarte = @Duarte)
 async function procurarPerfil(nome) {
-  return linha(`SELECT id, nome, nome_exibicao, cor, tema_banner, foto_versao, papel, bio, localizacao, criado_em,
+  return linha(`SELECT id, nome, nome_exibicao, cor, tema_banner, foto_versao, banner_versao, papel, bio, localizacao, criado_em,
       mostrar_listas, mostrar_seguidores
     FROM utilizadores WHERE nome = ?`, [String(nome).replace(/^@/, '').slice(0, 40)]);
 }

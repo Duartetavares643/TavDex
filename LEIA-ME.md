@@ -17,6 +17,7 @@ Site dinâmico e responsivo para descobrir, organizar e avaliar filmes e séries
    6. `database/05_banner_cinema.sql`: troca os cenários pelos 4 de cinema (fachada, estreia, noir, cartaz)
    7. `database/06_seguranca_contas.sql`: confirmação do email, @nomes antigos, géneros favoritos, privacidade do perfil e "Manter sessão iniciada" (põe as contas que já existem como confirmadas)
    8. `database/07_banners_novos.sql`: troca os cenários do banner pelos 5 novos (colina, pipocas, claquete, pelicula, marquise)
+   9. `database/08_banner_imagem.sql`: permite carregar uma imagem própria para o banner (colunas `banner` e `banner_versao`)
 
    > ⚠️ Cuidado com o `TavDex.sql` antigo ("versão 2", que está fora desta pasta): começa com `DROP DATABASE tavdex` e apaga a base de dados do site.
 3. Copiar `.env.example` para `.env` e preencher pelo menos `BD_PASSWORD` e `SEGREDO_SESSAO`.

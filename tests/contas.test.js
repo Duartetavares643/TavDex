@@ -395,6 +395,38 @@ describe('Passo 10 – definições', () => {
     assert.equal((await c.get(`/api/utilizadores/${u.id}/foto`)).status, 404);
   });
 
+  it('banner com imagem própria: só imagens, fica 1500×500, aparece no perfil e pode ser removido', async () => {
+    const u = await criarUtilizador();
+    const c = new Cliente(base);
+    assert.equal((await c.post('/api/utilizadores/eu/banner', new FormData())).status, 401, 'sem sessão não dá');
+    await c.entrar(u.nome, u.password);
+
+    const falso = new FormData();
+    falso.append('banner', new Blob(['não sou uma imagem'], { type: 'image/jpeg' }), 'b.jpg');
+    const r1 = await c.post('/api/utilizadores/eu/banner', falso);
+    assert.equal(r1.status, 400);
+    assert.equal(r1.dados.erro, 'O ficheiro tem de ser uma imagem JPG, PNG ou WebP.');
+
+    const png = await sharp({ create: { width: 1200, height: 900, channels: 3, background: '#3366ff' } }).png().toBuffer();
+    const envio = new FormData();
+    envio.append('banner', new Blob([png], { type: 'image/png' }), 'banner.png');
+    const r2 = await c.post('/api/utilizadores/eu/banner', envio);
+    assert.equal(r2.status, 200, JSON.stringify(r2.dados));
+    assert.ok(r2.dados.banner_versao > 0);
+
+    const img = await new Cliente(base).get(`/api/utilizadores/${u.id}/banner?v=${r2.dados.banner_versao}`);
+    assert.equal(img.headers.get('content-type'), 'image/jpeg');
+    const info = await sharp(img.dados).metadata();
+    assert.deepEqual([info.format, info.width, info.height], ['jpeg', 1500, 500]);
+    // O perfil público diz que há imagem (e as Definições também)
+    assert.equal((await new Cliente(base).get('/api/utilizadores/' + u.nome)).dados.perfil.banner_versao, r2.dados.banner_versao);
+    assert.equal((await c.get('/api/utilizadores/eu/definicoes')).dados.banner_versao, r2.dados.banner_versao);
+
+    assert.equal((await c.delete('/api/utilizadores/eu/banner')).status, 200);
+    assert.equal((await c.get(`/api/utilizadores/${u.id}/banner`)).status, 404);
+    assert.equal((await c.get('/api/utilizadores/' + u.nome)).dados.perfil.banner_versao, 0);
+  });
+
   it('alterar a palavra-passe com a atual errada é recusado e fica na atividade', async () => {
     const u = await criarUtilizador();
     const c = new Cliente(base);

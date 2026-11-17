@@ -3,6 +3,7 @@
 //  Depois do login volta à página onde o utilizador estava (?voltar=).
 //  · "Manter sessão iniciada" (desligado por omissão): 30 dias; senão a sessão
 //    acaba ao fechar o browser. A escolha fica guardada para o botão do Google.
+//  · Vindo do registo (?criada=1): aviso "Conta criada!" com o email escondido e Reenviar.
 //  · Conta com o email por confirmar: a palavra-passe certa não entra e aparece
 //    o botão "Reenviar email de confirmação".
 // =====================================================================
@@ -16,6 +17,7 @@
       <div class="brand"><img src="/img/logo.png" alt=""><h2>Bem-vindo de volta</h2><p>Descobre. Organiza. Avalia. Cria.</p></div>
       <form class="fm" id="f-login" novalidate>
         <h1>Entrar</h1>
+        <div class="conta-criada" id="conta-criada" role="status" hidden></div>
         ${botaoGoogle('Continuar com Google', voltar)}
         <div class="sep-ou"><span>ou</span></div>
         <input id="login" name="login" placeholder="@nome ou email" aria-label="Nome de utilizador ou email"
@@ -31,6 +33,28 @@
     </div></div></div>`);
 
   const form = document.getElementById('f-login');
+
+  // Vindo do registo (?criada=1): "Conta criada!" + email escondido + Reenviar,
+  // e o @nome já escrito no campo
+  if (new URLSearchParams(location.search).get('criada')) {
+    const url = new URL(location.href);
+    url.searchParams.delete('criada');
+    history.replaceState(null, '', url.pathname + url.search);
+    try {
+      const nome = sessionStorage.getItem('tavdex-conta-criada');
+      sessionStorage.removeItem('tavdex-conta-criada');
+      if (nome) form.login.value = nome;
+    } catch (erro) { /* ignora */ }
+    const estado = await api('/api/confirmacao').catch(() => ({ conta: false }));
+    const caixa = document.getElementById('conta-criada');
+    caixa.innerHTML = `<b>Conta criada!</b>
+      <p>Enviámos um link de confirmação para <b>${esc(estado.email || 'o teu email')}</b>.
+        Abre-o e depois entra aqui. Não encontras o email? Vê a pasta de spam.</p>`;
+    if (estado.conta) caixa.append(botaoReenviar());
+    caixa.hidden = false;
+    form.password.focus();
+  }
+
   // Guarda a escolha neste browser (o botão do Google usa a última escolha)
   form.manter.addEventListener('change', () => {
     try { localStorage.setItem('tavdex-manter', form.manter.checked ? '1' : ''); } catch (erro) { /* ignora */ }
@@ -53,10 +77,8 @@
     location.href = voltar;
   });
 
-  // "Ainda não confirmaste o teu email." + botão para reenviar o link
-  function mostrarPorConfirmar(f, mensagem) {
-    const msg = f.querySelector('.msg');
-    msg.textContent = mensagem + ' ';
+  // Botão "Reenviar email de confirmação" (fica na página de login)
+  function botaoReenviar() {
     const botao = document.createElement('button');
     botao.type = 'button';
     botao.className = 'btn ghost sm';
@@ -66,12 +88,19 @@
       try {
         const r = await api('/api/confirmacao/reenviar', 'POST');
         aviso(r.mensagem);
-        location.href = '/confirmar-email';
       } catch (erro) {
         aviso(erro.message, 'erro');
-        botao.disabled = false;
       }
+      // Espera 60 segundos antes de deixar reenviar outra vez
+      setTimeout(() => { botao.disabled = false; }, 60000);
     });
-    msg.append(botao);
+    return botao;
+  }
+
+  // "Ainda não confirmaste o teu email." + botão para reenviar o link
+  function mostrarPorConfirmar(f, mensagem) {
+    const msg = f.querySelector('.msg');
+    msg.textContent = mensagem + ' ';
+    msg.append(botaoReenviar());
   }
 })();

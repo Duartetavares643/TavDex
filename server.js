@@ -132,7 +132,7 @@ app.get('/api/estado', async (req, res) => {
 // Pedidos sem corpo (ex.: um DELETE simples) ficam com req.body = {}.
 // "no-store": as respostas da API nunca ficam guardadas no browser, por isso depois de
 // terminar sessão o botão Retroceder não mostra dados da conta.
-// (A foto de perfil substitui isto pela sua própria cache, em routes/utilizadores.js.)
+// (A foto de perfil e a imagem do banner substituem isto pela sua própria cache, em routes/utilizadores.js.)
 app.use('/api', (req, res, next) => {
   req.body = req.body || {};
   res.set('Cache-Control', 'no-store');
@@ -293,6 +293,11 @@ app.listen(PORTA, async () => {
     for (const tabela of ['verificacao_email', 'nomes_antigos', 'utilizador_generos']) {
       await pool.query(`SELECT 1 FROM ${tabela} LIMIT 1`).catch(migracao06);
     }
+    // Banner com imagem própria (database/08_banner_imagem.sql)
+    await pool.query('SELECT banner_versao FROM utilizadores LIMIT 1').catch(erro => {
+      if (erro.code === 'ER_BAD_FIELD_ERROR') erro.migracao = '08_banner_imagem.sql';
+      throw erro;
+    });
     console.log('Ligação à base de dados: OK');
     require('./routes/email').verificarEmail();
     limpar();
