@@ -36,6 +36,8 @@
     </div></div></div>`);
 
   const form = document.getElementById('f-registo');
+  // Avisa o servidor de que o formulário abriu (armadilha de tempo contra robôs)
+  api('/api/auth/registo-inicio', 'POST').catch(() => {});
   // A palavra-passe não pode conter o nome, o @nome nem o email escritos neste formulário
   const dadosPessoais = () => ({ nome: form.nome.value, nomeExibicao: form.nome_exibicao.value, email: form.email.value });
   ligarBarraForca(document.getElementById('pw-registo'), document.getElementById('forca-registo'),

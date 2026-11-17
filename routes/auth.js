@@ -101,9 +101,23 @@ router.get('/email-disponivel', async (req, res) => {
 // ---------------------------------------------------------------------
 // Registo (Passo 5) – devolve todos os erros juntos: { erros: { campo: mensagem } }
 // ---------------------------------------------------------------------
+// Armadilha de tempo: a página de registo avisa o servidor quando abre.
+// Uma pessoa demora pelo menos uns segundos a preencher o formulário; um robô envia-o logo.
+// (TEMPO_MINIMO_REGISTO no .env, em segundos; os testes automáticos usam 0.)
+router.post('/registo-inicio', (req, res) => {
+  req.session.registoInicio = Date.now();
+  res.json({ ok: true });
+});
+
 router.post('/registar', async (req, res) => {
   // Campo-armadilha: as pessoas não o veem, os robôs preenchem-no
   if (req.body.website) a.falha(400, 'Pedido inválido.');
+  const minimo = Number(process.env.TEMPO_MINIMO_REGISTO ?? 3) * 1000;
+  if (minimo > 0) {
+    const inicio = req.session.registoInicio;
+    if (!inicio) a.falha(400, 'Recarrega a página de registo e tenta outra vez.');
+    if (Date.now() - inicio < minimo) a.falha(400, 'Preencheste o formulário depressa demais. Espera uns segundos e tenta outra vez.');
+  }
 
   // Anti-spam por IP (contado pelos registos guardados na atividade das contas)
   const recentes = await linha(`SELECT COUNT(*) AS n FROM atividade_conta

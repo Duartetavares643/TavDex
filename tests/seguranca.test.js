@@ -44,6 +44,22 @@ describe('1. Palavras-passe fortes', () => {
     assert.equal(sequencia.dados.erros.password, 'Evita sequências óbvias como 1234, abcd ou qwer.');
   });
 
+  it('armadilha de tempo: registar sem abrir a página, ou depressa demais, é recusado', async () => {
+    process.env.TEMPO_MINIMO_REGISTO = '1';
+    try {
+      const c = new Cliente(base);
+      const semPagina = await c.post('/api/auth/registar', novoRegisto());
+      assert.equal(semPagina.dados.erro, 'Recarrega a página de registo e tenta outra vez.');
+      await c.post('/api/auth/registo-inicio');
+      const depressa = await c.post('/api/auth/registar', novoRegisto());
+      assert.equal(depressa.dados.erro, 'Preencheste o formulário depressa demais. Espera uns segundos e tenta outra vez.');
+      await esperar(1100);
+      assert.equal((await c.post('/api/auth/registar', novoRegisto())).status, 201);
+    } finally {
+      process.env.TEMPO_MINIMO_REGISTO = '0';
+    }
+  });
+
   it('as palavras-passe que não coincidem dão erro no campo de confirmar', async () => {
     const r = await new Cliente(base).post('/api/auth/registar', novoRegisto({ password2: 'Outra#Coisa99' }));
     assert.equal(r.dados.erros.password2, 'As palavras-passe não coincidem.');

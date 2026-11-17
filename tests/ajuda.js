@@ -13,6 +13,7 @@ process.env.GOOGLE_CLIENT_SECRET = '';
 // O teste do domínio inexistente liga o DNS só para ele, se TESTAR_DNS=1.
 process.env.VERIFICAR_FUGAS = '0';
 process.env.VERIFICAR_DNS = '0';
+process.env.TEMPO_MINIMO_REGISTO = '0';   // a armadilha de tempo do registo tem um teste próprio
 
 const fs = require('fs');
 const path = require('path');

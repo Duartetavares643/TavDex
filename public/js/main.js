@@ -348,8 +348,8 @@ async function terminarSessao(todos = false) {
     avisoNaProximaPagina(r.aviso);
   } catch (erro) { /* sem sessão: vai para o início na mesma */ }
   avisarOutrosSeparadores('saiu');
-  // Página pública: fica nela como visitante; privada: vai para o início
-  location.href = paginaPrivada() ? '/' : paginaAtual();
+  // Simples: depois de sair vai sempre para a página inicial, com a mensagem
+  location.href = '/';
 }
 
 // Erro com vários campos (para validar no browser antes de enviar)
@@ -783,9 +783,7 @@ function desenharTopo(u) {
         ${u.papel === 'admin' ? '<a href="/admin.html">Painel de administração</a>' : ''}
         <a href="/definicoes.html">Definições</a>
         <a href="/definicoes.html?tab=seguranca">Segurança da conta</a>
-        <form id="sair"><button class="rtog">Terminar sessão</button></form>
-        <button type="button" class="rtog sair-todos" data-sair-todos>Terminar sessão em todos os dispositivos</button>
-      </div>
+        <form id="sair"><button class="rtog">Terminar sessão</button></form>      </div>
     </div>`
     : `<a class="btn ghost sm nav-btn" href="/login.html?voltar=${encodeURIComponent(paginaAtual())}">Entrar</a>
        <a class="btn primary sm nav-btn" href="/registar.html?voltar=${encodeURIComponent(paginaAtual())}">Registar</a>`;
