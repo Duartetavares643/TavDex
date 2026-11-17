@@ -19,6 +19,8 @@
   const EVENTOS = {
     registo: 'Conta criada', registo_google: 'Conta criada com o Google', login: 'Sessão iniciada com palavra-passe',
     login_google: 'Sessão iniciada com o Google', login_falhado: 'Tentativa de login falhada', logout: 'Sessão terminada',
+    email_confirmado: 'Email confirmado', email_pedido: 'Pedido para mudar o email', email_cancelado: 'Mudança de email cancelada',
+    sessoes_todas: 'Sessão terminada em todos os dispositivos', nome_alterado: '@nome alterado',
     email_alterado: 'Email alterado', palavra_passe_alterada: 'Palavra-passe alterada', palavra_passe_definida: 'Palavra-passe definida',
     palavra_passe_reposta: 'Palavra-passe definida pelo link do email', google_ligado: 'Conta Google ligada',
     google_desligado: 'Conta Google desligada', sessoes_terminadas: 'Sessões terminadas noutros dispositivos',
@@ -41,7 +43,7 @@
           <div class="foto-campo">
             <label class="btn ghost sm">Escolher foto<input type="file" name="foto" id="foto" accept="image/jpeg,image/png,image/webp" hidden></label>
             ${d.foto_versao ? '<label class="chk"><input type="checkbox" name="remover_foto" id="remover-foto"> Remover a foto</label>' : ''}
-            <small class="muted">JPG, PNG ou WebP, até 5 MB. Fica recortada ao centro (256×256).</small>
+            <small class="muted">JPG, PNG ou WebP, até 5 MB. Depois de escolheres, podes recortá-la.</small>
           </div>
 
           <b>Cor do avatar</b>
@@ -62,10 +64,24 @@
           </div>
 
           <label>Nome<input name="nome_exibicao" value="${esc(d.nome_exibicao || d.nome)}" required minlength="2" maxlength="50" autocomplete="name"></label>
-          <label>@nome de utilizador<input name="nome" value="${esc(d.nome)}" required minlength="3" maxlength="30"
-            pattern="[A-Za-z0-9_.]{3,30}" autocapitalize="off" spellcheck="false"></label>
+          <label>@nome de utilizador<input name="nome" id="def-nome" value="${esc(d.nome)}" required minlength="3" maxlength="30"
+            pattern="[A-Za-z0-9_.]{3,30}" autocapitalize="off" spellcheck="false" ${d.pode_mudar_nome ? '' : 'readonly aria-readonly="true"'}></label>
+          <small class="muted nota-nome">${d.pode_mudar_nome
+            ? 'Só podes mudar o @nome uma vez a cada 30 dias. O endereço antigo do perfil continua a funcionar durante 30 dias.'
+            : `Podes voltar a mudar o teu @nome a partir de ${esc(d.nome_livre_em)}.`}</small>
           <label>Localização<input name="localizacao" value="${esc(d.localizacao)}" maxlength="40" placeholder="Ex.: Lisboa"></label>
           <label>Biografia <span class="cc" id="cc-bio"></span><textarea name="bio" id="bio" maxlength="160">${esc(d.bio)}</textarea></label>
+
+          <b id="rot-generos">Géneros favoritos <small class="muted">(até 3)</small></b>
+          <div class="generos-op" role="group" aria-labelledby="rot-generos">
+            ${d.generos.map(g => `<label class="chip"><input type="checkbox" data-lista data-genero value="${g.id}"
+                ${d.meus_generos.includes(g.id) ? 'checked' : ''}><span>${esc(g.nome)}</span></label>`).join('')}
+          </div>
+          <small class="muted">Aparecem no teu perfil e ajudam o "Recomendado para ti" enquanto tens poucas avaliações.</small>
+
+          <b>Privacidade</b>
+          <label class="chk"><input type="checkbox" name="mostrar_listas" ${d.mostrar_listas ? 'checked' : ''}> Mostrar os meus favoritos e vistos no perfil</label>
+          <label class="chk"><input type="checkbox" name="mostrar_seguidores" ${d.mostrar_seguidores ? 'checked' : ''}> Mostrar quem sigo e quem me segue</label>
           <label class="chk"><input type="checkbox" name="notif_email" ${d.notif_email ? 'checked' : ''}> Receber as notificações também por email</label>
           <p class="msg" role="alert"></p>
           <button class="btn primary" type="submit">Guardar alterações</button>
@@ -88,23 +104,34 @@
           <ul class="protecao">
             ${marca(pr.email_verificado, pr.email_verificado ? 'Email confirmado' : 'Email por confirmar (confirma-o pelo link de recuperação ou ligando o Google)')}
             ${marca(pr.tem_password, pr.tem_password ? 'Palavra-passe definida' : 'Sem palavra-passe (só entras com o Google)')}
+            ${pr.tem_password && pr.palavra_passe_fraca !== null
+              ? marca(!pr.palavra_passe_fraca, pr.palavra_passe_fraca ? 'Palavra-passe fraca — altera-a' : 'Palavra-passe forte') : ''}
+            ${pr.tem_password && pr.palavra_passe_dias !== null
+              ? `<li class="info"><b aria-hidden="true">·</b> Última alteração da palavra-passe: ${pr.palavra_passe_dias === 0 ? 'hoje' : `há ${pr.palavra_passe_dias} dia${pr.palavra_passe_dias === 1 ? '' : 's'}`}</li>` : ''}
             ${marca(pr.google, pr.google ? 'Google ligado' : 'Google não ligado')}
             ${marca(pr.sessoes <= 1, pr.sessoes <= 1 ? 'Só este dispositivo tem sessão iniciada' : `${pr.sessoes} sessões ativas`)}
           </ul>
         </div>
 
         <form class="box form" id="f-email" novalidate><h3>Email</h3>
-          <label>Email<input name="email" type="email" value="${esc(d.email)}" required maxlength="120" autocomplete="email"></label>
+          ${d.email_pendente ? `<div class="email-pendente" role="status">
+              A aguardar confirmação de <b>${esc(d.email_pendente)}</b>.
+              <button type="button" class="lk" id="email-reenviar">Reenviar</button> ·
+              <button type="button" class="lk" id="email-cancelar">Cancelar</button>
+            </div>` : ''}
+          <label>Email<input name="email" id="def-email" type="email" value="${esc(d.email)}" required maxlength="120" autocomplete="email"></label>
           ${d.tem_password ? `<label>Palavra-passe atual${campoPassword('password', 'Palavra-passe atual', 'current-password', 'required')}</label>` : ''}
-          <small class="muted">Vamos avisar o email antigo da mudança. O email novo fica por confirmar.</small>
+          <small class="muted">Enviamos um link para o email novo: o email só muda depois de o confirmares. O email antigo recebe um aviso.</small>
           <p class="msg" role="alert"></p><button class="btn primary sm" type="submit">Mudar email</button>
         </form>
 
         <form class="box form" id="f-pass" novalidate><h3>Palavra-passe</h3>
+          <!-- O @nome escondido ajuda os gestores de palavras-passe a guardar na conta certa -->
+          <input type="text" name="username" value="${esc(d.nome)}" autocomplete="username" hidden>
           ${d.tem_password
             ? `<label>Palavra-passe atual${campoPassword('atual', 'Palavra-passe atual', 'current-password', 'required')}</label>`
             : '<p>Entraste com o Google. Se definires uma palavra-passe, também podes entrar com o @nome ou o email.</p>'}
-          <label>Nova palavra-passe${campoPassword('nova', 'Nova palavra-passe', 'new-password', 'required minlength="8" maxlength="72" id="pw-nova"')}</label>
+          <label>Nova palavra-passe${campoPassword('nova', 'Nova palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-nova"')}</label>
           <div class="forca" id="forca-nova" aria-live="polite"><i></i><i></i><i></i><i></i><span></span></div>
           <label>Confirmar${campoPassword('nova2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}</label>
           ${outrasSessoes ? '<label class="chk"><input type="checkbox" name="terminarOutras" checked> Terminar a sessão nos outros dispositivos</label>' : ''}
@@ -128,7 +155,10 @@
               <small>IP ${esc(s.ip)} · ${s.via === 'google' ? 'com o Google' : 'com palavra-passe'} ·
                 ${s.atual ? '<span class="agora">Este dispositivo · agora</span>' : `ativa ${tempo(s.ultimo_acesso)}`}</small></div>
             ${s.atual ? '<button class="del-btn" id="sair-aqui">Sair</button>' : `<button class="del-btn" data-sessao="${s.id}">Terminar</button>`}</div>`).join('')}
-          ${outrasSessoes ? '<div class="btns" style="margin-top:12px"><button class="btn ghost sm" id="terminar-outras">Terminar todas as outras</button></div>' : ''}
+          <div class="btns" style="margin-top:12px">
+            ${outrasSessoes ? '<button class="btn ghost sm" id="terminar-outras">Terminar todas as outras</button>' : ''}
+            <button class="btn ghost sm" type="button" data-sair-todos>Terminar sessão em todos os dispositivos</button>
+          </div>
         </div>
 
         <div class="box"><h3>Atividade recente</h3><div class="tl">
@@ -183,6 +213,8 @@
       fotoUrl: urlFotoNova,
       contagens,
       acoes: '<span class="btn ghost sm" aria-hidden="true">✎ Editar perfil</span>',
+      // Géneros favoritos escolhidos (os nomes estão nos próprios botões)
+      generos: [...fPerfil.querySelectorAll('[data-genero]:checked')].map(c => c.nextElementSibling.textContent),
     });
     document.getElementById('cc-bio').textContent = `${bio.value.length}/160`;
   }
@@ -193,24 +225,68 @@
     .then(r => { contagens = r.contagens; preVisualizar(); })
     .catch(() => {});
 
-  campoFoto.addEventListener('change', () => {
-    if (urlFotoNova) URL.revokeObjectURL(urlFotoNova);
-    urlFotoNova = null;
+  // Escolher a foto -> janela para a recortar -> a foto recortada é a que se envia
+  let fotoRecortada = null;   // Blob JPEG quadrado (ou null)
+  let versaoFoto = 0;         // muda a cada recorte (para o aviso de alterações por guardar)
+  campoFoto.addEventListener('change', async () => {
     const ficheiro = campoFoto.files[0];
-    if (!ficheiro) return preVisualizar();
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(ficheiro.type)) {
-      campoFoto.value = '';
-      aviso('A foto tem de ser JPG, PNG ou WebP.', 'erro');
-    } else if (ficheiro.size > 5 * 1024 * 1024) {
-      campoFoto.value = '';
-      aviso('A foto tem de ter no máximo 5 MB.', 'erro');
-    } else {
-      urlFotoNova = URL.createObjectURL(ficheiro);
-      if (removerFoto) removerFoto.checked = false;
-    }
+    campoFoto.value = '';     // o ficheiro original não é enviado: só o recorte
+    if (!ficheiro) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(ficheiro.type)) return aviso('A foto tem de ser JPG, PNG ou WebP.', 'erro');
+    if (ficheiro.size > 5 * 1024 * 1024) return aviso('A foto tem de ter no máximo 5 MB.', 'erro');
+    const recorte = await recortarFoto(ficheiro);
+    if (!recorte) return;     // Cancelar: fica tudo como estava
+    if (urlFotoNova) URL.revokeObjectURL(urlFotoNova);
+    fotoRecortada = recorte;
+    versaoFoto++;
+    urlFotoNova = URL.createObjectURL(recorte);
+    if (removerFoto) removerFoto.checked = false;
     preVisualizar();
   });
   preVisualizar();
+
+  // Géneros favoritos: no máximo 3 (os outros ficam desativados quando já há 3)
+  const caixasGeneros = [...fPerfil.querySelectorAll('[data-genero]')];
+  const generosEscolhidos = () => caixasGeneros.filter(c => c.checked).map(c => Number(c.value));
+  function limitarGeneros() {
+    const cheio = generosEscolhidos().length >= 3;
+    caixasGeneros.forEach(c => { c.disabled = cheio && !c.checked; });
+  }
+  fPerfil.addEventListener('change', e => { if (e.target.matches('[data-genero]')) limitarGeneros(); });
+  limitarGeneros();
+
+  // @nome disponível ao vivo (se ainda puder mudar)
+  if (d.pode_mudar_nome) ligarNomeDisponivel(document.getElementById('def-nome'), d.nome);
+
+  // Mensagens por campo ao sair de cada campo (o servidor volta a verificar tudo ao guardar)
+  const verificacoes = {
+    nome_exibicao: v => {
+      const t = v.replace(/\s+/g, ' ').trim();
+      if (t.length < 2 || t.length > 50) return 'O nome tem de ter entre 2 e 50 caracteres.';
+      if (!/\p{L}/u.test(t)) return 'O nome tem de ter letras.';
+      return '';
+    },
+    nome: v => /^@?[A-Za-z0-9_.]{3,30}$/.test(v.trim()) ? '' : 'O @nome tem de ter 3 a 30 letras, números, _ ou .',
+    localizacao: v => v.trim().length > 40 ? 'A localização tem no máximo 40 caracteres.' : '',
+    bio: v => v.length > 160 ? 'A biografia tem no máximo 160 caracteres.' : '',
+  };
+  // (Ao sair do campo não se mexe no foco: a pessoa continua para o campo seguinte.)
+  fPerfil.addEventListener('focusout', e => {
+    const campo = e.target;
+    const verificar = verificacoes[campo.name];
+    if (!verificar) return;
+    const erro = verificar(campo.value);
+    const id = `erro-f-perfil-${campo.name}`;
+    document.getElementById(id)?.remove();
+    if (!erro) { campo.removeAttribute('aria-invalid'); return; }
+    const nota = document.createElement('small');
+    nota.className = 'erro-campo';
+    nota.id = id;
+    nota.textContent = erro;
+    campo.setAttribute('aria-invalid', 'true');
+    campo.setAttribute('aria-describedby', id);
+    campo.after(nota);
+  });
 
   // -------------------------------------------------------------------
   // Aviso "Tens alterações por guardar"
@@ -220,12 +296,12 @@
   // -------------------------------------------------------------------
   function valoresPerfil() {
     const f = fPerfil.elements;
-    const ficheiro = campoFoto.files[0];
     return JSON.stringify({
       nome_exibicao: f.nome_exibicao.value, nome: f.nome.value, localizacao: f.localizacao.value, bio: bio.value,
       notif_email: f.notif_email.checked, cor: corEscolhida(), tema: temaEscolhido(),
-      foto: ficheiro ? `${ficheiro.name}|${ficheiro.size}|${ficheiro.lastModified}` : '',
-      remover_foto: !!(removerFoto && removerFoto.checked),
+      foto: versaoFoto, remover_foto: !!(removerFoto && removerFoto.checked),
+      generos: generosEscolhidos().sort((a, b) => a - b),
+      mostrar_listas: f.mostrar_listas.checked, mostrar_seguidores: f.mostrar_seguidores.checked,
     });
   }
   const fotografia = valoresPerfil();
@@ -305,13 +381,15 @@
   // Guardar o perfil: primeiro a foto (se mudou), depois os outros campos
   ligarForm(fPerfil, async dados => {
     const erros = {};
-    if (dados.nome_exibicao.trim().length < 2) erros.nome_exibicao = 'O nome tem de ter entre 2 e 50 caracteres.';
-    if (!/^@?[A-Za-z0-9_.]{3,30}$/.test(dados.nome.trim())) erros.nome = 'O @nome tem de ter 3 a 30 letras, números, _ ou .';
+    for (const [campo, verificar] of Object.entries(verificacoes)) {
+      const erro = verificar(dados[campo] || '');
+      if (erro) erros[campo] = erro;
+    }
     if (Object.keys(erros).length) throw erroCampos(erros);
 
-    if (campoFoto.files[0]) {
+    if (fotoRecortada) {
       const envio = new FormData();
-      envio.append('foto', campoFoto.files[0]);
+      envio.append('foto', fotoRecortada, 'foto.jpg');
       try {
         await api('/api/utilizadores/eu/foto', 'POST', envio);
       } catch (erro) {
@@ -326,10 +404,11 @@
       r = await api('/api/utilizadores/eu/perfil', 'PUT', {
         nome_exibicao: dados.nome_exibicao, nome: dados.nome, cor: dados.cor, tema_banner: dados.tema_banner,
         localizacao: dados.localizacao, bio: dados.bio, notif_email: dados.notif_email,
+        generos: generosEscolhidos(), mostrar_listas: dados.mostrar_listas, mostrar_seguidores: dados.mostrar_seguidores,
       });
     } catch (erro) {
-      // O cenário são vários radios: a mensagem aparece em cima do botão
-      if (erro.erros && erro.erros.tema_banner) erro.message = erro.erros.tema_banner;
+      // O cenário e os géneros são vários botões: a mensagem aparece em cima do botão Guardar
+      if (erro.erros && (erro.erros.tema_banner || erro.erros.generos)) erro.message = erro.erros.tema_banner || erro.erros.generos;
       throw erro;
     }
     // Guardado: já pode sair sem aviso
@@ -340,19 +419,35 @@
   // -------------------------------------------------------------------
   // Conta e segurança
   // -------------------------------------------------------------------
-  ligarBarraForca(document.getElementById('pw-nova'), document.getElementById('forca-nova'));
+  // Palavra-passe nova: requisitos ao vivo (não pode conter o nome, o @nome nem o email da conta)
+  const fPass = document.getElementById('f-pass');
+  const dadosPessoais = () => ({ nome: d.nome, nomeExibicao: d.nome_exibicao, email: d.email });
+  ligarBarraForca(document.getElementById('pw-nova'), document.getElementById('forca-nova'),
+    { dados: dadosPessoais, confirmar: fPass.nova2 });
+  ligarCampoEmail(document.getElementById('def-email'));
 
   ligarForm(document.getElementById('f-email'), async dados => {
+    const erro = RegrasEmail.erroFormato(dados.email);
+    if (erro) throw erroCampos({ email: erro });
     const r = await api('/api/utilizadores/eu/email', 'PUT', dados);
     location.href = comAviso('/definicoes.html?tab=seguranca', r.mensagem);
   });
 
-  ligarForm(document.getElementById('f-pass'), async dados => {
+  // Mudança de email à espera de confirmação: Reenviar · Cancelar
+  document.getElementById('email-reenviar')?.addEventListener('click', async () => {
+    const r = await tentar(() => api('/api/utilizadores/eu/email/reenviar', 'POST'));
+    if (r) aviso(r.mensagem);
+  });
+  document.getElementById('email-cancelar')?.addEventListener('click', async () => {
+    const r = await tentar(() => api('/api/utilizadores/eu/email', 'DELETE'));
+    if (r) location.href = comAviso('/definicoes.html?tab=seguranca', r.mensagem);
+  });
+
+  ligarForm(fPass, async dados => {
     const erros = {};
-    if (dados.nova.length < 8 || !/[A-Za-zÀ-ÿ]/.test(dados.nova) || !/[0-9]/.test(dados.nova)) {
-      erros.nova = 'A palavra-passe tem de ter 8 a 72 caracteres, com letras e números.';
-    }
-    if (dados.nova !== dados.nova2) erros.nova2 = 'As palavras-passe não são iguais.';
+    const analise = RegrasPalavraPasse.analisar(dados.nova, dadosPessoais());
+    if (!analise.valida) erros.nova = analise.erros[0];
+    if (dados.nova !== dados.nova2) erros.nova2 = 'As palavras-passe não coincidem.';
     if (Object.keys(erros).length) throw erroCampos(erros);
     const r = await api('/api/utilizadores/eu/password', 'PUT', {
       atual: dados.atual, nova: dados.nova, nova2: dados.nova2, terminarOutras: outrasSessoes ? dados.terminarOutras : false,
@@ -364,8 +459,14 @@
     if (dados.confirmacao.trim().replace(/^@/, '').toLowerCase() !== d.nome.toLowerCase()) {
       throw erroCampos({ confirmacao: `Escreve @${d.nome} para confirmar.` });
     }
-    if (!confirm('Tens a certeza? A conta vai ser apagada para sempre.')) return;
-    await api('/api/utilizadores/eu', 'DELETE', dados);
+    const sim = await confirmarJanela({
+      titulo: 'Apagar a conta?', texto: 'Tens a certeza? A conta vai ser apagada para sempre.',
+      sim: 'Apagar para sempre', nao: 'Cancelar',
+    });
+    if (!sim) return;
+    const r = await api('/api/utilizadores/eu', 'DELETE', dados);
+    avisoNaProximaPagina(r.aviso);
+    avisarOutrosSeparadores('saiu');
     location.href = '/';
   });
 
@@ -374,15 +475,134 @@
     if (sessaoBtn && await tentar(() => api('/api/utilizadores/eu/sessoes/' + sessaoBtn.dataset.sessao, 'DELETE'))) {
       location.href = comAviso('/definicoes.html?tab=seguranca', 'Sessão terminada nesse dispositivo.');
     }
-    if (e.target.id === 'sair-aqui' && await tentar(() => api('/api/auth/logout', 'POST'))) {
-      location.href = '/';
-    }
+    if (e.target.id === 'sair-aqui') terminarSessao(false);
     if (e.target.id === 'terminar-outras' && await tentar(() => api('/api/utilizadores/eu/sessoes', 'DELETE'))) {
       location.href = comAviso('/definicoes.html?tab=seguranca', 'As outras sessões foram terminadas.');
     }
-    if (e.target.id === 'desligar-google' && confirm('Desligar a conta Google?')) {
+    if (e.target.id === 'desligar-google' && await confirmarJanela({ titulo: 'Desligar a conta Google?', texto: 'Deixas de poder entrar com o Google até a voltares a ligar.', sim: 'Desligar', nao: 'Cancelar' })) {
       const r = await tentar(() => api('/api/conta/google/desligar', 'POST'));
       if (r) location.href = comAviso('/definicoes.html?tab=seguranca', r.mensagem);
     }
   });
+
+  // -------------------------------------------------------------------
+  // Recortar a foto antes de enviar: a imagem num <canvas> com um círculo de recorte.
+  // Arrastar (rato ou dedo) move a foto; a barra (ou a roda do rato, ou + e −) faz zoom;
+  // as setas do teclado também movem. "Usar esta foto" devolve um JPEG quadrado (512×512).
+  // O servidor continua a validar o conteúdo e a reduzir a foto com o sharp.
+  // -------------------------------------------------------------------
+  function recortarFoto(ficheiro) {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(ficheiro);
+      const img = new Image();
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        aviso('Não foi possível abrir essa imagem.', 'erro');
+        resolve(null);
+      };
+      img.onload = () => {
+        let resultado = null;
+        const janela = abrirJanela(`<div class="modal-in">
+            <h2>Recortar a foto</h2>
+            <p class="modal-txt">Arrasta a foto para a acertar no círculo e usa o zoom.</p>
+            <canvas class="recorte-tela" width="320" height="320" tabindex="0"
+              aria-label="Foto a recortar. Usa as setas para mover e as teclas + e − para o zoom."></canvas>
+            <label class="recorte-zoom">Zoom <input type="range" min="1" max="4" step="0.01" value="1"></label>
+            <div class="modal-btns">
+              <button type="button" class="btn primary" data-usar>Usar esta foto</button>
+              <button type="button" class="btn ghost" data-cancelar>Cancelar</button>
+            </div>
+          </div>`, { classe: 'modal-aviso modal-recorte', aoFechar: () => { URL.revokeObjectURL(url); resolve(resultado); } });
+
+        const tela = janela.querySelector('canvas');
+        const ctx = tela.getContext('2d');
+        const zoomCampo = janela.querySelector('[type=range]');
+        const T = tela.width;                 // tamanho do canvas (320)
+        const R = 140;                        // raio do círculo de recorte
+        const base = Math.max(2 * R / img.width, 2 * R / img.height);   // com zoom 1 a foto cobre o círculo
+        let zoom = 1;
+        let cx = 0;                           // deslocamento do centro da foto (px do canvas)
+        let cy = 0;
+
+        // A foto nunca pode deixar o círculo com partes vazias
+        function limitar() {
+          const meiaL = img.width * base * zoom / 2;
+          const meiaA = img.height * base * zoom / 2;
+          cx = Math.max(-(meiaL - R), Math.min(meiaL - R, cx));
+          cy = Math.max(-(meiaA - R), Math.min(meiaA - R, cy));
+        }
+        function desenhar() {
+          limitar();
+          const l = img.width * base * zoom;
+          const a = img.height * base * zoom;
+          ctx.clearRect(0, 0, T, T);
+          ctx.drawImage(img, T / 2 + cx - l / 2, T / 2 + cy - a / 2, l, a);
+          // Escurece tudo menos o círculo (regra "evenodd": o círculo fica como um buraco)
+          ctx.fillStyle = 'rgba(8, 7, 11, .6)';
+          ctx.beginPath();
+          ctx.rect(0, 0, T, T);
+          ctx.arc(T / 2, T / 2, R, 0, Math.PI * 2);
+          ctx.fill('evenodd');
+          ctx.strokeStyle = 'rgba(255, 255, 255, .85)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(T / 2, T / 2, R, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        function mudarZoom(novo) {
+          zoom = Math.max(1, Math.min(4, novo));
+          zoomCampo.value = zoom;
+          desenhar();
+        }
+
+        // Arrastar com o rato ou com o dedo (pointer events servem para os dois)
+        let arrasto = null;
+        tela.addEventListener('pointerdown', e => {
+          tela.setPointerCapture(e.pointerId);
+          arrasto = { x: e.clientX, y: e.clientY };
+        });
+        tela.addEventListener('pointermove', e => {
+          if (!arrasto) return;
+          const escala = T / tela.getBoundingClientRect().width;   // o canvas pode estar mais pequeno no ecrã
+          cx += (e.clientX - arrasto.x) * escala;
+          cy += (e.clientY - arrasto.y) * escala;
+          arrasto = { x: e.clientX, y: e.clientY };
+          desenhar();
+        });
+        const largar = () => { arrasto = null; };
+        tela.addEventListener('pointerup', largar);
+        tela.addEventListener('pointercancel', largar);
+        tela.addEventListener('wheel', e => { e.preventDefault(); mudarZoom(zoom - e.deltaY * 0.002); }, { passive: false });
+        tela.addEventListener('keydown', e => {
+          const passos = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] };
+          if (passos[e.key]) { e.preventDefault(); cx += passos[e.key][0]; cy += passos[e.key][1]; desenhar(); }
+          if (e.key === '+' || e.key === '=') { e.preventDefault(); mudarZoom(zoom + 0.1); }
+          if (e.key === '-') { e.preventDefault(); mudarZoom(zoom - 0.1); }
+        });
+        zoomCampo.addEventListener('input', () => mudarZoom(Number(zoomCampo.value)));
+
+        janela.querySelector('[data-cancelar]').addEventListener('click', () => janela.close());
+        janela.querySelector('[data-usar]').addEventListener('click', () => {
+          // Recorta o quadrado do círculo, na resolução original da foto
+          const escala = base * zoom;
+          const l = img.width * escala;
+          const a = img.height * escala;
+          const sx = (l / 2 - cx - R) / escala;
+          const sy = (a / 2 - cy - R) / escala;
+          const lado = 2 * R / escala;
+          const saida = document.createElement('canvas');
+          saida.width = 512;
+          saida.height = 512;
+          saida.getContext('2d').drawImage(img, sx, sy, lado, lado, 0, 0, 512, 512);
+          saida.toBlob(blob => {
+            resultado = blob;
+            janela.close();
+          }, 'image/jpeg', 0.92);
+        });
+        desenhar();
+        tela.focus();
+      };
+      img.src = url;
+    });
+  }
 })();

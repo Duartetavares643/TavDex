@@ -40,17 +40,20 @@ async function recomendacoes(uid, quantos = 12) {
         (SELECT g.nome FROM generos g JOIN titulo_generos tg ON tg.genero_id = g.id
           WHERE tg.titulo_id = v.id ORDER BY g.nome LIMIT 1) AS genero1,
         -- quantos géneros deste título o utilizador avaliou com 4 ou 5 estrelas
+        -- ou escolheu como favoritos nas Definições (assim quem ainda tem poucas
+        -- avaliações já recebe recomendações à sua medida)
         (SELECT COUNT(*) FROM titulo_generos tg
           WHERE tg.titulo_id = v.id
-            AND tg.genero_id IN (SELECT tg2.genero_id FROM avaliacoes a
-                                 JOIN titulo_generos tg2 ON tg2.titulo_id = a.titulo_id
-                                 WHERE a.utilizador_id = ? AND a.nota >= 4)) AS em_comum
+            AND (tg.genero_id IN (SELECT tg2.genero_id FROM avaliacoes a
+                                  JOIN titulo_generos tg2 ON tg2.titulo_id = a.titulo_id
+                                  WHERE a.utilizador_id = ? AND a.nota >= 4)
+                 OR tg.genero_id IN (SELECT ug.genero_id FROM utilizador_generos ug WHERE ug.utilizador_id = ?))) AS em_comum
       FROM vw_titulos_avaliacao v
       WHERE ${excluir}
     ) x
     WHERE em_comum > 0
     ORDER BY em_comum DESC, media DESC
-    LIMIT ${n}`, [uid, uid, uid]);
+    LIMIT ${n}`, [uid, uid, uid, uid]);
 
   if (sugeridos.length >= n) return sugeridos;
 
