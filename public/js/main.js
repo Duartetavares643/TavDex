@@ -742,7 +742,7 @@ function desenharTopo(u) {
     <form class="search" action="/pesquisa.html" method="get" role="search">${ICONES.lupa}
       <input type="search" name="q" value="${esc(q)}" placeholder="Pesquisar filmes, séries, pessoas, projetos..." aria-label="Pesquisar">
     </form>
-    <button class="icone-btn tema" type="button" data-tema aria-label="Mudar entre modo escuro e claro" title="Modo escuro / claro">${ICONES.lua}${ICONES.sol}</button>
+    <button class="icone-btn tema" type="button" data-mudar-tema aria-label="Mudar entre modo escuro e claro" title="Modo escuro / claro">${ICONES.lua}${ICONES.sol}</button>
     ${conta}`;
   document.body.prepend(topo);
 
@@ -864,7 +864,9 @@ document.addEventListener('click', e => {
   }
 
   // Modo escuro / claro (fica guardado no browser)
-  if (e.target.closest('[data-tema]')) {
+  // (O botão tem um atributo só seu: o <html data-tema="claro"> e os banners também têm
+  //  "data-tema", e antes qualquer clique na página, no modo claro, voltava ao escuro.)
+  if (e.target.closest('[data-mudar-tema]')) {
     const raiz = document.documentElement;
     const claro = raiz.dataset.tema !== 'claro';
     if (claro) raiz.dataset.tema = 'claro'; else delete raiz.dataset.tema;
