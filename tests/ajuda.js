@@ -8,6 +8,11 @@
 process.env.EMAIL_MODE = 'ficheiro';   // tem de ser antes de carregar o servidor
 process.env.GOOGLE_CLIENT_ID = '';      // por omissão o Google não está configurado
 process.env.GOOGLE_CLIENT_SECRET = '';
+// Os testes correm sem internet: sem consultar o Have I Been Pwned nem o DNS.
+// (Definidas aqui e não no "npm test", porque no Windows "VAR=0 npm test" não funciona.)
+// O teste do domínio inexistente liga o DNS só para ele, se TESTAR_DNS=1.
+process.env.VERIFICAR_FUGAS = '0';
+process.env.VERIFICAR_DNS = '0';
 
 const fs = require('fs');
 const path = require('path');
@@ -32,16 +37,20 @@ async function parar() {
 }
 
 // "Browser" de teste
+//  ip = IP "de origem" deste cliente (enviado em X-Forwarded-For, que o servidor aceita
+//       porque tem "trust proxy"). Assim os limites por IP de um teste não afetam os outros.
+let contadorIp = 0;
 class Cliente {
-  constructor(base, userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36') {
+  constructor(base, userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36', ip = null) {
     this.base = base;
     this.cookies = {};
     this.csrf = null;
     this.userAgent = userAgent;
+    this.ip = ip || `10.${(Date.now() >> 8) % 250}.${Math.floor(++contadorIp / 250) % 250}.${contadorIp % 250 + 1}`;
   }
 
   async pedido(metodo, caminho, corpo = null, novaTentativa = true) {
-    const cabecalhos = { 'user-agent': this.userAgent };
+    const cabecalhos = { 'user-agent': this.userAgent, 'x-forwarded-for': this.ip };
     const cookies = Object.entries(this.cookies).map(([k, v]) => `${k}=${v}`).join('; ');
     if (cookies) cabecalhos.cookie = cookies;
     if (metodo !== 'GET') {
@@ -89,13 +98,16 @@ class Cliente {
 // Cria uma conta de teste diretamente na base de dados (mais rápido do que pela API
 // e não conta para o limite de registos). A data fica "ontem" pelo mesmo motivo.
 let contador = 0;
+// A palavra-passe de teste é das antigas (não tem símbolo): continua a entrar,
+// como as contas que já existiam antes das regras novas.
+// As contas de teste vêm com o email confirmado (senão não conseguiam entrar).
 const HASH = bcrypt.hashSync('Teste12345', 10);
 async function criarUtilizador(extra = {}) {
   contador++;
   const sufixo = `${Date.now().toString(36)}${contador}`;
   const u = {
     nome: `teste_${sufixo}`, email: `teste_${sufixo}@exemplo.pt`, password_hash: HASH, cor: 330,
-    papel: 'utilizador', email_verificado: 0, ...extra,
+    papel: 'utilizador', email_verificado: 1, ...extra,
   };
   const colunas = Object.keys(u);
   const r = await executar(`INSERT INTO utilizadores (${colunas.join(', ')}, criado_em)

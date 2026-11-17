@@ -83,23 +83,29 @@ describe('Passo 4 – modo visitante', () => {
 });
 
 // ---------------------------------------------------------------------
+// Palavras-passe fortes usadas nos testes (cumprem as regras e não têm "teste" nem "exemplo")
+const FORTE = 'Cinema#Noir7';
+const FORTE2 = 'Nova#Forte2026';
+const FORTE3 = 'Outra#Forte2027';
+
 describe('Passo 5 – registo', () => {
-  it('cria a conta, entra logo e regista "Conta criada"', async () => {
+  it('cria a conta por confirmar (sem entrar), envia o link e regista "Conta criada"', async () => {
     const c = new Cliente(base);
     const s = Date.now().toString(36);
     const r = await c.post('/api/auth/registar', {
       nome_exibicao: 'Teste Registo', nome: `teste_r${s}`, email: `teste_r${s}@exemplo.pt`,
-      password: 'abc12345', password2: 'abc12345', aceito: true,
+      password: FORTE, password2: FORTE, aceito: true,
     });
     assert.equal(r.status, 201, JSON.stringify(r.dados));
-    assert.equal(r.dados.mensagem, 'Conta criada! Bem-vindo ao TavDex, Teste Registo.');
-    const eu = await c.get('/api/auth/eu');
-    assert.equal(eu.dados.u.nome, `teste_r${s}`);
-    const u = await linha('SELECT * FROM utilizadores WHERE id = ?', [eu.dados.u.id]);
+    assert.equal(r.dados.mensagem, `Quase pronto! Enviámos um link para t•••••@exemplo.pt.`);
+    assert.equal((await c.get('/api/auth/eu')).dados.u, null, 'ainda não entrou');
+    const u = await linha('SELECT * FROM utilizadores WHERE nome = ?', [`teste_r${s}`]);
+    assert.equal(u.email_verificado, 0);
     assert.ok([330, 0, 25, 45, 150, 199, 215, 270].includes(u.cor));
     assert.ok(u.password_hash.startsWith('$2'), 'palavra-passe guardada com bcrypt');
     const at = await linha('SELECT descricao FROM atividade_conta WHERE utilizador_id = ? AND tipo = ?', [u.id, 'registo']);
     assert.equal(at.descricao, 'Conta criada');
+    assert.match(ultimoEmail(u.email), /\/confirmar-email\/[a-f0-9]{64}/);
   });
 
   it('recusa email ou @nome repetidos (sem distinguir maiúsculas) e devolve todos os erros juntos', async () => {
@@ -111,7 +117,7 @@ describe('Passo 5 – registo', () => {
     assert.equal(r.status, 400);
     assert.deepEqual(Object.keys(r.dados.erros).sort(), ['aceito', 'email', 'nome', 'nome_exibicao', 'password', 'password2']);
     assert.equal(r.dados.erros.nome, 'Esse @nome já está a ser usado.');
-    assert.equal(r.dados.erros.email, 'Já existe uma conta com esse email.');
+    assert.equal(r.dados.erros.email, 'Já existe uma conta com este email.');
   });
 });
 
@@ -163,7 +169,7 @@ describe('Passo 6 – login', () => {
 
 // ---------------------------------------------------------------------
 describe('Passo 7 – terminar sessão e sessões por dispositivo', () => {
-  it('logout só por POST com CSRF e deixa a mensagem para a página seguinte', async () => {
+  it('logout só por POST com CSRF; apaga a sessão e o cookie e devolve a mensagem', async () => {
     const u = await criarUtilizador();
     const c = new Cliente(base);
     await c.entrar(u.nome, u.password);
@@ -171,10 +177,14 @@ describe('Passo 7 – terminar sessão e sessões por dispositivo', () => {
     const cookies = Object.entries(c.cookies).map(([k, v]) => `${k}=${v}`).join('; ');
     const semToken = await fetch(base + '/api/auth/logout', { method: 'POST', headers: { cookie: cookies } });
     assert.equal(semToken.status, 403);
-    assert.equal((await c.post('/api/auth/logout')).status, 200);
-    const eu = await c.get('/api/auth/eu');
-    assert.equal(eu.dados.u, null);
-    assert.equal(eu.dados.aviso, 'Sessão terminada. Podes continuar a explorar o TavDex sem conta.');
+    const r = await c.post('/api/auth/logout');
+    assert.equal(r.status, 200);
+    assert.equal(r.dados.aviso, 'Sessão terminada. Podes continuar a explorar o TavDex sem conta.');
+    // O cookie é apagado no browser (Set-Cookie com uma data no passado)
+    assert.match(r.headers.getSetCookie().join(';'), /tavdex\.sid=;.*Expires=Thu, 01 Jan 1970/i);
+    assert.equal(c.cookies['tavdex.sid'], '');
+    assert.equal((await c.get('/api/auth/eu')).dados.u, null);
+    assert.equal((await c.get('/api/utilizadores/eu/definicoes')).status, 401);
     assert.equal((await linha('SELECT COUNT(*) AS n FROM sessoes WHERE utilizador_id = ?', [u.id])).n, 0);
   });
 
@@ -211,7 +221,7 @@ describe('Passo 8 – recuperação da palavra-passe', () => {
   it('com um email inexistente dá a mesma mensagem', async () => {
     const r = await new Cliente(base).post('/api/auth/recuperar', { email: 'ninguem_x@exemplo.pt' });
     assert.equal(r.status, 200);
-    assert.equal(r.dados.mensagem, 'Se existir uma conta TavDex com o email ninguem_x@exemplo.pt, vais receber dentro de momentos um link para definir uma nova palavra-passe. O link é válido durante 30 minutos.');
+    assert.equal(r.dados.mensagem, 'Se existir uma conta TavDex com esses dados, vais receber dentro de momentos um email com um link para definir uma nova palavra-passe. O link é válido durante 30 minutos.');
     assert.equal(ultimoEmail('ninguem_x@exemplo.pt'), null);
   });
 
@@ -227,15 +237,21 @@ describe('Passo 8 – recuperação da palavra-passe', () => {
     assert.equal((await linha('SELECT COUNT(*) AS n FROM recuperacoes WHERE token_hash = ?', [token])).n, 0, 'na BD fica só o hash');
 
     const c = new Cliente(base);
-    assert.equal((await c.get('/api/auth/repor/' + token)).dados.valido, true);
-    const r = await c.post('/api/auth/repor', { token, password: 'NovaPass123', password2: 'NovaPass123' });
+    const valido = await c.get('/api/auth/repor/' + token);
+    assert.equal(valido.dados.valido, true);
+    assert.equal(valido.dados.nome, u.nome, 'a página mostra "Nova palavra-passe para @nome"');
+    // As regras novas também valem aqui
+    const fraca = await c.post('/api/auth/repor', { token, password: 'NovaPass123', password2: 'NovaPass123' });
+    assert.equal(fraca.dados.erros.password, 'Usa pelo menos um símbolo (ex.: ! ? # @).');
+    const r = await c.post('/api/auth/repor', { token, password: FORTE2, password2: FORTE2 });
     assert.equal(r.status, 200);
     assert.equal(r.dados.mensagem, 'Palavra-passe alterada! Por segurança, terminámos todas as sessões desta conta.');
     assert.equal((await outro.get('/api/auth/eu')).dados.u, null, 'a outra sessão terminou');
     assert.equal((await linha('SELECT email_verificado FROM utilizadores WHERE id = ?', [u.id])).email_verificado, 1);
-    await new Cliente(base).entrar(u.nome, 'NovaPass123');
+    assert.match(ultimoEmail(u.email), /A palavra-passe da tua conta TavDex .* foi alterada/);
+    await new Cliente(base).entrar(u.nome, FORTE2);
 
-    const outraVez = await c.post('/api/auth/repor', { token, password: 'Outra12345', password2: 'Outra12345' });
+    const outraVez = await c.post('/api/auth/repor', { token, password: FORTE3, password2: FORTE3 });
     assert.equal(outraVez.status, 400);
     assert.equal(outraVez.dados.erro, 'Este link não é válido ou já expirou.');
   });
@@ -388,7 +404,9 @@ describe('Passo 10 – definições', () => {
     assert.equal(r.dados.erros.atual, 'A palavra-passe atual está errada.');
     const at = await linha("SELECT descricao FROM atividade_conta WHERE utilizador_id = ? AND tipo = 'palavra_passe_falhada'", [u.id]);
     assert.equal(at.descricao, 'Tentativa falhada de mudar a palavra-passe');
-    const igual = await c.put('/api/utilizadores/eu/password', { atual: u.password, nova: u.password, nova2: u.password });
+    // A nova não pode ser igual à atual
+    assert.equal((await c.put('/api/utilizadores/eu/password', { atual: u.password, nova: FORTE2, nova2: FORTE2 })).status, 200);
+    const igual = await c.put('/api/utilizadores/eu/password', { atual: FORTE2, nova: FORTE2, nova2: FORTE2 });
     assert.equal(igual.dados.erros.nova, 'A palavra-passe nova tem de ser diferente da atual.');
   });
 
@@ -398,21 +416,10 @@ describe('Passo 10 – definições', () => {
     const b = new Cliente(base);
     await a.entrar(u.nome, u.password);
     await b.entrar(u.nome, u.password);
-    await a.put('/api/utilizadores/eu/password', { atual: u.password, nova: 'Nova12345', nova2: 'Nova12345', terminarOutras: false });
+    await a.put('/api/utilizadores/eu/password', { atual: u.password, nova: FORTE2, nova2: FORTE2, terminarOutras: false });
     assert.notEqual((await b.get('/api/auth/eu')).dados.u, null);
-    await a.put('/api/utilizadores/eu/password', { atual: 'Nova12345', nova: 'Outra12345', nova2: 'Outra12345' });
+    await a.put('/api/utilizadores/eu/password', { atual: FORTE2, nova: FORTE3, nova2: FORTE3 });
     assert.equal((await b.get('/api/auth/eu')).dados.u, null, 'por omissão termina as outras');
-  });
-
-  it('mudar o email envia um aviso para o email antigo e o novo fica por confirmar', async () => {
-    const u = await criarUtilizador({ email_verificado: 1 });
-    const c = new Cliente(base);
-    await c.entrar(u.nome, u.password);
-    const novo = u.email.replace('@', '.novo@');
-    const r = await c.put('/api/utilizadores/eu/email', { email: novo, password: u.password });
-    assert.equal(r.status, 200);
-    assert.match(ultimoEmail(u.email), /foi alterado para/);
-    assert.equal((await linha('SELECT email_verificado FROM utilizadores WHERE id = ?', [u.id])).email_verificado, 0);
   });
 
   it('apagar conta sem escrever o @ certo não apaga; com o @ certo apaga tudo', async () => {
@@ -431,11 +438,12 @@ describe('Passo 10 – definições', () => {
 
     const certo = await c.delete('/api/utilizadores/eu', { password: u.password, confirmacao: '@' + u.nome });
     assert.equal(certo.status, 200);
+    assert.equal(certo.dados.aviso, 'A tua conta foi apagada.');
     assert.equal(await linha('SELECT id FROM utilizadores WHERE id = ?', [u.id]), null);
     assert.equal((await linha('SELECT COUNT(*) AS n FROM sessoes WHERE utilizador_id = ?', [u.id])).n, 0);
     assert.equal((await linha('SELECT COUNT(*) AS n FROM atividade_conta WHERE utilizador_id = ?', [u.id])).n, 0);
     assert.equal((await c.get(`/api/utilizadores/${u.id}/foto`)).status, 404);
-    assert.equal((await c.get('/api/auth/eu')).dados.aviso, 'A tua conta foi apagada.');
+    assert.equal((await c.get('/api/auth/eu')).dados.u, null);
   });
 
   it('o único administrador não pode apagar a conta', async () => {
