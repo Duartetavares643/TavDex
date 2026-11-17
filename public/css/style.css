@@ -1020,17 +1020,40 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
 
 .pbio { margin: 0; padding: 14px 24px 0; font-size: 15px; line-height: 1.6; }
 
+/* Números do perfil em cartões com ícone (5 lado a lado) */
 .pnums {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 22px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
     margin: 0;
-    padding: 16px 24px 0;
+    padding: 18px 24px 0;
     list-style: none;
-    font-size: 14px;
     color: var(--text-2, #9b97a6);
 }
-.pnums b { margin-right: 5px; font-size: 17px; color: var(--text, #f2f0f5); }
+.pnums li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+}
+.pnums .ic {
+    grid-row: span 2;
+    width: 34px; height: 34px;
+    padding: 8px;
+    border-radius: 10px;
+    background: hsl(var(--h) 70% 50% / .14);
+    color: hsl(var(--h) 75% 62%);
+}
+.pnums b { font: 400 24px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; color: var(--text, #f2f0f5); }
+.pnums small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Ícones de traço simples (perfil e separadores) */
+svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- Telemóvel / caixa estreita (até 600 px) ---------- */
 @container pperfil (max-width: 600px) {
@@ -1054,20 +1077,12 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
 
     .pbio { padding: 12px 20px 0; text-align: center; font-size: 14.5px; }
 
-    .pnums {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 0;
-        margin: 16px 16px 0;
-        padding: 10px 0;
-        border: 1px solid var(--line, #26242d);
-        border-radius: 12px;
-        font-size: 11px;
-        text-align: center;
-    }
-    .pnums li { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .pnums li + li { border-left: 1px solid var(--line, #26242d); }
-    .pnums b { margin: 0; font-size: 17px; }
+    /* no telemóvel: 5 colunas compactas, com o ícone em cima */
+    .pnums { gap: 6px; padding: 16px 14px 0; }
+    .pnums li { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px; text-align: center; min-width: 0; }
+    .pnums .ic { width: 26px; height: 26px; padding: 5px; border-radius: 8px; }
+    .pnums b { font-size: 20px; }
+    .pnums small { font-size: 10.5px; max-width: 100%; }
 }
 
 /* =====================================================================
@@ -1154,6 +1169,28 @@ input[readonly] { opacity: .7; cursor: not-allowed; }
 .so-tu { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
 .ver-mais { margin-top: 12px; }
 @container pperfil (max-width: 600px) { .ptags { justify-content: center; padding: 12px 16px 0; } }
+
+/* Perfil: separadores com ícone e o número numa pastilha */
+.tabs-perfil button { display: inline-flex; align-items: center; gap: 7px; }
+.tabs-perfil .ic { opacity: .75; }
+.tabs-perfil .on .ic { opacity: 1; color: var(--red-2); }
+.tab-n { min-width: 20px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 700; line-height: 1.5;
+  text-align: center; background: var(--surface-3); color: var(--text-2); }
+.tabs-perfil .on .tab-n { background: rgba(255, 45, 85, .16); color: var(--text); }
+
+/* Perfil: caixa "Géneros preferidos" (posição, nome, percentagem e barra) */
+.caixa-generos h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.caixa-generos h3 .ic { width: 18px; height: 18px; color: var(--red-2); }
+.caixa-generos .pequeno { font-size: 12px; margin: 0 0 12px; }
+.genero-linha { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
+.genero-linha + .genero-linha { border-top: 1px solid var(--line); }
+.genero-pos { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+  font: 400 17px/1 "Bebas Neue", "Inter", sans-serif; background: var(--surface-3); color: var(--text-2); }
+.genero-linha:first-child .genero-pos, .caixa-generos .pequeno + .genero-linha .genero-pos { background: var(--grad); color: #fff; }
+.genero-info { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.genero-topo { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; color: var(--text); }
+.genero-topo .gname { width: auto; flex: 1; }
+.genero-pct { color: var(--muted); font-size: 12.5px; font-weight: 600; }
 
 /* Perfil: separador "Resumo" (média, barras de 1 a 5 estrelas, géneros e atividade) */
 .resumo { display: grid; gap: 20px; }

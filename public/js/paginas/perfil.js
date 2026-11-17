@@ -28,6 +28,10 @@
   if (param('u') !== p.nome) history.replaceState(null, '', '/perfil.html?u=' + encodeURIComponent(p.nome) + location.hash);
   document.title = `${nomeVisivel(p)} (@${p.nome}) · TavDex`;
   const max = d.generos.length ? d.generos[0].n : 1;
+  const totalGeneros = d.generos.reduce((s, g) => s + Number(g.n), 0) || 1;
+  // Separador com ícone e o número numa pastilha (n = null: sem número)
+  const separador = (tab, icone, rotulo, n, on = false) => `<button data-tab="${tab}"${on ? ' class="on"' : ''}>
+      ${iconePerfil(icone)}<span>${rotulo}</span>${n === null || n === undefined ? '' : `<span class="tab-n">${Number(n) || 0}</span>`}</button>`;
   const priv = d.privacidade;
 
   // Estados vazios: ao dono mostra-se também o que pode fazer
@@ -97,16 +101,16 @@
 
     <div class="dcols"><div>
       <div class="tabsbox">
-        <div class="tabs">
-          <button data-tab="resumo" class="on">Resumo</button>
-          <button data-tab="fav">Favoritos${priv.listas ? '' : ` (${d.favoritos.length})`}</button>
-          <button data-tab="ava">Avaliações (${c.avaliacoes})</button>
-          <button data-tab="seg">Seguidores (${c.seguidores})</button>
-          <button data-tab="aseg">A seguir (${c.a_seguir})</button>
-          <button data-tab="ver">A ver${priv.listas ? '' : ` (${d.paraVer.length})`}</button>
-          <button data-tab="vis">Vistos (${c.vistos})</button>
-          <button data-tab="prj">Projetos (${c.projetos})</button>
-          ${d.meu ? '<button data-tab="recomendados">Recomendados</button>' : ''}
+        <div class="tabs tabs-perfil">
+          ${separador('resumo', 'resumo', 'Resumo', null, true)}
+          ${separador('fav', 'favoritos', 'Favoritos', priv.listas ? null : d.favoritos.length)}
+          ${separador('ava', 'avaliacoes', 'Avaliações', c.avaliacoes)}
+          ${separador('seg', 'seguidores', 'Seguidores', c.seguidores)}
+          ${separador('aseg', 'aSeguir', 'A seguir', c.a_seguir)}
+          ${separador('ver', 'ver', 'A ver', priv.listas ? null : d.paraVer.length)}
+          ${separador('vis', 'vistos', 'Vistos', c.vistos)}
+          ${separador('prj', 'projetos', 'Projetos', c.projetos)}
+          ${d.meu ? separador('recomendados', 'recomendados', 'Recomendados', null) : ''}
         </div>
         <div data-pane="resumo">${resumo}</div>
         <div data-pane="fav" hidden>${priv.listas ? listaPrivada : soTu(priv.so_tu_listas) + grelha(d.favoritos, 'Ainda não há favoritos.')}</div>
@@ -122,9 +126,14 @@
         ${d.meu ? `<div data-pane="recomendados" hidden>${grelha(d.recomendados, 'Avalia alguns títulos com 4 ou 5 estrelas (ou escolhe géneros favoritos nas Definições) para receberes recomendações.')}</div>` : ''}
       </div>
     </div><div>
-      <div class="box"><h3>Géneros preferidos</h3>
-        ${d.generos.length ? d.generos.map(g => `<div class="rb"><span class="gname">${esc(g.nome)}</span>
-          <div class="bar"><i style="width:${Math.round(g.n * 100 / max)}%"></i></div><span>${g.n}</span></div>`).join('') : '<p class="empty">Sem dados ainda.</p>'}
+      <div class="box caixa-generos"><h3>${iconePerfil('generos')} Géneros preferidos</h3>
+        <p class="muted pequeno">Dos favoritos e das avaliações com 4 ou 5 estrelas</p>
+        ${d.generos.length ? d.generos.map((g, i) => `<div class="genero-linha">
+            <span class="genero-pos">${i + 1}</span>
+            <div class="genero-info"><div class="genero-topo"><span class="gname">${esc(g.nome)}</span>
+              <span class="genero-pct">${Math.round(g.n * 100 / totalGeneros)}%</span></div>
+              <div class="bar"><i style="width:${Math.round(g.n * 100 / max)}%"></i></div></div>
+          </div>`).join('') : vazio('Ainda não há dados: avalia ou marca favoritos.', linkCatalogo)}
       </div>
     </div></div>
   </div></div>`);

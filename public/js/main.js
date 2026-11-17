@@ -442,6 +442,23 @@ function temaValido(tema) {
   return Object.prototype.hasOwnProperty.call(TEMAS_BANNER, tema) ? tema : 'colina';
 }
 
+// Ícones do perfil (traço simples, na cor do texto à volta)
+const ICONES_PERFIL = {
+  seguidores: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><circle cx="17" cy="9" r="2.8"/><path d="M15.6 14.3A5.5 5.5 0 0121.5 20"/>',
+  aSeguir: '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 20a6.5 6.5 0 0113 0"/><path d="M16 11l2 2 4-4"/>',
+  avaliacoes: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  vistos: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  projetos: '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9l2.4-5 15.2 2.4L21 9M8.5 4.6L7 9M14.5 5.5L13 9"/>',
+  resumo: '<path d="M4 20V11M10 20V5M16 20v-6M2 20h20"/>',
+  favoritos: '<path d="M12 20s-7.5-4.6-9.3-9.3C1.4 7.2 3.7 4 7 4c2 0 3.3 1.1 5 3 1.7-1.9 3-3 5-3 3.3 0 5.6 3.2 4.3 6.7C19.5 15.4 12 20 12 20z"/>',
+  ver: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  recomendados: '<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  generos: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+};
+function iconePerfil(nome) {
+  return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONES_PERFIL[nome] || ''}</svg>`;
+}
+
 // Avatar grande, nome, @nome, data, localização, biografia e números.
 //  p         = perfil (id, nome, nome_exibicao, papel, foto_versao, localizacao, bio, criado_em)
 //  acoes     = HTML dos botões (Editar perfil, ou Seguir / Mensagem)
@@ -457,12 +474,15 @@ function partesPerfil(p, { acoes = '', contagens = null, fotoUrl = null, segueTe
     : `<div class="phead__av" aria-hidden="true">${esc((nomeVisivel(p) || '?').charAt(0).toUpperCase())}</div>`;
   const desde = p.criado_em ? `<span>Membro desde ${dataCurta(p.criado_em).slice(3)}</span>` : '';
   const local = p.localizacao ? `<span>📍 ${esc(p.localizacao)}</span>` : '';
+  // Números em cartões com ícone (o de seguidores tem id, porque muda ao carregar em Seguir)
+  const cartaoNumero = (icone, valor, rotulo, id = '') => `<li>${iconePerfil(icone)}
+      <b${id ? ` id="${id}"` : ''}>${Number(valor) || 0}</b><small>${rotulo}</small></li>`;
   const numeros = !contagens ? '' : `<ul class="pnums">
-      <li><b id="n-seg">${Number(contagens.seguidores) || 0}</b>Seguidores</li>
-      <li><b>${Number(contagens.a_seguir) || 0}</b>A seguir</li>
-      <li><b>${Number(contagens.avaliacoes) || 0}</b>Avaliações</li>
-      <li><b>${Number(contagens.vistos) || 0}</b>Vistos</li>
-      <li><b>${Number(contagens.projetos) || 0}</b>Projetos</li>
+      ${cartaoNumero('seguidores', contagens.seguidores, 'Seguidores', 'n-seg')}
+      ${cartaoNumero('aSeguir', contagens.a_seguir, 'A seguir')}
+      ${cartaoNumero('avaliacoes', contagens.avaliacoes, 'Avaliações')}
+      ${cartaoNumero('vistos', contagens.vistos, 'Vistos')}
+      ${cartaoNumero('projetos', contagens.projetos, 'Projetos')}
     </ul>`;
   return `<div class="phead">
       ${avatarHtml}
