@@ -4,7 +4,8 @@
 //    smtp      envia a sério (precisa de GMAIL_UTILIZADOR e GMAIL_PASSWORD_APP)
 //    ficheiro  guarda cada email em emails/ (para testar sem enviar nada)
 //    consola   escreve o email na consola do servidor
-//  Sem EMAIL_MODE: usa smtp se o Gmail estiver configurado, senão consola.
+//  Sem EMAIL_MODE: usa smtp se o Gmail estiver configurado; senão guarda em ficheiro
+//  (na pasta emails/ dá para abrir o email .html e carregar no link, mesmo sem Gmail).
 // =====================================================================
 const fs = require('fs');
 const path = require('path');
@@ -12,7 +13,7 @@ const nodemailer = require('nodemailer');
 
 const PASTA_EMAILS = path.join(__dirname, '..', 'emails');
 const temGmail = !!(process.env.GMAIL_UTILIZADOR && process.env.GMAIL_PASSWORD_APP);
-const MODO = process.env.EMAIL_MODE || (temGmail ? 'smtp' : 'consola');
+const MODO = process.env.EMAIL_MODE || (temGmail ? 'smtp' : 'ficheiro');
 
 let transporte = null;
 if (MODO === 'smtp' && temGmail) {
@@ -58,6 +59,7 @@ async function enviarEmail(para, assunto, texto, html = null) {
       const nome = `${new Date().toISOString().replace(/[:.]/g, '-')}_${String(para).replace(/[^a-z0-9@._-]/gi, '_')}`;
       fs.writeFileSync(path.join(PASTA_EMAILS, nome + '.txt'), `Para: ${para}\nAssunto: ${assunto}\n\n${texto}\n`);
       if (html) fs.writeFileSync(path.join(PASTA_EMAILS, nome + '.html'), html);
+      if (process.env.EMAIL_MODE !== 'ficheiro') console.log(`Email "${assunto}" guardado em emails/${nome}.html (o Gmail não está configurado)`);
       return;
     }
     if (!transporte) {
