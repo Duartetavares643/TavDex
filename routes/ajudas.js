@@ -3,8 +3,12 @@
 //  (validação dos dados recebidos, notificações, anti-spam, paginação)
 // =====================================================================
 const crypto = require('crypto');
+const dns = require('dns');
+const fs = require('fs');
+const path = require('path');
 const { linha, linhas, executar } = require('../db');
 const { enviarEmail } = require('./email');
+const RegrasEmail = require('../public/js/regras-email');   // o mesmo ficheiro que o browser usa
 
 // ---------------------------------------------------------------------
 // Erros: falha(400, 'mensagem') pára a rota e o server.js responde
@@ -47,6 +51,17 @@ class Validacao {
 
   get temErros() { return Object.keys(this.erros).length > 0; }
 
+  // O mesmo que campo(), para validações que esperam por algo (ex.: DNS do email)
+  async campoAsync(nome, validar) {
+    try {
+      return await validar();
+    } catch (erro) {
+      if (!erro.publico) throw erro;
+      if (!this.erros[nome]) this.erros[nome] = erro.message;
+      return null;
+    }
+  }
+
   verificar() {
     if (this.temErros) falha(400, 'Corrige os campos assinalados.', { erros: this.erros });
   }
@@ -88,11 +103,119 @@ function booleano(valor) {
   return valor === true || valor === 1 || valor === '1' || valor === 'on' || valor === 'true';
 }
 
-// Email com formato válido (validação simples)
+// Email só com o formato verificado (para procurar uma conta que já existe, ex.: recuperação).
+// Para emails NOVOS (registo e mudança de email) usa-se validarEmail(), que verifica mais.
 function email(valor) {
-  const e = texto(valor, 'Email', 3, 120).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) falha(400, 'Email inválido.');
+  const e = RegrasEmail.normalizar(valor);
+  const erro = RegrasEmail.erroFormato(e);
+  if (erro) falha(400, erro);
   return e;
+}
+
+// ---------------------------------------------------------------------
+// Emails novos: formato + domínios descartáveis + o domínio recebe email (DNS)
+// ---------------------------------------------------------------------
+
+// Domínios de emails temporários (mailinator, yopmail, 10minutemail, …), carregados uma vez
+let DESCARTAVEIS = new Set();
+try {
+  DESCARTAVEIS = new Set(fs.readFileSync(path.join(__dirname, '..', 'dados', 'dominios-descartaveis.txt'), 'utf8')
+    .split(/\r?\n/).map(l => l.trim().toLowerCase()).filter(l => l && !l.startsWith('#')));
+} catch (erro) {
+  console.error('Aviso: não foi possível ler dados/dominios-descartaveis.txt:', erro.message);
+}
+
+// "abc.mailinator.com" também é descartável (verifica o domínio e os "pais")
+function eDescartavel(dominio) {
+  const partes = dominio.split('.');
+  for (let i = 0; i < partes.length - 1; i++) {
+    if (DESCARTAVEIS.has(partes.slice(i).join('.'))) return true;
+  }
+  return false;
+}
+
+// O domínio existe e pode receber email? Procura registos MX; se não houver, A ou AAAA.
+// Resultados guardados 1 hora em memória. No máximo 3 segundos.
+// Se o DNS falhar por um erro de rede, ACEITA (a confirmação por email é a prova final).
+// Desliga-se com VERIFICAR_DNS=0 (os testes automáticos fazem isso).
+const cacheDns = new Map();                    // dominio -> { existe, ate }
+const SEM_REGISTO = new Set(['ENOTFOUND', 'ENODATA']);   // o domínio não tem esse registo
+async function dominioRecebeEmail(dominio) {
+  if (process.env.VERIFICAR_DNS === '0') return true;
+  const guardado = cacheDns.get(dominio);
+  if (guardado && guardado.ate > Date.now()) return guardado.existe;
+
+  const resolver = new dns.promises.Resolver({ timeout: 1500, tries: 1 });
+  const procurar = async () => {
+    try {
+      const mx = await resolver.resolveMx(dominio);
+      // "MX nulo" (exchange vazio) quer dizer: este domínio não recebe email
+      if (mx.some(r => r.exchange && r.exchange !== '.')) return true;
+      if (mx.length) return false;
+    } catch (erro) { if (!SEM_REGISTO.has(erro.code)) throw erro; }
+    for (const tipo of ['resolve4', 'resolve6']) {
+      try {
+        if ((await resolver[tipo](dominio)).length) return true;
+      } catch (erro) { if (!SEM_REGISTO.has(erro.code)) throw erro; }
+    }
+    return false;
+  };
+  try {
+    const existe = await Promise.race([
+      procurar(),
+      new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error('tempo esgotado')), 3000).unref()),
+    ]);
+    cacheDns.set(dominio, { existe, ate: Date.now() + 60 * 60 * 1000 });
+    return existe;
+  } catch (erro) {
+    console.warn(`DNS indisponível para ${dominio} (o email foi aceite):`, erro.code || erro.message);
+    return true;
+  }
+}
+
+// Valida um email NOVO e devolve-o normalizado (minúsculas, sem espaços nas pontas)
+async function validarEmail(valor) {
+  const e = email(valor);
+  const dominio = e.split('@')[1];
+  if (eDescartavel(dominio)) falha(400, 'Não aceitamos emails temporários. Usa o teu email habitual.');
+  if (!(await dominioRecebeEmail(dominio))) falha(400, `O domínio @${dominio} não existe ou não recebe emails.`);
+  return e;
+}
+
+// "duarte@gmail.com" -> "d•••••@gmail.com"
+const esconderEmail = RegrasEmail.esconder;
+
+// ---------------------------------------------------------------------
+// @nome e nome do perfil
+// ---------------------------------------------------------------------
+
+// @nomes que ninguém pode usar (para ninguém se fazer passar pela equipa do TavDex)
+const NOMES_RESERVADOS = ['admin', 'administrador', 'tavdex', 'suporte', 'moderador', 'ajuda', 'sistema', 'root'];
+
+// O @nome pode ser usado por esta conta? Devolve a mensagem de erro, ou null se estiver livre.
+//  idAtual = id da conta que o quer usar (0 no registo). Pode manter o seu próprio @nome.
+//  Também fica reservado durante 30 dias o @nome antigo de OUTRA pessoa (tabela nomes_antigos).
+async function nomeIndisponivel(nome, idAtual = 0) {
+  if (NOMES_RESERVADOS.includes(String(nome).toLowerCase())) return 'Este nome de utilizador não está disponível.';
+  // O MySQL compara sem distinguir maiúsculas: "Duarte" = "duarte"
+  if (await linha('SELECT id FROM utilizadores WHERE nome = ? AND id <> ?', [nome, idAtual])) return 'Esse @nome já está a ser usado.';
+  const antigo = await linha('SELECT utilizador_id FROM nomes_antigos WHERE nome = ? AND data >= NOW() - INTERVAL 30 DAY', [nome]);
+  if (antigo && antigo.utilizador_id !== idAtual) return 'Este nome de utilizador não está disponível.';
+  return null;
+}
+
+// Nome do perfil (ex.: "Duarte Tavares"):
+//  · recusa caracteres invisíveis (largura zero, controlo, mudança de direção do texto),
+//    que servem para fingir ser outra pessoa com um nome "igual";
+//  · junta os espaços repetidos;
+//  · tem de ter pelo menos uma letra (não pode ser só emojis ou símbolos).
+const INVISIVEIS = /[\u0000-\u001f\u007f-\u009f­͏؜ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁤⁦-⁯ㅤ﻿ﾠ]/;
+function nomeExibicao(valor) {
+  const bruto = String(valor ?? '').normalize('NFC');
+  if (INVISIVEIS.test(bruto.replace(/[\t\n\r]/g, ' '))) falha(400, 'O nome tem caracteres que não se veem. Escreve-o outra vez.');
+  const t = texto(bruto.replace(/\s+/g, ' '), 'Nome', 2, 50);
+  if (!/\p{L}/u.test(t)) falha(400, 'O nome tem de ter letras.');
+  return t;
 }
 
 // Endereço de imagem opcional: só aceita https:// (evita "javascript:" e afins)
@@ -263,6 +386,8 @@ function temaBanner(valor) {
 
 module.exports = {
   falha, Validacao, texto, inteiro, inteiroOuNulo, escolha, booleano, email, urlImagem,
+  validarEmail, eDescartavel, dominioRecebeEmail, esconderEmail,
+  NOMES_RESERVADOS, nomeIndisponivel, nomeExibicao,
   sha256, tokenAleatorio, ipDe, nomeDispositivo, dispositivoDe, registarAtividade, voltarSeguro,
   colunasPublicas, CORES_AVATAR, corAleatoria, TEMAS_BANNER, temaBanner,
   demasiado, nLinks, verificarSpam, notificar, paginacao, marcadores, publico,
