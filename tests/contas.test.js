@@ -329,14 +329,14 @@ describe('Passo 10 – definições', () => {
     assert.equal(at.descricao, `@nome alterado (de @${a.nome} para @${a.nome}x)`);
   });
 
-  it('banner: um utilizador novo tem o cenário "fachada" no perfil público e nas definições', async () => {
+  it('banner: um utilizador novo tem o cenário "colina" no perfil público e nas definições', async () => {
     const u = await criarUtilizador();
     const c = new Cliente(base);
     await c.entrar(u.nome, u.password);
-    assert.equal((await new Cliente(base).get('/api/utilizadores/' + u.nome)).dados.perfil.tema_banner, 'fachada');
+    assert.equal((await new Cliente(base).get('/api/utilizadores/' + u.nome)).dados.perfil.tema_banner, 'colina');
     const def = await c.get('/api/utilizadores/eu/definicoes');
-    assert.equal(def.dados.tema_banner, 'fachada');
-    assert.deepEqual(def.dados.temas_banner, ['fachada', 'estreia', 'noir', 'cartaz']);
+    assert.equal(def.dados.tema_banner, 'colina');
+    assert.deepEqual(def.dados.temas_banner, ['colina', 'pipocas', 'claquete', 'pelicula', 'marquise']);
   });
 
   it('banner: um cenário que não existe é recusado com o erro no campo', async () => {
@@ -346,20 +346,20 @@ describe('Passo 10 – definições', () => {
     const r = await c.put('/api/utilizadores/eu/perfil', { nome_exibicao: 'Teste', nome: u.nome, cor: 330, tema_banner: 'qualquercoisa', localizacao: '', bio: '' });
     assert.equal(r.status, 400);
     assert.equal(r.dados.erros.tema_banner, 'Escolhe um dos cenários.');
-    assert.equal((await linha('SELECT tema_banner FROM utilizadores WHERE id = ?', [u.id])).tema_banner, 'fachada');
+    assert.equal((await linha('SELECT tema_banner FROM utilizadores WHERE id = ?', [u.id])).tema_banner, 'colina');
   });
 
-  it('banner: guardar "noir" muda o perfil público (e sem tema_banner mantém o que estava)', async () => {
+  it('banner: guardar "marquise" muda o perfil público (e sem tema_banner mantém o que estava)', async () => {
     const u = await criarUtilizador();
     const c = new Cliente(base);
     await c.entrar(u.nome, u.password);
-    const r = await c.put('/api/utilizadores/eu/perfil', { nome_exibicao: 'Teste', nome: u.nome, cor: 199, tema_banner: 'noir', localizacao: '', bio: '' });
+    const r = await c.put('/api/utilizadores/eu/perfil', { nome_exibicao: 'Teste', nome: u.nome, cor: 199, tema_banner: 'marquise', localizacao: '', bio: '' });
     assert.equal(r.status, 200, JSON.stringify(r.dados));
     const perfil = await new Cliente(base).get('/api/utilizadores/' + u.nome);
-    assert.equal(perfil.dados.perfil.tema_banner, 'noir');
+    assert.equal(perfil.dados.perfil.tema_banner, 'marquise');
     assert.equal(perfil.dados.perfil.cor, 199);
     await c.put('/api/utilizadores/eu/perfil', { nome_exibicao: 'Teste', nome: u.nome, cor: 199, localizacao: '', bio: '' });
-    assert.equal((await new Cliente(base).get('/api/utilizadores/' + u.nome)).dados.perfil.tema_banner, 'noir');
+    assert.equal((await new Cliente(base).get('/api/utilizadores/' + u.nome)).dados.perfil.tema_banner, 'marquise');
   });
 
   it('um ficheiro que não é imagem é recusado; a foto fica 256×256 e a antiga é substituída', async () => {

@@ -16,6 +16,7 @@ Site dinâmico e responsivo para descobrir, organizar e avaliar filmes e séries
    5. `database/04_banner_perfil.sql`: cenário do banner do perfil (`tema_banner`)
    6. `database/05_banner_cinema.sql`: troca os cenários pelos 4 de cinema (fachada, estreia, noir, cartaz)
    7. `database/06_seguranca_contas.sql`: confirmação do email, @nomes antigos, géneros favoritos, privacidade do perfil e "Manter sessão iniciada" (põe as contas que já existem como confirmadas)
+   8. `database/07_banners_novos.sql`: troca os cenários do banner pelos 5 novos (colina, pipocas, claquete, pelicula, marquise)
 
    > ⚠️ Cuidado com o `TavDex.sql` antigo ("versão 2", que está fora desta pasta): começa com `DROP DATABASE tavdex` e apaga a base de dados do site.
 3. Copiar `.env.example` para `.env` e preencher pelo menos `BD_PASSWORD` e `SEGREDO_SESSAO`.
@@ -116,7 +117,7 @@ public/              páginas .html (uma por ecrã)
   js/api.js          api() (fetch + token CSRF), esc() (contra XSS) e TavDex.pedido()
   js/main.js         topo, rodapé, tema, cartões, janela "Inicia sessão para continuar", botão Google, formulários,
                      cabecalhoPerfil() (cartão do perfil com o banner)
-  js/banner-perfil.js  banner em pixel art num <canvas> (4 cenários), sem imagens
+  js/banner-perfil.js  banner em pixel art num <canvas> (5 cenários de cinema), sem imagens
   js/regras-palavra-passe.js  regras das palavras-passe (o MESMO ficheiro no browser e no servidor)
   js/regras-email.js formato do email e "Querias dizer …?" (também partilhado com o servidor)
   js/paginas/        o JavaScript de cada página
@@ -171,7 +172,7 @@ Melhorias à Fase 2 do anteprojeto (registo, login, logout, recuperação, perfi
 2. **Visitante:** carregar em "+ Seguir" num perfil ou em "Favorito" num filme → abre a janela "Inicia sessão para continuar" → entrar → volta à mesma página.
 3. **Registo:** criar conta (lista de requisitos ao vivo, "Querias dizer …?" com `duarte@gmial.com`, @nome disponível) → página "Quase pronto!" → abrir o link do email (pasta `emails/` com `EMAIL_MODE=ficheiro`) → "Confirmar email" → entra.
    **Definições:** recortar a foto, cor, nome, géneros favoritos, privacidade e pré-visualização ao vivo.
-   **Banner do perfil:** escolher um dos 4 cenários (Cinema de bairro, Noite de estreia, Cinema noir, Cartaz vintage) e ver o TAVDEX mudar com a cor do avatar.
+   **Banner do perfil:** escolher um dos 5 cenários (Colina das estrelas, Sessão de pipocas, Claquete antiga, Rolo de película, Cinema à noite) e ver o TAVDEX mudar com a cor do avatar.
    Mudar um campo e carregar num link do topo → aparece "Tens alterações por guardar".
 4. **Login falhado 5 vezes** com a mesma conta → aparece o bloqueio de 15 minutos.
 5. **Recuperar palavra-passe:** o link aparece na consola do servidor (ou no Gmail, se estiver configurado).

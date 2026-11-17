@@ -378,7 +378,7 @@ function corAleatoria() {
 
 // Cenários do banner do perfil (coluna utilizadores.tema_banner).
 // O primeiro é o cenário por omissão.
-const TEMAS_BANNER = ['fachada', 'estreia', 'noir', 'cartaz'];
+const TEMAS_BANNER = ['colina', 'pipocas', 'claquete', 'pelicula', 'marquise'];
 // Devolve sempre um cenário válido (se o valor for estranho, usa o primeiro)
 function temaBanner(valor) {
   return TEMAS_BANNER.includes(valor) ? valor : TEMAS_BANNER[0];

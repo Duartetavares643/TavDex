@@ -272,13 +272,13 @@ app.listen(PORTA, async () => {
       if (erro.code === 'ER_BAD_FIELD_ERROR') erro.migracao = '04_banner_perfil.sql';
       throw erro;
     });
-    // Cenários de cinema (database/05_banner_cinema.sql): a coluna tem de aceitar 'fachada'
+    // Cenários do banner (05_banner_cinema.sql e depois 07_banners_novos.sql): a coluna tem de aceitar 'colina'
     const [[coluna]] = await pool.query(`SELECT COLUMN_TYPE AS tipo FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'utilizadores' AND COLUMN_NAME = 'tema_banner'`);
-    if (!coluna || !String(coluna.tipo).includes("'fachada'")) {
+    if (!coluna || !String(coluna.tipo).includes("'colina'")) {
       const erro = new Error('A coluna tema_banner ainda tem os cenários antigos');
       erro.code = 'ER_BAD_FIELD_ERROR';
-      erro.migracao = '05_banner_cinema.sql';
+      erro.migracao = String(coluna && coluna.tipo).includes("'fachada'") ? '07_banners_novos.sql' : '05_banner_cinema.sql e 07_banners_novos.sql';
       throw erro;
     }
     // Contas mais seguras (database/06_seguranca_contas.sql): tabelas e colunas novas

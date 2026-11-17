@@ -927,8 +927,8 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
    • O desenho é feito por js/banner-perfil.js num <canvas> pequeno
      (1 "pixel" do desenho = 3 px do ecrã, ou 2 px no telemóvel),
      ampliado sem suavizar (image-rendering: pixelated).
-   • Há 4 cenários de cinema, escolhidos com data-tema no banner:
-       fachada | estreia | noir | cartaz
+   • Há 5 cenários de cinema, escolhidos com data-tema no banner:
+       colina | pipocas | claquete | pelicula | marquise
    • A cor do letreiro TAVDEX segue a cor do avatar: style="--h: <cor_avatar>".
    • "Container queries": o perfil adapta-se à largura da caixa onde
      está, por isso fica bem no telemóvel e em colunas estreitas.
@@ -1083,8 +1083,9 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
 .phead__acoes .btns { display: flex; flex-wrap: wrap; gap: 8px; }
 .phead__acoes .btn { white-space: nowrap; }
 
-/* Definições: escolha do cenário (4 seguidos no computador, 2×2 no telemóvel) */
-.temas-banner { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+/* Definições: escolha do cenário (5 cenários, 2 por linha: assim cada miniatura tem
+   largura suficiente para o TAVDEX caber) */
+.temas-banner { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .tema-op { position: relative; display: block !important; cursor: pointer; }
 .tema-op input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .tema-op__caixa { display: flex; flex-direction: column; gap: 6px; padding: 5px; border: 2px solid var(--line-2);
