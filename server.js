@@ -294,6 +294,7 @@ app.listen(PORTA, async () => {
       await pool.query(`SELECT 1 FROM ${tabela} LIMIT 1`).catch(migracao06);
     }
     console.log('Ligação à base de dados: OK');
+    require('./routes/email').verificarEmail();
     limpar();
     limparSessoes();
   } catch (erro) {

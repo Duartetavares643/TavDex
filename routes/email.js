@@ -12,15 +12,27 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 
 const PASTA_EMAILS = path.join(__dirname, '..', 'emails');
-const temGmail = !!(process.env.GMAIL_UTILIZADOR && process.env.GMAIL_PASSWORD_APP);
+// A Google mostra a palavra-passe de aplicação com espaços ("abcd efgh ijkl mnop"):
+// os espaços não fazem parte dela, por isso tiram-se aqui.
+const GMAIL_UTILIZADOR = String(process.env.GMAIL_UTILIZADOR || '').trim();
+const GMAIL_PASSWORD_APP = String(process.env.GMAIL_PASSWORD_APP || '').replace(/\s+/g, '');
+const temGmail = !!(GMAIL_UTILIZADOR && GMAIL_PASSWORD_APP);
 const MODO = process.env.EMAIL_MODE || (temGmail ? 'smtp' : 'ficheiro');
 
 let transporte = null;
 if (MODO === 'smtp' && temGmail) {
   transporte = nodemailer.createTransport({
     service: 'gmail',
-    auth: { user: process.env.GMAIL_UTILIZADOR, pass: process.env.GMAIL_PASSWORD_APP },
+    auth: { user: GMAIL_UTILIZADOR, pass: GMAIL_PASSWORD_APP },
   });
+}
+
+// Ao arrancar, confirma se o Gmail aceita a conta (o erro verdadeiro aparece na consola)
+function verificarEmail() {
+  if (!transporte) return;
+  transporte.verify()
+    .then(() => console.log(`Envio de emails: OK (Gmail ${GMAIL_UTILIZADOR})`))
+    .catch(erro => console.error('Envio de emails: o Gmail recusou a ligação –', erro.message));
 }
 
 // Escapa texto para o HTML do email
@@ -67,7 +79,7 @@ async function enviarEmail(para, assunto, texto, html = null) {
       return;
     }
     await transporte.sendMail({
-      from: process.env.EMAIL_FROM || `TavDex <${process.env.GMAIL_UTILIZADOR}>`,
+      from: process.env.EMAIL_FROM || `TavDex <${GMAIL_UTILIZADOR}>`,
       to: para, subject: assunto, text: texto, ...(html ? { html } : {}),
     });
   } catch (erro) {
@@ -75,4 +87,4 @@ async function enviarEmail(para, assunto, texto, html = null) {
   }
 }
 
-module.exports = { enviarEmail, modeloEmail, PASTA_EMAILS };
+module.exports = { enviarEmail, modeloEmail, verificarEmail, PASTA_EMAILS };
