@@ -14,7 +14,8 @@ const helmet = require('helmet');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const { pool, linha, executar } = require('./db');
-const { utilizadorAtual, exigirLogin, exigirLoginPagina } = require('./routes/middleware');
+const { utilizadorAtual, exigirLogin, exigirLoginPagina, NOME_COOKIE, OPCOES_COOKIE } = require('./routes/middleware');
+const { limparContasPorConfirmar } = require('./routes/confirmacao-email');
 
 const app = express();
 const PORTA = Number(process.env.PORTA) || 3000;
@@ -73,18 +74,18 @@ const guardaSessoes = new MySQLStore({
   schema: { tableName: 'sessoes_express' },
 }, pool);
 
+// As opções do cookie (OPCOES_COOKIE, em routes/middleware.js) são as mesmas que o logout usa
+// para o apagar: httpOnly (o JavaScript da página não o lê), sameSite 'lax' (ajuda contra
+// pedidos vindos de outros sites) e secure em https (só viaja cifrado).
+// A duração é escolhida no login ("Manter sessão iniciada": 30 dias; senão, até fechar o browser).
+// Os visitantes (só com o token CSRF) ficam com 1 dia.
 app.use(session({
-  name: 'tavdex.sid',
+  name: NOME_COOKIE,
   secret: process.env.SEGREDO_SESSAO || 'segredo-de-desenvolvimento',
   store: guardaSessoes,
   resave: false,
   saveUninitialized: false,          // só cria sessão quando é preciso
-  cookie: {
-    httpOnly: true,                  // o JavaScript da página não consegue ler o cookie
-    sameSite: 'lax',                 // ajuda contra pedidos vindos de outros sites
-    secure: HTTPS,                   // em https o cookie só viaja cifrado
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
-  },
+  cookie: { ...OPCOES_COOKIE, maxAge: 1000 * 60 * 60 * 24 },
 }));
 
 // ---------------------------------------------------------------------
@@ -128,8 +129,15 @@ app.get('/api/estado', async (req, res) => {
   }
 });
 
-// Pedidos sem corpo (ex.: um DELETE simples) ficam com req.body = {}
-app.use('/api', (req, res, next) => { req.body = req.body || {}; next(); });
+// Pedidos sem corpo (ex.: um DELETE simples) ficam com req.body = {}.
+// "no-store": as respostas da API nunca ficam guardadas no browser, por isso depois de
+// terminar sessão o botão Retroceder não mostra dados da conta.
+// (A foto de perfil substitui isto pela sua própria cache, em routes/utilizadores.js.)
+app.use('/api', (req, res, next) => {
+  req.body = req.body || {};
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 // Em todos os pedidos à API: descobre quem tem a sessão iniciada (fica em req.u).
 // Só na /api, para os ficheiros CSS, JS e imagens não irem à base de dados.
@@ -139,6 +147,7 @@ const google = require('./routes/google');
 const utilizadores = require('./routes/utilizadores');
 app.use('/api/auth/google', google);                            // Passo 6: login com o Google (OAuth 2.0 + PKCE)
 app.use('/api/auth', require('./routes/auth'));                 // Passos 5 a 8
+app.use('/api/confirmacao', require('./routes/confirmacao-email'));   // confirmação do email por link
 app.use('/api/conta', google.conta);                            // POST /api/conta/google/desligar
 app.post('/api/seguir/:id', exigirLogin, utilizadores.seguir);  // Passo 9: seguir / deixar de seguir
 app.use('/api/utilizadores', utilizadores);                     // Passos 9 e 10
@@ -161,10 +170,26 @@ const pagina = nome => (req, res) => res.sendFile(path.join(__dirname, 'public',
 const PRIVADAS = ['definicoes', 'listas', 'chat', 'notificacoes', 'admin', 'candidaturas', 'projeto-novo', 'projeto-editar'];
 for (const nome of PRIVADAS) app.get([`/${nome}`, `/${nome}.html`], exigirLoginPagina, pagina(`${nome}.html`));
 
+// Páginas com um token no endereço (links dos emails): "no-referrer" impede que o
+// endereço com o token seja enviado a outro site num clique, e "no-store" que fique em cache.
+const comToken = (req, res, next) => {
+  res.set({ 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store' });
+  next();
+};
+app.get(['/repor', '/repor.html', '/nova-palavra-passe'], comToken, pagina('repor.html'));
+app.get(['/confirmar-email', '/confirmar-email.html', '/confirmar-email/:token'], comToken, pagina('confirmar-email.html'));
+
 // Endereços "limpos" que mostram as páginas que já existem
 app.get('/entrar', pagina('login.html'));
-app.get('/nova-palavra-passe', pagina('repor.html'));
-app.get('/perfil/:nome', (req, res) => res.redirect('/perfil.html?u=' + encodeURIComponent(req.params.nome)));
+// GET /sair nunca termina a sessão (um link ou uma imagem noutro site não te tira do TavDex):
+// mostra uma página com o botão "Terminar sessão" (que faz POST com o token CSRF)
+app.get(['/sair', '/sair.html'], pagina('sair.html'));
+// /perfil/nome -> página do perfil. Um @nome antigo (mudado há menos de 30 dias) redireciona
+// de vez (301) para o perfil novo.
+app.get('/perfil/:nome', async (req, res) => {
+  const novo = await utilizadores.nomeNovo(req.params.nome);
+  res.redirect(novo ? 301 : 302, '/perfil.html?u=' + encodeURIComponent(novo || req.params.nome));
+});
 
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
@@ -208,8 +233,22 @@ async function limpar() {
     await executar('DELETE FROM atividade_conta WHERE criado_em < NOW() - INTERVAL 180 DAY');
     await executar('DELETE FROM tentativas_login WHERE criado_em < NOW() - INTERVAL 1 DAY');
     await executar('DELETE FROM recuperacoes WHERE expira_em < NOW() - INTERVAL 1 DAY');
+    // Contas por confirmar há mais de 7 dias (liberta o email e o @nome) e links velhos
+    await limparContasPorConfirmar();
+    await executar('DELETE FROM nomes_antigos WHERE data < NOW() - INTERVAL 30 DAY');
   } catch (erro) {
     console.error('Limpeza automática falhou:', erro.message);
+  }
+}
+
+// Sessões expiradas (de hora a hora): 12 horas sem atividade sem "Manter sessão iniciada",
+// data de expiração passada, ou mais de 90 dias no total
+async function limparSessoes() {
+  try {
+    await executar(`DELETE FROM sessoes WHERE (manter = 0 AND ultimo_acesso < NOW() - INTERVAL 12 HOUR)
+      OR (expira_em IS NOT NULL AND expira_em < NOW()) OR criado_em < NOW() - INTERVAL 90 DAY`);
+  } catch (erro) {
+    console.error('Limpeza das sessões falhou:', erro.message);
   }
 }
 
@@ -223,6 +262,7 @@ if (require.main !== module) return;
 app.listen(PORTA, async () => {
   console.log(`TavDex a funcionar em http://localhost:${PORTA}`);
   setInterval(limpar, 24 * 60 * 60 * 1000).unref();
+  setInterval(limparSessoes, 60 * 60 * 1000).unref();
   // Testa logo a ligação ao MySQL, para o problema aparecer na consola
   try {
     await pool.query('SELECT 1 FROM vw_titulos_avaliacao LIMIT 1');
@@ -241,8 +281,21 @@ app.listen(PORTA, async () => {
       erro.migracao = '05_banner_cinema.sql';
       throw erro;
     }
+    // Contas mais seguras (database/06_seguranca_contas.sql): tabelas e colunas novas
+    const migracao06 = erro => {
+      if (['ER_BAD_FIELD_ERROR', 'ER_NO_SUCH_TABLE'].includes(erro.code)) { erro.code = 'ER_BAD_FIELD_ERROR'; erro.migracao = '06_seguranca_contas.sql'; }
+      throw erro;
+    };
+    await pool.query(`SELECT email_pendente, palavra_passe_alterada_em, palavra_passe_fraca, nome_alterado_em,
+      mostrar_listas, mostrar_seguidores FROM utilizadores LIMIT 1`).catch(migracao06);
+    await pool.query('SELECT manter, expira_em FROM sessoes LIMIT 1').catch(migracao06);
+    await pool.query('SELECT ip FROM recuperacoes LIMIT 1').catch(migracao06);
+    for (const tabela of ['verificacao_email', 'nomes_antigos', 'utilizador_generos']) {
+      await pool.query(`SELECT 1 FROM ${tabela} LIMIT 1`).catch(migracao06);
+    }
     console.log('Ligação à base de dados: OK');
     limpar();
+    limparSessoes();
   } catch (erro) {
     console.error(`\n*** Problema na base de dados (${erro.code}): ${erro.message}`);
     if (erro.code === 'ER_ACCESS_DENIED_ERROR') console.error('    -> Confirma BD_UTILIZADOR e BD_PASSWORD no ficheiro .env');

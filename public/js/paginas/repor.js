@@ -1,9 +1,14 @@
 // =====================================================================
 //  "Nova palavra-passe" (Passo 8), a partir do link do email (?token=)
-//  O link é verificado logo ao abrir a página.
+//  · o token sai logo da barra de endereço (history.replaceState) e fica só
+//    numa variável; o servidor envia "Referrer-Policy: no-referrer";
+//  · mostra para que conta é ("Nova palavra-passe para @nome");
+//  · usa as mesmas regras do registo (requisitos ao vivo) e não deixa repetir a atual.
 // =====================================================================
 (async () => {
   const token = param('token') || '';
+  // Tira o token do endereço: não fica no histórico, nem em capturas de ecrã, nem é partilhado sem querer
+  if (token) history.replaceState(null, '', location.pathname);
 
   const linkInvalido = () => mostrar(`<div class="content"><div class="left narrow" style="max-width:520px">
     <div class="box form"><h1 class="ph">Link inválido</h1>
@@ -19,8 +24,10 @@
     <div class="authx">
       <div class="brand"><img src="/img/logo.png" alt=""><h2>Nova palavra-passe</h2><p>Escolhe uma palavra-passe que não uses noutros sites.</p></div>
       <form class="fm" id="f-repor" novalidate>
-        <h1>Definir nova palavra-passe</h1>
-        ${campoPassword('password', 'Nova palavra-passe', 'new-password', 'required minlength="8" maxlength="72" id="pw-repor"')}
+        <h1>Nova palavra-passe para <span class="pw-conta">@${esc(r.nome)}</span></h1>
+        <!-- O nome de utilizador escondido ajuda os gestores de palavras-passe a guardar na conta certa -->
+        <input type="text" name="username" value="${esc(r.nome)}" autocomplete="username" hidden>
+        ${campoPassword('password', 'Nova palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-repor"')}
         <div class="forca" id="forca-repor" aria-live="polite"><i></i><i></i><i></i><i></i><span></span></div>
         ${campoPassword('password2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}
         <p class="msg" role="alert"></p>
@@ -28,14 +35,16 @@
       </form>
     </div></div></div>`);
 
-  ligarBarraForca(document.getElementById('pw-repor'), document.getElementById('forca-repor'));
+  const form = document.getElementById('f-repor');
+  const dadosPessoais = () => ({ nome: r.nome, nomeExibicao: r.nome_exibicao, email: r.email });
+  ligarBarraForca(document.getElementById('pw-repor'), document.getElementById('forca-repor'),
+    { dados: dadosPessoais, confirmar: form.password2 });
 
-  ligarForm(document.getElementById('f-repor'), async dados => {
+  ligarForm(form, async dados => {
     const erros = {};
-    if (dados.password.length < 8 || !/[A-Za-zÀ-ÿ]/.test(dados.password) || !/[0-9]/.test(dados.password)) {
-      erros.password = 'A palavra-passe tem de ter 8 a 72 caracteres, com letras e números.';
-    }
-    if (dados.password !== dados.password2) erros.password2 = 'As palavras-passe não são iguais.';
+    const analise = RegrasPalavraPasse.analisar(dados.password, dadosPessoais());
+    if (!analise.valida) erros.password = analise.erros[0];
+    if (dados.password !== dados.password2) erros.password2 = 'As palavras-passe não coincidem.';
     if (Object.keys(erros).length) throw erroCampos(erros);
     try {
       const resposta = await api('/api/auth/repor', 'POST', { token, password: dados.password, password2: dados.password2 });

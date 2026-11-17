@@ -74,7 +74,11 @@ router.get('/', (req, res) => {
   const verifier = base64url(crypto.randomBytes(32));                                  // PKCE: segredo deste pedido
   const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());   // PKCE: o que o Google recebe
 
-  req.session.google = { state, verifier, modo, voltar, uid: modo === 'ligar' ? req.u.id : null, criado: Date.now() };
+  // manter = "Manter sessão iniciada" (a página envia a última escolha feita no login, ?manter=1)
+  req.session.google = {
+    state, verifier, modo, voltar, uid: modo === 'ligar' ? req.u.id : null, criado: Date.now(),
+    manter: a.booleano(req.query.manter),
+  };
 
   const parametros = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
@@ -204,8 +208,9 @@ router.get('/callback', async (req, res) => {
       caso = 3;
       let base = googleEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_.]/g, '').slice(0, 26);
       if (base.length < 3) base = ('user' + base).slice(0, 26);
+      // Primeiro @nome livre (nem de outra conta, nem reservado como "admin", nem @ antigo de alguém)
       let nome = base;
-      for (let i = 2; await linha('SELECT id FROM utilizadores WHERE nome = ?', [nome]); i++) nome = base + i;
+      for (let i = 2; await a.nomeIndisponivel(nome); i++) nome = base + i;
       const nomeExibicao = String(dados.name || nome).trim().slice(0, 50) || nome;
       const foto = await fotoDoGoogle(dados.picture);
 
@@ -221,7 +226,7 @@ router.get('/callback', async (req, res) => {
 
   if (u.bloqueado) return voltarComErro(SUSPENSA);
 
-  await iniciarSessao(req, u, 'google');
+  await iniciarSessao(req, u, 'google', !!pedido.manter);
   if (caso !== 3) await a.registarAtividade(req, u.id, 'login_google', `Sessão iniciada com o Google · ${a.dispositivoDe(req)}`);
   res.redirect(comMensagem(pedido.voltar, 'ok', mensagem));
 });

@@ -59,27 +59,241 @@ function campoPassword(nome, rotulo, autocomplete, extra = '') {
     <button type="button" class="ver-pw" data-ver-pw aria-label="Mostrar a palavra-passe">Ver</button></div>`;
 }
 
-// Força da palavra-passe: 0 (muito fraca) a 4 (muito forte)
-function forcaPassword(p) {
-  let pontos = 0;
-  if (p.length >= 8) pontos++;
-  if (p.length >= 12) pontos++;
-  if (/[a-z]/.test(p) && /[A-Z]/.test(p)) pontos++;
-  if (/[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p)) pontos++;
-  if (!/[A-Za-z]/.test(p) || !/[0-9]/.test(p)) pontos = Math.min(pontos, 1);   // tem de ter letras e números
-  return p ? pontos : 0;
-}
-const NOMES_FORCA = ['Muito fraca', 'Fraca', 'Razoável', 'Forte', 'Muito forte'];
+// =====================================================================
+// PALAVRA-PASSE NOVA: barra de força (Fraca / Razoável / Boa / Forte), lista de
+// requisitos ao vivo (✓ / ○), "As palavras-passe não coincidem." e o botão de
+// enviar só ativo quando está tudo cumprido.
+// As regras estão em /js/regras-palavra-passe.js (o mesmo ficheiro que o servidor usa);
+// a página tem de o carregar antes deste.
+//  campo     = <input> da palavra-passe nova
+//  barra     = <div class="forca"> (4 traços + texto)
+//  dados     = função que devolve { nome, nomeExibicao, email } (para "não contém o teu nome")
+//  confirmar = <input> "Confirmar a palavra-passe" (opcional)
+// =====================================================================
+function ligarBarraForca(campo, barra, { dados = () => ({}), confirmar = null } = {}) {
+  const R = window.RegrasPalavraPasse;
+  if (!campo || !barra || !R) return;
+  const form = campo.form;
+  const botao = form && form.querySelector('button[type=submit], button:not([type])');
 
-// Liga uma barra de força (<div class="forca">) a um campo de palavra-passe
-function ligarBarraForca(campo, barra) {
+  // Lista de requisitos por baixo da barra
+  const lista = document.createElement('ul');
+  lista.className = 'requisitos';
+  lista.id = (campo.id || campo.name) + '-requisitos';
+  barra.after(lista);
+  campo.setAttribute('aria-describedby', lista.id);
+
+  // Nota "As palavras-passe não coincidem." por baixo do campo de confirmar
+  let notaConfirmar = null;
+  if (confirmar) {
+    notaConfirmar = document.createElement('small');
+    notaConfirmar.className = 'nota-campo erro';
+    notaConfirmar.setAttribute('aria-live', 'polite');
+    (confirmar.closest('.campo-pw') || confirmar).after(notaConfirmar);
+  }
+
   const atualizar = () => {
-    const n = forcaPassword(campo.value);
-    barra.dataset.n = campo.value ? n : '';
-    barra.querySelector('span').textContent = campo.value ? `Força: ${NOMES_FORCA[n]}` : 'Mínimo 8 caracteres, com letras e números';
+    const a = R.analisar(campo.value, dados());
+    barra.dataset.n = campo.value ? a.forca : '';
+    barra.querySelector('span').textContent = campo.value
+      ? `Força: ${R.NOMES_FORCA[a.forca]}`
+      : 'Pelo menos 10 caracteres, com maiúsculas, minúsculas, números e símbolos';
+    // ✓ verde quando cumprido, ○ cinzento quando falta (o texto escondido ajuda os leitores de ecrã)
+    let html = a.requisitos.map(r => `<li class="${r.ok ? 'ok' : ''}"><span aria-hidden="true">${r.ok ? '✓' : '○'}</span>
+      ${esc(r.texto)}<span class="sr">${r.ok ? ' – cumprido' : ' – em falta'}</span></li>`).join('');
+    // Regras que não estão na lista (repetidos, sequências, tamanho em bytes)
+    const extra = a.requisitos.every(r => r.ok) && !a.valida ? a.erros[0] : '';
+    if (extra) html += `<li class="falta"><span aria-hidden="true">!</span> ${esc(extra)}</li>`;
+    lista.innerHTML = html;
+
+    const coincidem = !confirmar || !confirmar.value || confirmar.value === campo.value;
+    if (notaConfirmar) notaConfirmar.textContent = coincidem ? '' : 'As palavras-passe não coincidem.';
+    if (botao) botao.disabled = !(a.valida && (!confirmar || confirmar.value === campo.value));
   };
-  campo.addEventListener('input', atualizar);
+  // Ouve o formulário todo (o nome e o email também contam para "não contém o teu nome")
+  (form || campo).addEventListener('input', atualizar);
   atualizar();
+}
+
+// =====================================================================
+// EMAIL: ao sair do campo mostra se o formato está errado e sugere a
+// correção de erros de escrita ("Querias dizer duarte@gmail.com?").
+// É só uma ajuda: quem decide é o servidor. Usa /js/regras-email.js.
+// =====================================================================
+function ligarCampoEmail(campo) {
+  const R = window.RegrasEmail;
+  if (!campo || !R) return;
+  const nota = document.createElement('small');
+  nota.className = 'nota-campo';
+  nota.setAttribute('aria-live', 'polite');
+  campo.after(nota);
+  campo.addEventListener('blur', () => {
+    nota.textContent = '';
+    nota.className = 'nota-campo';
+    if (!campo.value.trim()) return;
+    const erro = R.erroFormato(campo.value);
+    if (erro) {
+      nota.classList.add('erro');
+      nota.textContent = erro;
+      return;
+    }
+    const sugestao = R.sugestao(campo.value);
+    if (!sugestao) return;
+    // Montado com DOM (textContent): o email escrito nunca entra como HTML
+    nota.append('Querias dizer ');
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'lk';
+    botao.textContent = sugestao;
+    botao.addEventListener('click', () => {
+      campo.value = sugestao;
+      nota.textContent = '';
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
+      campo.focus();
+    });
+    nota.append(botao, '?');
+  });
+}
+
+// =====================================================================
+// @NOME DISPONÍVEL AO VIVO: enquanto se escreve (espera 400 ms depois da última
+// tecla) pergunta ao servidor e mostra "✓ Disponível" ou "Já está a ser usado".
+//  atual = @nome atual da conta (nas Definições), que conta como disponível
+// =====================================================================
+function ligarNomeDisponivel(campo, atual = '') {
+  if (!campo) return;
+  const nota = document.createElement('small');
+  nota.className = 'nota-campo';
+  nota.setAttribute('aria-live', 'polite');
+  campo.after(nota);
+  let relogio = null;
+  let pedido = 0;
+  campo.addEventListener('input', () => {
+    clearTimeout(relogio);
+    nota.textContent = '';
+    nota.className = 'nota-campo';
+    const nome = campo.value.trim().replace(/^@/, '');
+    if (nome.length < 3 || nome === atual) return;
+    relogio = setTimeout(async () => {
+      const este = ++pedido;   // só conta a resposta do último pedido
+      try {
+        const r = await api('/api/utilizadores/disponivel?nome=' + encodeURIComponent(nome));
+        if (este !== pedido) return;
+        nota.className = 'nota-campo ' + (r.disponivel ? 'ok' : 'erro');
+        nota.textContent = r.mensagem;
+      } catch (erro) { /* demasiados pedidos ou sem rede: o servidor verifica ao guardar */ }
+    }, 400);
+  });
+}
+
+// =====================================================================
+// JANELAS (confirmar, recortar a foto, …) no estilo da "Inicia sessão para continuar":
+// role="dialog", aria-modal="true", o foco fica preso lá dentro (Tab e Shift+Tab)
+// e Esc fecha. Devolve o <dialog>; ao fechar, o foco volta ao elemento de antes.
+// =====================================================================
+function abrirJanela(html, { classe = '', aoFechar = null } = {}) {
+  const antes = document.activeElement;
+  const janela = document.createElement('dialog');
+  janela.className = 'modal ' + classe;
+  janela.setAttribute('role', 'dialog');
+  janela.setAttribute('aria-modal', 'true');
+  janela.innerHTML = html;
+  const titulo = janela.querySelector('h2');
+  if (titulo) {
+    titulo.id = titulo.id || 'janela-' + Math.random().toString(36).slice(2);
+    janela.setAttribute('aria-labelledby', titulo.id);
+  }
+  document.body.append(janela);
+  janela.addEventListener('keydown', e => {
+    if (e.key !== 'Tab') return;
+    const focaveis = [...janela.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.disabled && el.offsetParent !== null);
+    if (!focaveis.length) return;
+    const primeiro = focaveis[0];
+    const ultimo = focaveis[focaveis.length - 1];
+    if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+    else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+  });
+  janela.addEventListener('click', e => { if (e.target === janela) janela.close(); });   // clicar fora fecha
+  janela.addEventListener('close', () => {
+    if (aoFechar) aoFechar();
+    janela.remove();
+    if (antes && antes.focus) antes.focus();
+  });
+  if (typeof janela.showModal === 'function') janela.showModal(); else janela.setAttribute('open', '');   // Esc fecha sozinho
+  return janela;
+}
+
+// Pergunta de sim/não numa janela. Devolve uma promessa com true (confirmou) ou false.
+function confirmarJanela({ titulo, texto, sim = 'Confirmar', nao = 'Cancelar' }) {
+  return new Promise(resolve => {
+    let resposta = false;
+    const janela = abrirJanela(`<div class="modal-in">
+        <h2></h2><p class="modal-txt"></p>
+        <div class="modal-btns"><button type="button" class="btn primary" data-sim></button>
+          <button type="button" class="btn ghost" data-nao></button></div>
+      </div>`, { classe: 'modal-aviso', aoFechar: () => resolve(resposta) });
+    // textContent: os textos nunca entram como HTML
+    janela.querySelector('h2').textContent = titulo;
+    janela.querySelector('.modal-txt').textContent = texto;
+    janela.querySelector('[data-sim]').textContent = sim;
+    janela.querySelector('[data-nao]').textContent = nao;
+    janela.querySelector('[data-sim]').addEventListener('click', () => { resposta = true; janela.close(); });
+    janela.querySelector('[data-nao]').addEventListener('click', () => janela.close());
+    janela.querySelector('[data-nao]').focus();
+  });
+}
+
+// =====================================================================
+// SESSÃO EM TODOS OS SEPARADORES
+// Terminar (ou iniciar) sessão num separador atualiza logo os outros, com
+// BroadcastChannel (e o evento "storage" nos browsers que não o têm).
+// =====================================================================
+const PAGINAS_PRIVADAS = /^\/(definicoes|listas|chat|notificacoes|admin|candidaturas|projeto-novo|projeto-editar)(\.html)?$/;
+const paginaPrivada = () => PAGINAS_PRIVADAS.test(location.pathname);
+let canalSessao = null;
+try { canalSessao = new BroadcastChannel('tavdex-sessao'); } catch (erro) { /* browser antigo: usa o "storage" */ }
+
+function avisarOutrosSeparadores(tipo) {
+  if (canalSessao) canalSessao.postMessage({ tipo });
+  try { localStorage.setItem('tavdex-sessao', JSON.stringify({ tipo, t: Date.now() })); } catch (erro) { /* ignora */ }
+}
+
+function sessaoMudouNoutroSeparador(tipo) {
+  if (tipo === 'saiu' && sessaoAtual) {
+    // Página privada -> início; pública -> fica nela, agora como visitante
+    if (paginaPrivada()) location.href = '/'; else location.reload();
+  } else if (tipo === 'entrou') {
+    location.reload();
+  }
+}
+if (canalSessao) canalSessao.onmessage = e => sessaoMudouNoutroSeparador(e.data && e.data.tipo);
+else window.addEventListener('storage', e => {
+  if (e.key === 'tavdex-sessao' && e.newValue) sessaoMudouNoutroSeparador(JSON.parse(e.newValue).tipo);
+});
+
+// Aviso para mostrar na página seguinte (ex.: "Sessão terminada…")
+function avisoNaProximaPagina(texto) {
+  try { sessionStorage.setItem('tavdex-aviso', texto); } catch (erro) { /* ignora */ }
+}
+
+// Terminar sessão (POST com o token CSRF). todos = em todos os dispositivos, incluindo este.
+async function terminarSessao(todos = false) {
+  if (todos) {
+    const sim = await confirmarJanela({
+      titulo: 'Sair de todos os dispositivos?',
+      texto: 'Vais sair do TavDex em todos os dispositivos, incluindo este.',
+      sim: 'Terminar em todos', nao: 'Cancelar',
+    });
+    if (!sim) return;
+  }
+  try {
+    const r = await api(todos ? '/api/auth/logout-todos' : '/api/auth/logout', 'POST');
+    avisoNaProximaPagina(r.aviso);
+  } catch (erro) { /* sem sessão: vai para o início na mesma */ }
+  avisarOutrosSeparadores('saiu');
+  // Página pública: fica nela como visitante; privada: vai para o início
+  location.href = paginaPrivada() ? '/' : paginaAtual();
 }
 
 // Erro com vários campos (para validar no browser antes de enviar)
@@ -118,6 +332,11 @@ function avisosDoEndereco(avisoSessao) {
   const ok = param('ok');
   const erro = param('erro');
   if (avisoSessao) aviso(avisoSessao);
+  // Aviso guardado pela página anterior (ex.: "Sessão terminada…" depois do logout)
+  try {
+    const guardado = sessionStorage.getItem('tavdex-aviso');
+    if (guardado) { sessionStorage.removeItem('tavdex-aviso'); aviso(guardado); }
+  } catch (erroGuardado) { /* ignora */ }
   if (ok) aviso(ok);
   if (erro) aviso(erro, 'erro');
   if (ok || erro) {
@@ -171,7 +390,9 @@ function temaValido(tema) {
 //  acoes     = HTML dos botões (Editar perfil, ou Seguir / Mensagem)
 //  contagens = { seguidores, a_seguir, avaliacoes, vistos, projetos } (ou null para não mostrar)
 //  fotoUrl   = foto escolhida e ainda não guardada (pré-visualização nas Definições)
-function partesPerfil(p, { acoes = '', contagens = null, fotoUrl = null } = {}) {
+//  segueTe   = esta pessoa segue quem está a ver (etiqueta "Segue-te" ao lado do nome)
+//  generos   = géneros favoritos escolhidos pela pessoa (etiquetas por baixo da biografia)
+function partesPerfil(p, { acoes = '', contagens = null, fotoUrl = null, segueTe = false, generos = [] } = {}) {
   const versao = Number(p.foto_versao) || 0;
   const foto = fotoUrl || (versao > 0 ? `/api/utilizadores/${Number(p.id)}/foto?v=${versao}` : null);
   const avatarHtml = foto
@@ -189,12 +410,13 @@ function partesPerfil(p, { acoes = '', contagens = null, fotoUrl = null } = {}) 
   return `<div class="phead">
       ${avatarHtml}
       <div class="phead__info">
-        <h1 class="phead__nome">${esc(nomeVisivel(p))}${p.papel === 'admin' ? '<span class="badge" style="--c:330">Admin</span>' : ''}</h1>
+        <h1 class="phead__nome">${esc(nomeVisivel(p))}${p.papel === 'admin' ? '<span class="badge" style="--c:330">Admin</span>' : ''}${segueTe ? '<span class="badge segue-te" style="--c:199">Segue-te</span>' : ''}</h1>
         <p class="phead__meta"><span>@${esc(p.nome)}</span>${desde}${local}</p>
       </div>
       <div class="phead__acoes">${acoes}</div>
     </div>
     ${p.bio ? `<p class="pbio">${esc(p.bio)}</p>` : ''}
+    ${generos.length ? `<ul class="ptags" aria-label="Géneros favoritos">${generos.map(g => `<li>${esc(g)}</li>`).join('')}</ul>` : ''}
     ${numeros}`;
 }
 
@@ -210,8 +432,13 @@ function cabecalhoPerfil(p, opcoes = {}) {
 const LOGO_GOOGLE = `<svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
 
 // Botão "Continuar com Google" (login, registo e janela de login). Volta à página indicada.
+// A escolha "Manter sessão iniciada" fica guardada neste browser e o Google usa a última escolha
+function manterSessaoGuardado() {
+  try { return localStorage.getItem('tavdex-manter') === '1'; } catch (erro) { return false; }
+}
 function botaoGoogle(texto = 'Continuar com Google', voltar = paginaAtual()) {
-  return `<a class="btn google" data-google href="/api/auth/google?voltar=${encodeURIComponent(voltar)}">${LOGO_GOOGLE}<span>${esc(texto)}</span></a>`;
+  const manter = manterSessaoGuardado() ? '&manter=1' : '';
+  return `<a class="btn google" data-google href="/api/auth/google?voltar=${encodeURIComponent(voltar)}${manter}">${LOGO_GOOGLE}<span>${esc(texto)}</span></a>`;
 }
 
 function linkPerfil(u) {
@@ -397,15 +624,29 @@ function ligarForm(form, funcao) {
     } catch (erro) {
       if (erro.status === 401) return abrirJanelaLogin(form.dataset.acao || 'continuar');
       if (erro.erros) marcarErrosCampos(form, erro.erros);
+      // Registo com um email que já tem conta: ligação para recuperar a palavra-passe
+      const notaEmail = document.getElementById(`erro-${form.id}-email`);
+      if (notaEmail && /^Já existe uma conta/.test(notaEmail.textContent)) {
+        notaEmail.insertAdjacentHTML('beforeend', ' <a class="lk" href="/recuperar.html"><b>Recuperar a palavra-passe</b></a>');
+      }
       if (msg) {
         msg.textContent = erro.message;
-        // Bloqueio do login: mostra também a ligação para recuperar a palavra-passe
-        if (erro.codigo === 'bloqueado') msg.insertAdjacentHTML('beforeend', ' <a class="lk" href="/recuperar.html">Recuperar a palavra-passe</a>');
+        // Bloqueio do login: ligação para recuperar a palavra-passe, já com o email/@nome escrito
+        if (erro.codigo === 'bloqueado') {
+          const escrito = form.elements.login ? form.elements.login.value.trim() : '';
+          const link = document.createElement('a');
+          link.className = 'lk';
+          link.href = '/recuperar.html' + (escrito ? '?login=' + encodeURIComponent(escrito) : '');
+          link.textContent = 'Recuperar a palavra-passe';
+          msg.append(' ', link);
+        }
       } else {
         aviso(erro.message, 'erro');
       }
     } finally {
       if (botao) botao.disabled = false;
+      // Volta a verificar o formulário (ex.: o botão só fica ativo com a palavra-passe certa)
+      form.dispatchEvent(new Event('input'));
     }
   });
 }
@@ -486,6 +727,7 @@ function desenharTopo(u) {
         <a href="/definicoes.html">Definições</a>
         <a href="/definicoes.html?tab=seguranca">Segurança da conta</a>
         <form id="sair"><button class="rtog">Terminar sessão</button></form>
+        <button type="button" class="rtog sair-todos" data-sair-todos>Terminar sessão em todos os dispositivos</button>
       </div>
     </div>`
     : `<a class="btn ghost sm nav-btn" href="/login.html?voltar=${encodeURIComponent(paginaAtual())}">Entrar</a>
@@ -503,12 +745,11 @@ function desenharTopo(u) {
     ${conta}`;
   document.body.prepend(topo);
 
-  // Terminar sessão (POST com token CSRF)
+  // Terminar sessão (POST com token CSRF), aqui ou em todos os dispositivos
   const sair = document.getElementById('sair');
-  if (sair) sair.addEventListener('submit', async e => {
+  if (sair) sair.addEventListener('submit', e => {
     e.preventDefault();
-    await tentar(() => api('/api/auth/logout', 'POST'));
-    location.href = '/';
+    terminarSessao(false);
   });
 }
 
@@ -529,10 +770,39 @@ function desenharRodape(u) {
   document.body.append(rodape);
 }
 
+// Depois do login com uma palavra-passe antiga que já não cumpre as regras (não bloqueia)
+function avisoPalavraPasseFraca() {
+  const div = document.createElement('div');
+  div.className = 'flash erro';
+  div.setAttribute('role', 'alert');
+  div.append('A tua palavra-passe já não cumpre as regras de segurança do TavDex. ');
+  const link = document.createElement('a');
+  link.className = 'lk';
+  link.href = '/definicoes.html?tab=seguranca';
+  link.innerHTML = '<b>Altera-a agora</b>';
+  div.append(link, '.');
+  document.querySelector('main').prepend(div);
+  setTimeout(() => div.remove(), 15000);
+}
+
 estadoSessao.then(estado => {
   desenharTopo(estado.u);
   desenharRodape(estado.u);
   avisosDoEndereco(estado.aviso);
+  if (estado.palavra_passe_fraca) avisoPalavraPasseFraca();
+  // A sessão mudou desde a última página (login, Google, confirmação, logout)? Avisa os outros separadores.
+  try {
+    const agora = estado.u ? String(estado.u.id) : '';
+    const antes = localStorage.getItem('tavdex-uid');
+    if (antes !== null && antes !== agora) avisarOutrosSeparadores(agora ? 'entrou' : 'saiu');
+    localStorage.setItem('tavdex-uid', agora);
+  } catch (erro) { /* ignora */ }
+});
+
+// Botão Retroceder: o browser pode mostrar uma cópia guardada da página (bfcache).
+// Numa página privada, recarrega-a, para não mostrar dados depois de terminar sessão.
+window.addEventListener('pageshow', e => {
+  if (e.persisted && paginaPrivada()) location.reload();
 });
 
 // =====================================================================
@@ -559,6 +829,9 @@ document.addEventListener('click', e => {
 document.addEventListener('click', e => {
   // Fechar a janela de login ("Continuar a explorar")
   if (e.target.closest('[data-fechar-janela]')) e.target.closest('dialog').close();
+
+  // "Terminar sessão em todos os dispositivos" (menu da conta e Definições)
+  if (e.target.closest('[data-sair-todos]')) terminarSessao(true);
 
   // Ver / Ocultar a palavra-passe
   const verPw = e.target.closest('[data-ver-pw]');
