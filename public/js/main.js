@@ -120,14 +120,18 @@ function ligarBarraForca(campo, barra, { dados = () => ({}), confirmar = null } 
 // correção de erros de escrita ("Querias dizer duarte@gmail.com?").
 // É só uma ajuda: quem decide é o servidor. Usa /js/regras-email.js.
 // =====================================================================
-function ligarCampoEmail(campo) {
+//  verificar = true (no registo): depois do formato, pergunta ao servidor se o domínio
+//  existe e recebe emails e se já há uma conta com este email.
+function ligarCampoEmail(campo, { verificar = false } = {}) {
   const R = window.RegrasEmail;
   if (!campo || !R) return;
   const nota = document.createElement('small');
   nota.className = 'nota-campo';
   nota.setAttribute('aria-live', 'polite');
   campo.after(nota);
-  campo.addEventListener('blur', () => {
+  // Ao voltar a escrever, a nota antiga desaparece
+  campo.addEventListener('input', () => { nota.textContent = ''; nota.className = 'nota-campo'; });
+  campo.addEventListener('blur', async () => {
     nota.textContent = '';
     nota.className = 'nota-campo';
     if (!campo.value.trim()) return;
@@ -138,7 +142,27 @@ function ligarCampoEmail(campo) {
       return;
     }
     const sugestao = R.sugestao(campo.value);
-    if (!sugestao) return;
+    if (!sugestao) {
+      if (!verificar) return;
+      const valor = campo.value.trim();
+      nota.textContent = 'A verificar o email…';
+      try {
+        const r = await api('/api/auth/email-disponivel?email=' + encodeURIComponent(valor));
+        if (campo.value.trim() !== valor) return;   // entretanto mudou: esta resposta já não interessa
+        nota.className = 'nota-campo ' + (r.valido ? 'ok' : 'erro');
+        nota.textContent = r.mensagem;
+        if (r.existe) {
+          const link = document.createElement('a');
+          link.className = 'lk';
+          link.href = '/recuperar.html?login=' + encodeURIComponent(valor);
+          link.textContent = 'Recuperar a palavra-passe';
+          nota.append(' ', link);
+        }
+      } catch (erroPedido) {
+        nota.textContent = '';   // sem resposta (ou demasiados pedidos): o servidor volta a verificar ao criar a conta
+      }
+      return;
+    }
     // Montado com DOM (textContent): o email escrito nunca entra como HTML
     nota.append('Querias dizer ');
     const botao = document.createElement('button');
@@ -153,6 +177,38 @@ function ligarCampoEmail(campo) {
     });
     nota.append(botao, '?');
   });
+}
+
+// =====================================================================
+// NOME DA PESSOA (ex.: "Duarte Tavares"): só letras (com acentos), espaços,
+// hífen e apóstrofo — sem números nem símbolos. A mesma regra está no servidor
+// (nomeExibicao em routes/ajudas.js). Devolve a mensagem de erro, ou '' se estiver bem.
+// =====================================================================
+const REGRA_NOME_PESSOA = /^[\p{L}\p{M}]+(?:[ '’-][\p{L}\p{M}]+)*$/u;
+function erroNomePessoa(valor) {
+  const t = String(valor || '').replace(/\s+/g, ' ').trim();
+  if (!t) return 'Escreve o teu nome.';
+  if (t.length < 2 || t.length > 50) return 'O nome tem de ter entre 2 e 50 caracteres.';
+  if (!/\p{L}/u.test(t)) return 'O nome tem de ter letras.';
+  if (!REGRA_NOME_PESSOA.test(t)) return "O nome só pode ter letras, espaços, hífen (-) e apóstrofo ('). Sem números nem símbolos.";
+  return '';
+}
+
+// Mostra o erro de um campo enquanto se escreve (sem mexer no foco).
+//  verificar = função que devolve a mensagem de erro, ou '' se estiver bem
+function ligarVerificacaoCampo(campo, verificar) {
+  if (!campo) return;
+  const nota = document.createElement('small');
+  nota.className = 'nota-campo erro';
+  nota.setAttribute('aria-live', 'polite');
+  campo.after(nota);
+  const atualizar = () => {
+    const erro = campo.value ? verificar(campo.value) : '';
+    nota.textContent = erro;
+    if (erro) campo.setAttribute('aria-invalid', 'true'); else campo.removeAttribute('aria-invalid');
+  };
+  campo.addEventListener('input', atualizar);
+  campo.addEventListener('blur', atualizar);
 }
 
 // =====================================================================

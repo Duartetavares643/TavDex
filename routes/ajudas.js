@@ -208,13 +208,17 @@ async function nomeIndisponivel(nome, idAtual = 0) {
 //  · recusa caracteres invisíveis (largura zero, controlo, mudança de direção do texto),
 //    que servem para fingir ser outra pessoa com um nome "igual";
 //  · junta os espaços repetidos;
-//  · tem de ter pelo menos uma letra (não pode ser só emojis ou símbolos).
+//  · tem de ter pelo menos uma letra (não pode ser só emojis ou símbolos);
+//  · só aceita letras (com acentos), espaços, hífen e apóstrofo: nada de números
+//    nem símbolos (ex.: "Ana-Rita D'Almeida" sim; "Duarte123" não).
 const INVISIVEIS = /[\u0000-\u001f\u007f-\u009f­͏؜ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁤⁦-⁯ㅤ﻿ﾠ]/;
+const REGRA_NOME_PESSOA = /^[\p{L}\p{M}]+(?:[ '’-][\p{L}\p{M}]+)*$/u;
 function nomeExibicao(valor) {
   const bruto = String(valor ?? '').normalize('NFC');
   if (INVISIVEIS.test(bruto.replace(/[\t\n\r]/g, ' '))) falha(400, 'O nome tem caracteres que não se veem. Escreve-o outra vez.');
   const t = texto(bruto.replace(/\s+/g, ' '), 'Nome', 2, 50);
   if (!/\p{L}/u.test(t)) falha(400, 'O nome tem de ter letras.');
+  if (!REGRA_NOME_PESSOA.test(t)) falha(400, 'O nome só pode ter letras, espaços, hífen (-) e apóstrofo (\'). Sem números nem símbolos.');
   return t;
 }
 
@@ -387,7 +391,7 @@ function temaBanner(valor) {
 module.exports = {
   falha, Validacao, texto, inteiro, inteiroOuNulo, escolha, booleano, email, urlImagem,
   validarEmail, eDescartavel, dominioRecebeEmail, esconderEmail,
-  NOMES_RESERVADOS, nomeIndisponivel, nomeExibicao,
+  NOMES_RESERVADOS, nomeIndisponivel, nomeExibicao, REGRA_NOME_PESSOA,
   sha256, tokenAleatorio, ipDe, nomeDispositivo, dispositivoDe, registarAtividade, voltarSeguro,
   colunasPublicas, CORES_AVATAR, corAleatoria, TEMAS_BANNER, temaBanner,
   demasiado, nLinks, verificarSpam, notificar, paginacao, marcadores, publico,

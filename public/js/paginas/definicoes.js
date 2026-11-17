@@ -26,6 +26,11 @@
     google_desligado: 'Conta Google desligada', sessoes_terminadas: 'Sessões terminadas noutros dispositivos',
   };
   const dataHora = t => t ? `${dataCurta(t)} ${t.slice(11, 16)}` : '';
+  // O nome só aceita letras. Se ainda não há nome (ou o antigo tem números), sugere um
+  // feito a partir do @nome, só com as letras: "ana_m" -> "Ana M", "rui99" -> "Rui".
+  const nomeSugerido = d.nome_exibicao && !erroNomePessoa(d.nome_exibicao) ? d.nome_exibicao
+    : (d.nome_exibicao || d.nome).replace(/[^\p{L}\p{M}' -]+/gu, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/(^|\s)\p{Ll}/gu, l => l.toUpperCase()) || '';
   const pr = d.protecao;
   const outrasSessoes = d.sessoes.filter(s => !s.atual).length;
   const marca = (bom, texto) => `<li class="${bom ? 'ok' : 'aviso'}"><b aria-hidden="true">${bom ? '✓' : '!'}</b> ${texto}</li>`;
@@ -63,7 +68,7 @@
                 </span></label>`).join('')}
           </div>
 
-          <label>Nome<input name="nome_exibicao" value="${esc(d.nome_exibicao || d.nome)}" required minlength="2" maxlength="50" autocomplete="name"></label>
+          <label>Nome<input name="nome_exibicao" value="${esc(nomeSugerido)}" required minlength="2" maxlength="50" autocomplete="name"></label>
           <label>@nome de utilizador<input name="nome" id="def-nome" value="${esc(d.nome)}" required minlength="3" maxlength="30"
             pattern="[A-Za-z0-9_.]{3,30}" autocapitalize="off" spellcheck="false" ${d.pode_mudar_nome ? '' : 'readonly aria-readonly="true"'}></label>
           <small class="muted nota-nome">${d.pode_mudar_nome
@@ -260,12 +265,7 @@
 
   // Mensagens por campo ao sair de cada campo (o servidor volta a verificar tudo ao guardar)
   const verificacoes = {
-    nome_exibicao: v => {
-      const t = v.replace(/\s+/g, ' ').trim();
-      if (t.length < 2 || t.length > 50) return 'O nome tem de ter entre 2 e 50 caracteres.';
-      if (!/\p{L}/u.test(t)) return 'O nome tem de ter letras.';
-      return '';
-    },
+    nome_exibicao: erroNomePessoa,   // só letras, espaços, hífen e apóstrofo (main.js)
     nome: v => /^@?[A-Za-z0-9_.]{3,30}$/.test(v.trim()) ? '' : 'O @nome tem de ter 3 a 30 letras, números, _ ou .',
     localizacao: v => v.trim().length > 40 ? 'A localização tem no máximo 40 caracteres.' : '',
     bio: v => v.length > 160 ? 'A biografia tem no máximo 160 caracteres.' : '',

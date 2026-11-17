@@ -17,7 +17,7 @@
       <div class="brand"><img src="/img/logo.png" alt=""><h2>Junta-te ao TavDex</h2><p>Avalia, cria listas e apresenta os teus projetos.</p></div>
       <form class="fm" id="f-registo" novalidate>
         <h1>Criar conta</h1>
-        <input name="nome_exibicao" placeholder="Nome (ex.: Duarte Tavares)" aria-label="Nome" required minlength="2" maxlength="50" autocomplete="name">
+        <input name="nome_exibicao" placeholder="Nome (só letras, ex.: Duarte Tavares)" aria-label="Nome" required minlength="2" maxlength="50" autocomplete="name">
         <input name="nome" id="registo-nome" placeholder="@nome de utilizador (3 a 30: letras, números, _ e .)" aria-label="Nome de utilizador"
           required minlength="3" maxlength="30" pattern="[A-Za-z0-9_.]{3,30}" autocomplete="username" autocapitalize="off" spellcheck="false">
         <input name="email" id="registo-email" type="email" placeholder="Email" aria-label="Email" required maxlength="120" autocomplete="email">
@@ -38,15 +38,21 @@
   const dadosPessoais = () => ({ nome: form.nome.value, nomeExibicao: form.nome_exibicao.value, email: form.email.value });
   ligarBarraForca(document.getElementById('pw-registo'), document.getElementById('forca-registo'),
     { dados: dadosPessoais, confirmar: form.password2 });
-  ligarCampoEmail(form.email);
+  // Cada campo só aceita o que pede (o servidor volta a verificar tudo ao criar a conta):
+  //  nome  → só letras, espaços, hífen e apóstrofo (sem números)
+  //  @nome → letras, números, _ e . e diz logo se já está a ser usado
+  //  email → formato, emails temporários, domínio que recebe emails e se já tem conta
+  ligarVerificacaoCampo(form.nome_exibicao, erroNomePessoa);
   ligarNomeDisponivel(form.nome);
+  ligarCampoEmail(form.email, { verificar: true });
 
   ligarForm(form, async dados => {
     // Validação rápida no browser, com todos os erros juntos (o servidor valida tudo outra vez)
     const erros = {};
     const nomeExibicao = dados.nome_exibicao.trim();
     const nome = dados.nome.trim().replace(/^@/, '');
-    if (nomeExibicao.length < 2 || nomeExibicao.length > 50) erros.nome_exibicao = 'O nome tem de ter entre 2 e 50 caracteres.';
+    const erroNome = erroNomePessoa(nomeExibicao);
+    if (erroNome) erros.nome_exibicao = erroNome;
     if (!/^[A-Za-z0-9_.]{3,30}$/.test(nome)) erros.nome = 'O @nome tem de ter 3 a 30 letras, números, _ ou .';
     const erroEmail = RegrasEmail.erroFormato(dados.email);
     if (erroEmail) erros.email = erroEmail;

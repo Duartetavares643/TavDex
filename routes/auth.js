@@ -70,6 +70,35 @@ router.get('/eu', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------
+// O email pode ser usado no registo? (a página pergunta ao sair do campo)
+// Verifica o formato, se é temporário, se o domínio existe e recebe emails (DNS)
+// e se já há uma conta com ele. No máximo 20 pedidos por minuto por IP.
+// (Dizer que o email já tem conta é inevitável no registo; o limite trava quem
+//  quisesse usar isto para descobrir emails.)
+// ---------------------------------------------------------------------
+const pedidosEmail = new Map();   // ip -> { n, ate }
+router.get('/email-disponivel', async (req, res) => {
+  const ip = a.ipDe(req);
+  const agora = Date.now();
+  const contagem = pedidosEmail.get(ip);
+  if (!contagem || contagem.ate < agora) pedidosEmail.set(ip, { n: 1, ate: agora + 60000 });
+  else if (++contagem.n > 20) a.falha(429, 'Demasiados pedidos. Espera um pouco.');
+  if (pedidosEmail.size > 5000) for (const [k, v] of pedidosEmail) if (v.ate < agora) pedidosEmail.delete(k);
+
+  let email;
+  try {
+    email = await a.validarEmail(req.query.email);
+  } catch (erro) {
+    if (!erro.publico) throw erro;
+    return res.json({ valido: false, mensagem: erro.message });
+  }
+  if (await linha('SELECT id FROM utilizadores WHERE email = ? OR email_pendente = ?', [email, email])) {
+    return res.json({ valido: false, existe: true, mensagem: 'Já existe uma conta com este email.' });
+  }
+  res.json({ valido: true, mensagem: '✓ Email válido: é para aqui que vamos enviar o link de confirmação.' });
+});
+
+// ---------------------------------------------------------------------
 // Registo (Passo 5) – devolve todos os erros juntos: { erros: { campo: mensagem } }
 // ---------------------------------------------------------------------
 router.post('/registar', async (req, res) => {

@@ -71,6 +71,26 @@ describe('2. Só emails válidos', () => {
     assert.equal(descartavel.dados.erros.email, 'Não aceitamos emails temporários. Usa o teu email habitual.');
   });
 
+  it('o nome só aceita letras (sem números nem símbolos); o @nome pode ter números', async () => {
+    const c = new Cliente(base);
+    const comNumeros = await c.post('/api/auth/registar', novoRegisto({ nome_exibicao: 'Duarte123' }));
+    assert.equal(comNumeros.dados.erros.nome_exibicao, "O nome só pode ter letras, espaços, hífen (-) e apóstrofo ('). Sem números nem símbolos.");
+    const simbolos = await c.post('/api/auth/registar', novoRegisto({ nome_exibicao: 'Duarte_T!' }));
+    assert.ok(simbolos.dados.erros.nome_exibicao);
+    const certo = await c.post('/api/auth/registar', novoRegisto({ nome_exibicao: "Ana-Rita D'Almeida", nome: `teste_n${Date.now().toString(36)}99` }));
+    assert.equal(certo.status, 201, JSON.stringify(certo.dados));
+  });
+
+  it('o registo pergunta pelo email: formato, temporário, já tem conta ou pode ser usado', async () => {
+    const c = new Cliente(base);
+    const pergunta = email => c.get('/api/auth/email-disponivel?email=' + encodeURIComponent(email));
+    assert.deepEqual((await pergunta('sem-arroba')).dados, { valido: false, mensagem: 'Escreve um email válido (ex.: nome@gmail.com).' });
+    assert.equal((await pergunta('teste_x@yopmail.com')).dados.mensagem, 'Não aceitamos emails temporários. Usa o teu email habitual.');
+    const u = await criarUtilizador();
+    assert.deepEqual((await pergunta(u.email.toUpperCase())).dados, { valido: false, existe: true, mensagem: 'Já existe uma conta com este email.' });
+    assert.equal((await pergunta('teste_livre_' + Date.now() + '@exemplo.pt')).dados.valido, true);
+  });
+
   // Precisa de internet (DNS): só corre com TESTAR_DNS=1
   it('recusa um domínio que não existe', { skip: process.env.TESTAR_DNS !== '1' && 'precisa de internet (TESTAR_DNS=1)' }, async () => {
     process.env.VERIFICAR_DNS = '1';
