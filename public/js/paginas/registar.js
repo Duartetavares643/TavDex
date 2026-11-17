@@ -1,6 +1,6 @@
 // =====================================================================
 //  Registo de uma conta nova (Passo 5)
-//  O formulário de registo. O servidor valida tudo outra vez
+//  Google no topo, "ou", e o formulário. O servidor valida tudo outra vez
 //  e devolve todos os erros juntos; o que foi escrito nunca se perde.
 //  · palavra-passe: lista de requisitos ao vivo e o botão só fica ativo
 //    com todos cumpridos (regras em /js/regras-palavra-passe.js);
@@ -17,6 +17,8 @@
       <div class="brand"><img src="/img/logo.png" alt=""><h2>Junta-te ao TavDex</h2><p>Avalia, cria listas e apresenta os teus projetos.</p></div>
       <form class="fm" id="f-registo" novalidate>
         <h1>Criar conta</h1>
+        ${botaoGoogle('Registar com Google', voltar)}
+        <div class="sep-ou"><span>ou</span></div>
         <input name="nome_exibicao" placeholder="Nome (só letras, ex.: Duarte Tavares)" aria-label="Nome" required minlength="2" maxlength="50" autocomplete="name">
         <input name="nome" id="registo-nome" placeholder="@nome de utilizador (3 a 30: letras, números, _ e .)" aria-label="Nome de utilizador"
           required minlength="3" maxlength="30" pattern="[A-Za-z0-9_.]{3,30}" autocomplete="username" autocapitalize="off" spellcheck="false">

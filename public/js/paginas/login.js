@@ -1,8 +1,8 @@
 // =====================================================================
-//  Entrar (Passo 6): formulário com @nome ou email e palavra-passe.
+//  Entrar (Passo 6): Google no topo, "ou", e o formulário com @nome ou email.
 //  Depois do login volta à página onde o utilizador estava (?voltar=).
 //  · "Manter sessão iniciada" (desligado por omissão): 30 dias; senão a sessão
-//    acaba ao fechar o browser. A escolha fica guardada neste browser.
+//    acaba ao fechar o browser. A escolha fica guardada para o botão do Google.
 //  · Conta com o email por confirmar: a palavra-passe certa não entra e aparece
 //    o botão "Reenviar email de confirmação".
 // =====================================================================
@@ -16,6 +16,8 @@
       <div class="brand"><img src="/img/logo.png" alt=""><h2>Bem-vindo de volta</h2><p>Descobre. Organiza. Avalia. Cria.</p></div>
       <form class="fm" id="f-login" novalidate>
         <h1>Entrar</h1>
+        ${botaoGoogle('Continuar com Google', voltar)}
+        <div class="sep-ou"><span>ou</span></div>
         <input id="login" name="login" placeholder="@nome ou email" aria-label="Nome de utilizador ou email"
           autocomplete="username" required maxlength="120">
         ${campoPassword('password', 'Palavra-passe', 'current-password', 'required')}
@@ -29,9 +31,11 @@
     </div></div></div>`);
 
   const form = document.getElementById('f-login');
-  // Guarda a escolha neste browser (a caixa já vem marcada da próxima vez)
+  // Guarda a escolha neste browser (o botão do Google usa a última escolha)
   form.manter.addEventListener('change', () => {
     try { localStorage.setItem('tavdex-manter', form.manter.checked ? '1' : ''); } catch (erro) { /* ignora */ }
+    const google = form.querySelector('[data-google]');
+    if (google) google.outerHTML = botaoGoogle('Continuar com Google', voltar);
   });
 
   ligarForm(form, async (dados, f) => {

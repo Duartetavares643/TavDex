@@ -742,7 +742,8 @@ function abrirJanelaLogin(acao = 'continuar') {
     <p class="modal-txt"></p>
     <div class="modal-btns">
       <a class="btn primary" href="/login.html?voltar=${voltar}">Iniciar sessão</a>
-      < class="btn ghost" href="/registar.html?voltar=${voltar}">Criar conta grátis</a>
+      ${botaoGoogle('Continuar com Google')}
+      <a class="btn ghost" href="/registar.html?voltar=${voltar}">Criar conta grátis</a>
     </div>
     <button type="button" class="lk modal-fechar" data-fechar-janela>Continuar a explorar</button>
   </div>`;
