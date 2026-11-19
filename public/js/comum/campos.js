@@ -163,19 +163,9 @@ function ligarCampoEmail(campo, { verificar = false } = {}) {
 }
 
 // =====================================================================
-// NOME DA PESSOA (ex.: "Duarte Tavares"): só letras (com acentos), espaços,
-// hífen e apóstrofo — sem números nem símbolos. A mesma regra está no servidor
-// (nomeExibicao em routes/ajudas.js). Devolve a mensagem de erro, ou '' se estiver bem.
+// NOME DA PESSOA E @NOME: as regras estão em /js/regras-nomes.js (window.RegrasNomes),
+// o mesmo ficheiro que o servidor usa. As páginas com estes campos carregam-no antes.
 // =====================================================================
-const REGRA_NOME_PESSOA = /^[\p{L}\p{M}]+(?:[ '’-][\p{L}\p{M}]+)*$/u;
-function erroNomePessoa(valor) {
-  const t = String(valor || '').replace(/\s+/g, ' ').trim();
-  if (!t) return 'Escreve o teu nome.';
-  if (t.length < 2 || t.length > 50) return 'O nome tem de ter entre 2 e 50 caracteres.';
-  if (!/\p{L}/u.test(t)) return 'O nome tem de ter letras.';
-  if (!REGRA_NOME_PESSOA.test(t)) return "O nome só pode ter letras, espaços, hífen (-) e apóstrofo ('). Sem números nem símbolos.";
-  return '';
-}
 
 // Campo a vermelho (borda + aria-invalid) ou não. Usado por todas as verificações ao vivo.
 function marcarCampo(campo, errado) {
@@ -207,15 +197,6 @@ function ligarVerificacaoCampo(campo, verificar, espera = 350) {
 // tecla) pergunta ao servidor e mostra "✓ Disponível" ou "Já está a ser usado".
 //  atual = @nome atual da conta (nas Definições), que conta como disponível
 // =====================================================================
-// Erro do formato do @nome ('' se estiver bem)
-function erroFormatoNome(valor) {
-  const nome = String(valor || '').trim().replace(/^@/, '');
-  if (/[^A-Za-z0-9_.]/.test(nome)) return 'O @nome só pode ter letras sem acentos, números, _ e . (sem espaços).';
-  if (nome.length < 3) return 'O @nome tem de ter pelo menos 3 caracteres.';
-  if (nome.length > 30) return 'O @nome tem no máximo 30 caracteres.';
-  return '';
-}
-
 function ligarNomeDisponivel(campo, atual = '') {
   if (!campo) return;
   const nota = document.createElement('small');
@@ -234,7 +215,7 @@ function ligarNomeDisponivel(campo, atual = '') {
     clearTimeout(relogio);
     const nome = campo.value.trim().replace(/^@/, '');
     if (!nome || nome === atual) return mostrarNota('', '');
-    const erro = erroFormatoNome(nome);
+    const erro = RegrasNomes.erroArroba(nome);
     // Caracteres proibidos aparecem logo; "pelo menos 3" só depois de uma pausa (ou ao sair)
     if (erro && (rapido || /[^A-Za-z0-9_.@]/.test(campo.value.trim()))) return mostrarNota('erro', erro);
     mostrarNota('', '');
@@ -252,5 +233,5 @@ function ligarNomeDisponivel(campo, atual = '') {
     }, rapido ? 0 : 400);
   };
   campo.addEventListener('input', () => verificar(false));
-  campo.addEventListener('blur', () => { if (erroFormatoNome(campo.value) && campo.value.trim()) verificar(true); });
+  campo.addEventListener('blur', () => { if (RegrasNomes.erroArroba(campo.value) && campo.value.trim()) verificar(true); });
 }

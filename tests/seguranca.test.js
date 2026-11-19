@@ -418,3 +418,30 @@ describe('6 e 7. Perfil público e Definições', () => {
     assert.deepEqual(perfil.dados.generos_escolhidos, [{ id: g.id, nome: g.nome }]);
   });
 });
+
+// ---------------------------------------------------------------------
+describe('Regras dos nomes partilhadas (public/js/regras-nomes.js)', () => {
+  const RegrasNomes = require('../public/js/regras-nomes');
+
+  it('o browser e o servidor dão a mesma mensagem para o nome e o @nome', async () => {
+    const c = new Cliente(base);
+    for (const [campo, valor, mensagem] of [
+      ['nome_exibicao', 'Duarte 123', RegrasNomes.erroNomePessoa('Duarte 123')],
+      ['nome_exibicao', 'A', RegrasNomes.erroNomePessoa('A')],
+      ['nome', 'ab c', RegrasNomes.erroArroba('ab c')],
+      ['nome', 'ab', RegrasNomes.erroArroba('ab')],
+    ]) {
+      assert.ok(mensagem, `a regra partilhada recusa "${valor}"`);
+      const r = await c.post('/api/auth/registar', novoRegisto({ [campo]: valor }));
+      assert.equal(r.status, 400);
+      assert.equal(r.dados.erros[campo], mensagem, `${campo} = "${valor}"`);
+    }
+  });
+
+  it('nomes válidos passam e os @nomes reservados são reconhecidos sem distinguir maiúsculas', () => {
+    assert.equal(RegrasNomes.erroNomePessoa("Ana-Rita D'Almeida"), '');
+    assert.equal(RegrasNomes.erroArroba('@duarte_t.2'), '');
+    assert.equal(RegrasNomes.reservado('Admin'), true);
+    assert.equal(RegrasNomes.reservado('duarte'), false);
+  });
+});

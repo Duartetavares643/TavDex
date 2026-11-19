@@ -49,7 +49,7 @@
   //  nome  → só letras, espaços, hífen e apóstrofo (sem números)
   //  @nome → letras, números, _ e . e diz logo se já está a ser usado
   //  email → formato, emails temporários, domínio que recebe emails e se já tem conta
-  ligarVerificacaoCampo(form.nome_exibicao, erroNomePessoa);
+  ligarVerificacaoCampo(form.nome_exibicao, RegrasNomes.erroNomePessoa);
   ligarNomeDisponivel(form.nome);
   ligarCampoEmail(form.email, { verificar: true });
 
@@ -58,9 +58,9 @@
     const erros = {};
     const nomeExibicao = dados.nome_exibicao.trim();
     const nome = dados.nome.trim().replace(/^@/, '');
-    const erroNome = erroNomePessoa(nomeExibicao);
+    const erroNome = RegrasNomes.erroNomePessoa(nomeExibicao);
     if (erroNome) erros.nome_exibicao = erroNome;
-    const erroArroba = erroFormatoNome(nome);
+    const erroArroba = RegrasNomes.erroArroba(nome);
     if (erroArroba) erros.nome = erroArroba;
     const erroEmail = RegrasEmail.erroFormato(dados.email);
     if (erroEmail) erros.email = erroEmail;

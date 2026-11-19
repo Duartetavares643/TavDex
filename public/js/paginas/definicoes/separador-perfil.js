@@ -9,7 +9,7 @@
 function htmlSeparadorPerfil(d) {
   // O nome só aceita letras. Se ainda não há nome (ou o antigo tem números), sugere um
   // feito a partir do @nome, só com as letras: "ana_m" -> "Ana M", "rui99" -> "Rui".
-  const nomeSugerido = d.nome_exibicao && !erroNomePessoa(d.nome_exibicao) ? d.nome_exibicao
+  const nomeSugerido = d.nome_exibicao && !RegrasNomes.erroNomePessoa(d.nome_exibicao) ? d.nome_exibicao
     : (d.nome_exibicao || d.nome).replace(/[^\p{L}\p{M}' -]+/gu, ' ').replace(/\s+/g, ' ').trim()
       .replace(/(^|\s)\p{Ll}/gu, l => l.toUpperCase()) || '';
   return `
@@ -202,13 +202,13 @@ function ligarSeparadorPerfil(d) {
 
   // Verificações de cada campo (o servidor volta a verificar tudo ao guardar)
   const verificacoes = {
-    nome_exibicao: erroNomePessoa,   // só letras, espaços, hífen e apóstrofo (js/comum/campos.js)
-    nome: erroFormatoNome,           // letras sem acentos, números, _ e . (js/comum/campos.js)
+    nome_exibicao: RegrasNomes.erroNomePessoa,   // só letras, espaços, hífen e apóstrofo (js/regras-nomes.js)
+    nome: RegrasNomes.erroArroba,           // letras sem acentos, números, _ e . (js/regras-nomes.js)
     localizacao: v => v.trim().length > 40 ? 'A localização tem no máximo 40 caracteres.' : '',
     bio: v => v.length > 160 ? 'A biografia tem no máximo 160 caracteres.' : '',
   };
   // O nome fica a vermelho logo enquanto se escreve (o @nome já tem o "Disponível" ao vivo)
-  ligarVerificacaoCampo(fPerfil.nome_exibicao, erroNomePessoa);
+  ligarVerificacaoCampo(fPerfil.nome_exibicao, RegrasNomes.erroNomePessoa);
   const aoVivo = ['nome_exibicao', ...(d.pode_mudar_nome ? ['nome'] : [])];
   // Os outros campos: mensagem ao sair do campo (sem mexer no foco)
   fPerfil.addEventListener('focusout', e => {

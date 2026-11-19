@@ -23,9 +23,6 @@ const { enviarConfirmacao } = require('./confirmacao-email');
 const router = express.Router();
 const URL_SITE = process.env.URL_SITE || 'http://localhost:3000';
 
-// Regras do @nome: 3 a 30 letras, números, _ ou .
-const REGRA_NOME = /^[A-Za-z0-9_.]{3,30}$/;
-
 // Anti-spam do registo: no máximo 15 contas novas por IP em 10 minutos.
 // (Antes era um limite para o site todo, e um só robô conseguia impedir toda a gente de se registar.)
 const REGISTOS_POR_IP = 15;
@@ -44,13 +41,6 @@ const HASH_FALSO = bcrypt.hashSync('conta-que-nao-existe', 10);
 // (10+ caracteres, maiúsculas, minúsculas, números e símbolos, nada pessoal,
 //  não pode ser uma das mais comuns nem ter aparecido em fugas de dados)
 const validarPassword = validarPalavraPasse;
-
-// @nome: tira o "@" do início e valida
-function validarNome(valor) {
-  const nome = a.texto(String(valor ?? '').trim().replace(/^@/, ''), 'Nome de utilizador', 3, 30);
-  if (!REGRA_NOME.test(nome)) a.falha(400, 'O @nome só pode ter letras, números, _ e .');
-  return nome;
-}
 
 // ---------------------------------------------------------------------
 // Quem sou eu? (usado pela barra de navegação em todas as páginas)
@@ -128,7 +118,7 @@ router.post('/registar', async (req, res) => {
 
   const v = new a.Validacao();
   const nomeExibicao = v.campo('nome_exibicao', () => a.nomeExibicao(req.body.nome_exibicao));
-  const nome = v.campo('nome', () => validarNome(req.body.nome));
+  const nome = v.campo('nome', () => a.validarArroba(req.body.nome));
   const email = await v.campoAsync('email', () => a.validarEmail(req.body.email));
   // A palavra-passe não pode conter o @nome, o nome nem o email (por isso vai com esses dados)
   const password = await v.campoAsync('password', () => validarPassword(req.body.password,
@@ -367,4 +357,3 @@ module.exports = router;
 module.exports.avisarPalavraPasseAlterada = avisarPalavraPasseAlterada;
 module.exports.compararPassword = compararPassword;
 module.exports.validarPassword = validarPassword;
-module.exports.validarNome = validarNome;

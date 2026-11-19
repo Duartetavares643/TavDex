@@ -9,6 +9,7 @@ const path = require('path');
 const { linha, linhas, executar } = require('../db');
 const { enviarEmail } = require('./email');
 const RegrasEmail = require('../public/js/regras-email');   // o mesmo ficheiro que o browser usa
+const RegrasNomes = require('../public/js/regras-nomes');   // idem, para o nome e o @nome
 
 // ---------------------------------------------------------------------
 // Erros: falha(400, 'mensagem') pára a rota e o server.js responde
@@ -189,16 +190,15 @@ const esconderEmail = RegrasEmail.esconder;
 
 // ---------------------------------------------------------------------
 // @nome e nome do perfil
+// As regras (o que pode ter, tamanhos, @nomes reservados) estão em public/js/regras-nomes.js,
+// o mesmo ficheiro que o browser usa. Aqui junta-se o que só o servidor sabe.
 // ---------------------------------------------------------------------
-
-// @nomes que ninguém pode usar (para ninguém se fazer passar pela equipa do TavDex)
-const NOMES_RESERVADOS = ['admin', 'administrador', 'tavdex', 'suporte', 'moderador', 'ajuda', 'sistema', 'root'];
 
 // O @nome pode ser usado por esta conta? Devolve a mensagem de erro, ou null se estiver livre.
 //  idAtual = id da conta que o quer usar (0 no registo). Pode manter o seu próprio @nome.
 //  Também fica reservado durante 30 dias o @nome antigo de OUTRA pessoa (tabela nomes_antigos).
 async function nomeIndisponivel(nome, idAtual = 0) {
-  if (NOMES_RESERVADOS.includes(String(nome).toLowerCase())) return 'Este nome de utilizador não está disponível.';
+  if (RegrasNomes.reservado(nome)) return 'Este nome de utilizador não está disponível.';
   // O MySQL compara sem distinguir maiúsculas: "Duarte" = "duarte"
   if (await linha('SELECT id FROM utilizadores WHERE nome = ? AND id <> ?', [nome, idAtual])) return 'Esse @nome já está a ser usado.';
   const antigo = await linha('SELECT utilizador_id FROM nomes_antigos WHERE nome = ? AND data >= NOW() - INTERVAL 30 DAY', [nome]);
@@ -206,22 +206,23 @@ async function nomeIndisponivel(nome, idAtual = 0) {
   return null;
 }
 
-// Nome do perfil (ex.: "Duarte Tavares"):
-//  · recusa caracteres invisíveis (largura zero, controlo, mudança de direção do texto),
-//    que servem para fingir ser outra pessoa com um nome "igual";
-//  · junta os espaços repetidos;
-//  · tem de ter pelo menos uma letra (não pode ser só emojis ou símbolos);
-//  · só aceita letras (com acentos), espaços, hífen e apóstrofo: nada de números
-//    nem símbolos (ex.: "Ana-Rita D'Almeida" sim; "Duarte123" não).
-const INVISIVEIS = /[\u0000-\u001f\u007f-\u009f­͏؜ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁤⁦-⁯ㅤ﻿ﾠ]/;
-const REGRA_NOME_PESSOA = /^[\p{L}\p{M}]+(?:[ '’-][\p{L}\p{M}]+)*$/u;
+// Nome do perfil (ex.: "Duarte Tavares"): recusa caracteres invisíveis, junta os espaços
+// repetidos e aplica a regra partilhada (só letras, espaços, hífen e apóstrofo).
+// Devolve o nome arrumado.
 function nomeExibicao(valor) {
   const bruto = String(valor ?? '').normalize('NFC');
-  if (INVISIVEIS.test(bruto.replace(/[\t\n\r]/g, ' '))) falha(400, 'O nome tem caracteres que não se veem. Escreve-o outra vez.');
-  const t = texto(bruto.replace(/\s+/g, ' '), 'Nome', 2, 50);
-  if (!/\p{L}/u.test(t)) falha(400, 'O nome tem de ter letras.');
-  if (!REGRA_NOME_PESSOA.test(t)) falha(400, 'O nome só pode ter letras, espaços, hífen (-) e apóstrofo (\'). Sem números nem símbolos.');
-  return t;
+  if (RegrasNomes.INVISIVEIS.test(bruto.replace(/[\t\n\r]/g, ' '))) falha(400, 'O nome tem caracteres que não se veem. Escreve-o outra vez.');
+  const erro = RegrasNomes.erroNomePessoa(bruto);
+  if (erro) falha(400, erro);
+  return bruto.replace(/\s+/g, ' ').trim();
+}
+
+// @nome de utilizador: tira o "@" do início e aplica a regra partilhada. Devolve o @nome.
+function validarArroba(valor) {
+  const nome = String(valor ?? '').trim().replace(/^@/, '');
+  const erro = RegrasNomes.erroArroba(nome);
+  if (erro) falha(400, erro);
+  return nome;
 }
 
 // Endereço de imagem opcional: só aceita https:// (evita "javascript:" e afins)
@@ -396,7 +397,7 @@ function temaBanner(valor) {
 module.exports = {
   falha, Validacao, texto, inteiro, inteiroOuNulo, escolha, booleano, email, urlImagem,
   validarEmail, esconderEmail,
-  nomeIndisponivel, nomeExibicao, REGRA_NOME_PESSOA,
+  nomeIndisponivel, nomeExibicao, validarArroba,
   sha256, tokenAleatorio, ipDe, nomeDispositivo, dispositivoDe, registarAtividade, voltarSeguro,
   colunasPublicas, CORES_AVATAR, corAleatoria, TEMAS_BANNER, temaBanner,
   demasiado, nLinks, verificarSpam, notificar, paginacao, marcadores, publico,

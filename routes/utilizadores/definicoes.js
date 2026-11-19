@@ -16,7 +16,7 @@ const { linha, linhas, executar } = require('../../db');
 const a = require('../ajudas');
 const { exigirLogin, terminarSessao } = require('../middleware');
 const { enviarEmail, modeloEmail } = require('../email');
-const { compararPassword, validarPassword, validarNome, avisarPalavraPasseAlterada } = require('../auth');
+const { compararPassword, validarPassword, avisarPalavraPasseAlterada } = require('../auth');
 const { dadosPessoais } = require('../palavras-passe');
 const { enviarConfirmacao, limiteEnvios } = require('../confirmacao-email');
 const { desligarGoogle } = require('../google');
@@ -90,7 +90,7 @@ router.get('/disponivel', async (req, res) => {
 
   let nome;
   try {
-    nome = validarNome(req.query.nome);
+    nome = a.validarArroba(req.query.nome);
   } catch (erro) {
     if (!erro.publico) throw erro;
     return res.json({ disponivel: false, mensagem: erro.message });
@@ -104,7 +104,7 @@ router.get('/disponivel', async (req, res) => {
 router.put('/eu/perfil', exigirLogin, async (req, res) => {
   const v = new a.Validacao();
   const nomeExibicao = v.campo('nome_exibicao', () => a.nomeExibicao(req.body.nome_exibicao));
-  const nome = v.campo('nome', () => validarNome(req.body.nome));
+  const nome = v.campo('nome', () => a.validarArroba(req.body.nome));
   const cor = v.campo('cor', () => a.inteiro(req.body.cor, 'Cor', 0, 359));
   // Cenário do banner: só um dos 4 valores (se não vier, mantém o atual)
   const temaBanner = req.body.tema_banner === undefined ? a.temaBanner(req.u.tema_banner) : req.body.tema_banner;
