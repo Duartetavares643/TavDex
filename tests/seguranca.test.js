@@ -2,7 +2,7 @@
 //  TavDex – testes automáticos das "Contas mais seguras"
 //  (palavras-passe fortes, emails válidos, confirmação do email, recuperação,
 //   logout e sessões, perfil público e Definições)
-//  Correr com:  npm test   (precisa da base de dados com o 06_seguranca_contas.sql)
+//  Correr com:  npm test   (precisa da base de dados instalada com database/tavdex_site.sql)
 //  Corre sem internet: o tests/ajuda.js desliga o Have I Been Pwned e o DNS.
 // =====================================================================
 const { describe, it, before, after } = require('node:test');

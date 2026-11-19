@@ -221,7 +221,7 @@ app.use((erro, req, res, next) => {
     return res.status(503).json({ erro: 'Sem ligação à base de dados. Verifica o .env e se o MySQL está ligado.' });
   }
   if (erro.code === 'ER_NO_SUCH_TABLE' || erro.code === 'ER_BAD_FIELD_ERROR') {
-    return res.status(503).json({ erro: 'A base de dados está desatualizada. Executa os scripts da pasta database/.' });
+    return res.status(503).json({ erro: 'A base de dados está desatualizada. Instala-a com o script database/tavdex_site.sql.' });
   }
   res.status(500).json({ erro: 'Ocorreu um erro no servidor.' });
 });
@@ -256,6 +256,30 @@ async function limparSessoes() {
   }
 }
 
+// ---------------------------------------------------------------------
+// 8. Verificação da base de dados ao arrancar
+//    Uma só consulta às tabelas e colunas mais recentes: se falhar, a base de
+//    dados não existe ou é de uma versão antiga do TavDex.
+// ---------------------------------------------------------------------
+async function verificarBaseDados() {
+  await pool.query(`SELECT u.banner_versao, u.mostrar_listas, u.email_pendente, s.manter, r.ip
+    FROM utilizadores u, sessoes s, recuperacoes r, verificacao_email, nomes_antigos, utilizador_generos, vw_titulos_avaliacao
+    LIMIT 1`);
+  // Os cenários do banner também mudaram de nome ao longo do projeto
+  const [[coluna]] = await pool.query(`SELECT COLUMN_TYPE AS tipo FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'utilizadores' AND COLUMN_NAME = 'tema_banner'`);
+  if (!String(coluna && coluna.tipo).includes("'colina'")) {
+    throw Object.assign(new Error('a coluna tema_banner tem os cenários antigos'), { code: 'ER_BAD_FIELD_ERROR' });
+  }
+}
+
+// O que fazer para resolver cada problema da base de dados (uma frase)
+function conselhoBaseDados(erro) {
+  if (erro.code === 'ECONNREFUSED') return 'O MySQL está desligado. Liga-o (ex.: o WAMP) e reinicia o servidor.';
+  if (erro.code === 'ER_ACCESS_DENIED_ERROR') return 'Confirma BD_UTILIZADOR e BD_PASSWORD no ficheiro .env.';
+  return `Instala a base de dados com o script database/tavdex_site.sql e confirma BD_NOME=tavdex_site no .env.`;
+}
+
 // Um erro inesperado numa tarefa de fundo vai para o log em vez de desligar o servidor
 process.on('unhandledRejection', erro => console.error('Erro não tratado:', erro));
 
@@ -267,52 +291,15 @@ app.listen(PORTA, async () => {
   console.log(`TavDex a funcionar em http://localhost:${PORTA}`);
   setInterval(limpar, 24 * 60 * 60 * 1000).unref();
   setInterval(limparSessoes, 60 * 60 * 1000).unref();
-  // Testa logo a ligação ao MySQL, para o problema aparecer na consola
+  // Testa logo a base de dados, para um problema aparecer na consola com uma mensagem clara
   try {
-    await pool.query('SELECT 1 FROM vw_titulos_avaliacao LIMIT 1');
-    await pool.query('SELECT foto_versao FROM utilizadores LIMIT 1');
-    // Coluna do banner do perfil (database/04_banner_perfil.sql)
-    await pool.query('SELECT tema_banner FROM utilizadores LIMIT 1').catch(erro => {
-      if (erro.code === 'ER_BAD_FIELD_ERROR') erro.migracao = '04_banner_perfil.sql';
-      throw erro;
-    });
-    // Cenários do banner (05_banner_cinema.sql e depois 07_banners_novos.sql): a coluna tem de aceitar 'colina'
-    const [[coluna]] = await pool.query(`SELECT COLUMN_TYPE AS tipo FROM information_schema.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'utilizadores' AND COLUMN_NAME = 'tema_banner'`);
-    if (!coluna || !String(coluna.tipo).includes("'colina'")) {
-      const erro = new Error('A coluna tema_banner ainda tem os cenários antigos');
-      erro.code = 'ER_BAD_FIELD_ERROR';
-      erro.migracao = String(coluna && coluna.tipo).includes("'fachada'") ? '07_banners_novos.sql' : '05_banner_cinema.sql e 07_banners_novos.sql';
-      throw erro;
-    }
-    // Contas mais seguras (database/06_seguranca_contas.sql): tabelas e colunas novas
-    const migracao06 = erro => {
-      if (['ER_BAD_FIELD_ERROR', 'ER_NO_SUCH_TABLE'].includes(erro.code)) { erro.code = 'ER_BAD_FIELD_ERROR'; erro.migracao = '06_seguranca_contas.sql'; }
-      throw erro;
-    };
-    await pool.query(`SELECT email_pendente, palavra_passe_alterada_em, palavra_passe_fraca, nome_alterado_em,
-      mostrar_listas, mostrar_seguidores FROM utilizadores LIMIT 1`).catch(migracao06);
-    await pool.query('SELECT manter, expira_em FROM sessoes LIMIT 1').catch(migracao06);
-    await pool.query('SELECT ip FROM recuperacoes LIMIT 1').catch(migracao06);
-    for (const tabela of ['verificacao_email', 'nomes_antigos', 'utilizador_generos']) {
-      await pool.query(`SELECT 1 FROM ${tabela} LIMIT 1`).catch(migracao06);
-    }
-    // Banner com imagem própria (database/08_banner_imagem.sql)
-    await pool.query('SELECT banner_versao FROM utilizadores LIMIT 1').catch(erro => {
-      if (erro.code === 'ER_BAD_FIELD_ERROR') erro.migracao = '08_banner_imagem.sql';
-      throw erro;
-    });
+    await verificarBaseDados();
     console.log('Ligação à base de dados: OK');
     require('./routes/email').verificarEmail();
     limpar();
     limparSessoes();
   } catch (erro) {
-    console.error(`\n*** Problema na base de dados (${erro.code}): ${erro.message}`);
-    if (erro.code === 'ER_ACCESS_DENIED_ERROR') console.error('    -> Confirma BD_UTILIZADOR e BD_PASSWORD no ficheiro .env');
-    else if (erro.code === 'ER_BAD_DB_ERROR') console.error('    -> Executa database/01_criar_bd.sql, 02_inserir_dados.sql e extras.sql');
-    else if (erro.code === 'ER_NO_SUCH_TABLE') console.error('    -> Executa database/extras.sql e database/03_contas.sql');
-    else if (erro.code === 'ER_BAD_FIELD_ERROR') console.error(`    -> Executa database/${erro.migracao || '03_contas.sql'}`);
-    else if (erro.code === 'ECONNREFUSED') console.error('    -> O MySQL está desligado. Liga-o e reinicia o servidor.');
-    console.error('');
+    console.error(`\n*** Problema na base de dados: ${erro.message}`);
+    console.error(`    -> ${conselhoBaseDados(erro)}\n`);
   }
 });

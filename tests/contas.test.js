@@ -1,7 +1,7 @@
 // =====================================================================
 //  TavDex – testes automáticos dos Passos 4 a 10 (contas, sessões, perfil)
 //  Correr com:  npm test
-//  Precisa do MySQL ligado e da base de dados TavDex com os scripts 01, 02, extras e 03.
+//  Precisa do MySQL ligado e da base de dados instalada com database/tavdex_site.sql.
 //  Cria contas "teste_..." e apaga-as no fim (não mexe nas contas verdadeiras).
 // =====================================================================
 const { describe, it, before, after } = require('node:test');
