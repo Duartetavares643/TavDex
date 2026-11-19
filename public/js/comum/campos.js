@@ -6,7 +6,7 @@
 // =====================================================================
 
 // Campo de palavra-passe com o botão Ver/Ocultar
-function campoPassword(nome, rotulo, autocomplete, extra = '') {
+function campoPalavraPasse(nome, rotulo, autocomplete, extra = '') {
   return `<div class="campo-pw"><input name="${nome}" type="password" placeholder="${esc(rotulo)}" aria-label="${esc(rotulo)}"
       autocomplete="${autocomplete}" ${extra}>
     <button type="button" class="ver-pw" data-ver-pw aria-label="Mostrar a palavra-passe">Ver</button></div>`;

@@ -16,8 +16,8 @@ const { linha, linhas, executar } = require('../../db');
 const a = require('../ajudas');
 const { exigirLogin, terminarSessao } = require('../middleware');
 const { enviarEmail, modeloEmail } = require('../email');
-const { compararPassword, validarPassword, avisarPalavraPasseAlterada } = require('../auth');
-const { dadosPessoais } = require('../palavras-passe');
+const { compararPalavraPasse, avisarPalavraPasseAlterada } = require('../auth');
+const { validarPalavraPasse, dadosPessoais } = require('../palavras-passe');
 const { enviarConfirmacao, limiteEnvios } = require('../confirmacao-email');
 const { desligarGoogle } = require('../google');
 
@@ -161,7 +161,7 @@ router.put('/eu/perfil', exigirLogin, async (req, res) => {
 // recebe um link de confirmação (24 horas); só ao abrir o link é que o email muda
 // (ver routes/confirmacao-email.js). Assim um erro de escrita não faz perder a conta.
 router.put('/eu/email', exigirLogin, async (req, res) => {
-  if (req.u.password_hash && !(await compararPassword(String(req.body.password || ''), req.u.password_hash))) {
+  if (req.u.password_hash && !(await compararPalavraPasse(String(req.body.password || ''), req.u.password_hash))) {
     await a.registarAtividade(req, req.u.id, 'email_falhado', 'Tentativa falhada de mudar o email (palavra-passe errada)');
     a.falha(400, 'A palavra-passe atual está errada.', { erros: { password: 'A palavra-passe atual está errada.' } });
   }
@@ -212,14 +212,14 @@ router.delete('/eu/email', exigirLogin, async (req, res) => {
 router.put('/eu/password', exigirLogin, async (req, res) => {
   const tinha = !!req.u.password_hash;
   // Quem já tem palavra-passe tem de escrever a atual (contas só com Google não têm)
-  if (tinha && !(await compararPassword(String(req.body.atual || ''), req.u.password_hash))) {
+  if (tinha && !(await compararPalavraPasse(String(req.body.atual || ''), req.u.password_hash))) {
     await a.registarAtividade(req, req.u.id, 'palavra_passe_falhada', 'Tentativa falhada de mudar a palavra-passe');
     a.falha(400, 'A palavra-passe atual está errada.', { erros: { atual: 'A palavra-passe atual está errada.' } });
   }
   const v = new a.Validacao();
-  const nova = await v.campoAsync('nova', () => validarPassword(req.body.nova, dadosPessoais(req.u)));
+  const nova = await v.campoAsync('nova', () => validarPalavraPasse(req.body.nova, dadosPessoais(req.u)));
   if (req.body.nova2 !== undefined && String(req.body.nova2) !== String(req.body.nova ?? '')) v.erro('nova2', 'As palavras-passe não coincidem.');
-  if (nova && tinha && await compararPassword(nova, req.u.password_hash)) v.erro('nova', 'A palavra-passe nova tem de ser diferente da atual.');
+  if (nova && tinha && await compararPalavraPasse(nova, req.u.password_hash)) v.erro('nova', 'A palavra-passe nova tem de ser diferente da atual.');
   v.verificar();
 
   const hash = await bcrypt.hash(nova, 10);
@@ -243,7 +243,7 @@ router.delete('/eu/google', exigirLogin, desligarGoogle);
 // Apagar a conta (pede a palavra-passe e o @nome escrito)
 router.delete('/eu', exigirLogin, async (req, res) => {
   const v = new a.Validacao();
-  if (req.u.password_hash && !(await compararPassword(String(req.body.password || ''), req.u.password_hash))) {
+  if (req.u.password_hash && !(await compararPalavraPasse(String(req.body.password || ''), req.u.password_hash))) {
     v.erro('password', 'A palavra-passe está errada.');
   }
   // Para confirmar, o utilizador escreve o seu @nome

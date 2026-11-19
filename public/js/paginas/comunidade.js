@@ -84,11 +84,11 @@
     // Ir para a publicação indicada no endereço (ex.: vindo de uma notificação)
     if (location.hash) document.querySelector(location.hash)?.scrollIntoView({ block: 'center' });
 
-    ligarForm(document.getElementById('f-publicar'), async dados => {
+    ligarFormulario(document.getElementById('f-publicar'), async dados => {
       await api('/api/comunidade/publicacoes', 'POST', dados);
       carregar();
     });
-    document.querySelectorAll('[data-comentar]').forEach(f => ligarForm(f, async dados => {
+    document.querySelectorAll('[data-comentar]').forEach(f => ligarFormulario(f, async dados => {
       await api(`/api/comunidade/publicacoes/${f.dataset.comentar}/comentarios`, 'POST', { texto: dados.texto, pai_id: f.dataset.pai || null });
       carregar();
     }));

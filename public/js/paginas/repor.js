@@ -27,9 +27,9 @@
         <h1>Nova palavra-passe para <span class="pw-conta">@${esc(r.nome)}</span></h1>
         <!-- O nome de utilizador escondido ajuda os gestores de palavras-passe a guardar na conta certa -->
         <input type="text" name="username" value="${esc(r.nome)}" autocomplete="username" hidden>
-        ${campoPassword('password', 'Nova palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-repor"')}
+        ${campoPalavraPasse('password', 'Nova palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-repor"')}
         <div class="forca" id="forca-repor" aria-live="polite"><i></i><i></i><i></i><i></i><span></span></div>
-        ${campoPassword('password2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}
+        ${campoPalavraPasse('password2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}
         <p class="msg" role="alert"></p>
         <button class="btn primary" type="submit">Guardar</button>
       </form>
@@ -40,7 +40,7 @@
   ligarBarraForca(document.getElementById('pw-repor'), document.getElementById('forca-repor'),
     { dados: dadosPessoais, confirmar: form.password2 });
 
-  ligarForm(form, async dados => {
+  ligarFormulario(form, async dados => {
     const erros = {};
     const analise = RegrasPalavraPasse.analisar(dados.password, dadosPessoais());
     if (!analise.valida) erros.password = analise.erros[0];

@@ -115,7 +115,7 @@ async function adminEditarTitulo(painel, id) {
   tipo.addEventListener('change', atualizarTipo);
   atualizarTipo();
 
-  ligarForm(document.getElementById('f-titulo'), async (dadosForm, form) => {
+  ligarFormulario(document.getElementById('f-titulo'), async (dadosForm, form) => {
     dadosForm.generos = [...form.querySelectorAll('[name=generos]:checked')].map(c => c.value);
     if (novo) {
       const r = await api('/api/titulos', 'POST', dadosForm);
@@ -133,7 +133,7 @@ async function adminEditarTitulo(painel, id) {
       .map(c => ({ plataforma_id: c.value, link: e.target.querySelector(`[data-link="${c.value}"]`).value.trim() }));
     if (await tentar(() => api(`/api/titulos/${t.id}/plataformas`, 'PUT', { plataformas }))) aviso('"Onde ver" guardado.');
   });
-  ligarForm(document.getElementById('f-pessoa'), async dadosForm => {
+  ligarFormulario(document.getElementById('f-pessoa'), async dadosForm => {
     await api(`/api/titulos/${t.id}/pessoas`, 'POST', dadosForm);
     recarregar();
   });
@@ -144,11 +144,11 @@ async function adminEditarTitulo(painel, id) {
     const r = await api('/api/titulos/pessoas/lista?q=' + encodeURIComponent(nomePessoa.value)).catch(() => ({ pessoas: [] }));
     document.getElementById('lista-pessoas').innerHTML = r.pessoas.map(p => `<option value="${esc(p.nome)}">`).join('');
   });
-  ligarForm(document.getElementById('f-temporada'), async dadosForm => {
+  ligarFormulario(document.getElementById('f-temporada'), async dadosForm => {
     await api(`/api/titulos/${t.id}/temporadas`, 'POST', dadosForm);
     recarregar();
   });
-  document.querySelectorAll('[data-episodio]').forEach(f => ligarForm(f, async dadosForm => {
+  document.querySelectorAll('[data-episodio]').forEach(f => ligarFormulario(f, async dadosForm => {
     await api(`/api/titulos/temporadas/${f.dataset.episodio}/episodios`, 'POST', dadosForm);
     recarregar();
   }));

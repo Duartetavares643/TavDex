@@ -115,7 +115,7 @@
   // Liga os botões (listas, avaliar, apagar, denunciar)
   function ligarEventos() {
     const t = d.titulo;
-    ligarForm(document.getElementById('f-avaliar'), async dados => {
+    ligarFormulario(document.getElementById('f-avaliar'), async dados => {
       if (!dados.nota) throw new Error('Escolhe de 1 a 5 estrelas.');
       await api(`/api/avaliacoes/titulo/${t.id}`, 'PUT', dados);
       aviso(d.minha_avaliacao ? 'Avaliação atualizada.' : 'Obrigado pela avaliação!');

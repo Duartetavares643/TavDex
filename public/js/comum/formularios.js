@@ -1,6 +1,6 @@
 // =====================================================================
 //  TavDex – envio dos formulários
-//  ligarForm() junta os campos, envia, desativa o botão enquanto espera e mostra
+//  ligarFormulario() junta os campos, envia, desativa o botão enquanto espera e mostra
 //  os erros de cada campo. tentar() faz o mesmo para botões simples.
 // =====================================================================
 
@@ -13,7 +13,7 @@ function erroCampos(erros) {
 
 // =====================================================================
 // FORMULÁRIOS
-// ligarForm(form, async dados => {...}): impede o envio normal, junta os
+// ligarFormulario(form, async dados => {...}): impede o envio normal, junta os
 // campos num objeto, desativa o botão enquanto espera e mostra os erros.
 // Se o servidor devolver { erros: { campo: mensagem } }, cada campo errado
 // fica marcado (aria-invalid + borda vermelha) com a mensagem por baixo.
@@ -48,7 +48,7 @@ function marcarErrosCampos(form, erros) {
 }
 
 // Liga o formulário (ver a explicação no bloco de cima)
-function ligarForm(form, funcao) {
+function ligarFormulario(form, funcao) {
   if (!form) return;
   // Ao corrigir um campo, a marca de erro do último envio desaparece.
   // Corre na fase de captura (antes das verificações ao vivo de cada campo), para

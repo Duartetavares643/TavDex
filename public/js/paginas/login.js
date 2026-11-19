@@ -22,7 +22,7 @@
         <div class="sep-ou"><span>ou</span></div>
         <input id="login" name="login" placeholder="@nome ou email" aria-label="Nome de utilizador ou email"
           autocomplete="username" required maxlength="120">
-        ${campoPassword('password', 'Palavra-passe', 'current-password', 'required')}
+        ${campoPalavraPasse('password', 'Palavra-passe', 'current-password', 'required')}
         <label class="chk"><input type="checkbox" name="manter" ${manterSessaoGuardado() ? 'checked' : ''}> Manter sessão iniciada</label>
         <a class="lk fl" href="/recuperar.html">Esqueci-me da palavra-passe ou do @nome</a>
         <p class="msg" role="alert"></p>
@@ -62,7 +62,7 @@
     if (google) google.outerHTML = botaoGoogle('Continuar com Google', voltar);
   });
 
-  ligarForm(form, async (dados, f) => {
+  ligarFormulario(form, async (dados, f) => {
     const erros = {};
     if (!dados.login.trim()) erros.login = 'Escreve o teu @nome ou email.';
     if (!dados.password) erros.password = 'Escreve a palavra-passe.';

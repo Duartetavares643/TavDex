@@ -29,7 +29,7 @@ const REGISTOS_POR_IP = 15;
 
 // Os hashes criados pelo PHP começam por $2y$; o algoritmo é o mesmo do $2a$
 // do bcryptjs, por isso basta trocar o prefixo antes de comparar.
-function compararPassword(password, hash) {
+function compararPalavraPasse(password, hash) {
   if (!hash) return false;
   return bcrypt.compare(password, hash.replace(/^\$2y\$/, '$2a$'));
 }
@@ -37,10 +37,9 @@ function compararPassword(password, hash) {
 // Hash de uma palavra-passe qualquer, só para comparar quando a conta não existe
 const HASH_FALSO = bcrypt.hashSync('conta-que-nao-existe', 10);
 
-// Palavra-passe nova: as regras estão em routes/palavras-passe.js
+// Palavra-passe nova: validarPalavraPasse() está em routes/palavras-passe.js
 // (10+ caracteres, maiúsculas, minúsculas, números e símbolos, nada pessoal,
 //  não pode ser uma das mais comuns nem ter aparecido em fugas de dados)
-const validarPassword = validarPalavraPasse;
 
 // ---------------------------------------------------------------------
 // Quem sou eu? (usado pela barra de navegação em todas as páginas)
@@ -121,7 +120,7 @@ router.post('/registar', async (req, res) => {
   const nome = v.campo('nome', () => a.validarArroba(req.body.nome));
   const email = await v.campoAsync('email', () => a.validarEmail(req.body.email));
   // A palavra-passe não pode conter o @nome, o nome nem o email (por isso vai com esses dados)
-  const password = await v.campoAsync('password', () => validarPassword(req.body.password,
+  const password = await v.campoAsync('password', () => validarPalavraPasse(req.body.password,
     { nome: nome || req.body.nome, nomeExibicao: nomeExibicao || req.body.nome_exibicao, email: email || req.body.email }));
   if (String(req.body.password2 ?? '') !== String(req.body.password ?? '')) v.erro('password2', 'As palavras-passe não coincidem.');
   if (!a.booleano(req.body.aceito)) v.erro('aceito', 'Tens de aceitar as regras da comunidade TavDex.');
@@ -177,7 +176,7 @@ router.post('/login', async (req, res) => {
 
   // Mesmo sem conta compara com um hash falso, para a resposta demorar o mesmo
   // tempo (assim não se descobre que contas existem pelo tempo de resposta)
-  const certa = await compararPassword(password, u && u.password_hash ? u.password_hash : HASH_FALSO) && !!u?.password_hash;
+  const certa = await compararPalavraPasse(password, u && u.password_hash ? u.password_hash : HASH_FALSO) && !!u?.password_hash;
   if (!u || !certa) {
     await executar('INSERT INTO tentativas_login (email, ip) VALUES (?, ?)', [chave, ip]);
     if (u) await a.registarAtividade(req, u.id, 'login_falhado', 'Tentativa de login falhada');
@@ -333,10 +332,10 @@ router.post('/repor', async (req, res) => {
   const uid = pedido.utilizador_id;
   const dono = await linha('SELECT * FROM utilizadores WHERE id = ?', [uid]);
   const v = new a.Validacao();
-  const password = await v.campoAsync('password', () => validarPassword(req.body.password, dadosPessoais(dono)));
+  const password = await v.campoAsync('password', () => validarPalavraPasse(req.body.password, dadosPessoais(dono)));
   if (String(req.body.password2 ?? req.body.password ?? '') !== String(req.body.password ?? '')) v.erro('password2', 'As palavras-passe não coincidem.');
   // A nova não pode ser igual à atual
-  if (password && dono.password_hash && await compararPassword(password, dono.password_hash)) {
+  if (password && dono.password_hash && await compararPalavraPasse(password, dono.password_hash)) {
     v.erro('password', 'A palavra-passe nova tem de ser diferente da atual.');
   }
   v.verificar();
@@ -355,5 +354,4 @@ router.post('/repor', async (req, res) => {
 
 module.exports = router;
 module.exports.avisarPalavraPasseAlterada = avisarPalavraPasseAlterada;
-module.exports.compararPassword = compararPassword;
-module.exports.validarPassword = validarPassword;
+module.exports.compararPalavraPasse = compararPalavraPasse;

@@ -33,7 +33,7 @@
     document.querySelector('.txt-principal').textContent = texto;
     const form = document.getElementById('f-novo-link');
     ligarCampoEmail(form.email);
-    ligarForm(form, async (dados, f) => {
+    ligarFormulario(form, async (dados, f) => {
       const erro = RegrasEmail.erroFormato(dados.email);
       if (erro) throw erroCampos({ email: erro });
       const r = await api('/api/confirmacao/reenviar', 'POST', { email: dados.email });

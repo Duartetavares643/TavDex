@@ -320,7 +320,7 @@ function ligarSeparadorPerfil(d) {
   });
 
   // Guardar o perfil: primeiro a foto (se mudou), depois os outros campos
-  ligarForm(fPerfil, async dados => {
+  ligarFormulario(fPerfil, async dados => {
     const erros = {};
     for (const [campo, verificar] of Object.entries(verificacoes)) {
       const erro = verificar(dados[campo] || '');

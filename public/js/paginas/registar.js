@@ -26,9 +26,9 @@
         <input name="nome" id="registo-nome" placeholder="@nome de utilizador (3 a 30: letras, números, _ e .)" aria-label="Nome de utilizador"
           required minlength="3" maxlength="30" pattern="[A-Za-z0-9_.]{3,30}" autocomplete="username" autocapitalize="off" spellcheck="false">
         <input name="email" id="registo-email" type="email" placeholder="Email" aria-label="Email" required maxlength="120" autocomplete="email">
-        ${campoPassword('password', 'Palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-registo"')}
+        ${campoPalavraPasse('password', 'Palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-registo"')}
         <div class="forca" id="forca-registo" aria-live="polite"><i></i><i></i><i></i><i></i><span></span></div>
-        ${campoPassword('password2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}
+        ${campoPalavraPasse('password2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}
         <label class="chk"><input type="checkbox" name="aceito"> Aceito as <a class="lk" href="/termos.html" target="_blank">regras da comunidade TavDex</a></label>
         <!-- Campo-armadilha: invisível para as pessoas, os robôs preenchem-no -->
         <div class="hp" aria-hidden="true"><label>Não preenchas<input name="website" tabindex="-1" autocomplete="off"></label></div>
@@ -53,7 +53,7 @@
   ligarNomeDisponivel(form.nome);
   ligarCampoEmail(form.email, { verificar: true });
 
-  ligarForm(form, async dados => {
+  ligarFormulario(form, async dados => {
     // Validação rápida no browser, com todos os erros juntos (o servidor valida tudo outra vez)
     const erros = {};
     const nomeExibicao = dados.nome_exibicao.trim();

@@ -37,7 +37,7 @@
       </div>
 
       <div class="box"><h3>Vagas</h3>
-        ${d.vagas.map(v => `<div class="li"><div><b>${esc(v.funcao)}</b> ${v.aberta ? badgeEstado('Recrutamento') : '<span class="badge" style="--c:215">Fechada</span>'}
+        ${d.vagas.map(v => `<div class="li"><div><b>${esc(v.funcao)}</b> ${v.aberta ? etiquetaEstado('Recrutamento') : '<span class="badge" style="--c:215">Fechada</span>'}
             <small>${esc(v.descricao)}</small></div>
           <div class="cact"><button class="btn ghost sm" data-vaga-estado="${v.id}" data-aberta="${v.aberta ? 0 : 1}">${v.aberta ? 'Fechar' : 'Reabrir'}</button>
             <button class="del-btn" data-apagar-vaga="${v.id}">Apagar</button></div></div>`).join('') || '<p class="empty">Sem vagas.</p>'}
@@ -56,15 +56,15 @@
   // Liga os formulários e os botões de apagar
   function ligarEventos() {
     const p = d.projeto;
-    ligarForm(document.getElementById('f-dados'), async dados => {
+    ligarFormulario(document.getElementById('f-dados'), async dados => {
       await api(`/api/projetos/${p.id}`, 'PUT', dados);
       aviso('Projeto guardado.');
     });
-    ligarForm(document.getElementById('f-membro'), async dados => {
+    ligarFormulario(document.getElementById('f-membro'), async dados => {
       await api(`/api/projetos/${p.id}/equipa`, 'POST', dados);
       carregar();
     });
-    ligarForm(document.getElementById('f-vaga'), async dados => {
+    ligarFormulario(document.getElementById('f-vaga'), async dados => {
       await api(`/api/projetos/${p.id}/vagas`, 'POST', dados);
       carregar();
     });

@@ -44,7 +44,7 @@ function htmlSeparadorSeguranca(d) {
               <button type="button" class="lk" id="email-cancelar">Cancelar</button>
             </div>` : ''}
           <label>Email<input name="email" id="def-email" type="email" value="${esc(d.email)}" required maxlength="120" autocomplete="email"></label>
-          ${d.tem_password ? `<label>Palavra-passe atual${campoPassword('password', 'Palavra-passe atual', 'current-password', 'required')}</label>` : ''}
+          ${d.tem_password ? `<label>Palavra-passe atual${campoPalavraPasse('password', 'Palavra-passe atual', 'current-password', 'required')}</label>` : ''}
           <small class="muted">Enviamos um link para o email novo: o email só muda depois de o confirmares. O email antigo recebe um aviso.</small>
           <p class="msg" role="alert"></p><button class="btn primary sm" type="submit">Mudar email</button>
         </form>
@@ -53,11 +53,11 @@ function htmlSeparadorSeguranca(d) {
           <!-- O @nome escondido ajuda os gestores de palavras-passe a guardar na conta certa -->
           <input type="text" name="username" value="${esc(d.nome)}" autocomplete="username" hidden>
           ${d.tem_password
-            ? `<label>Palavra-passe atual${campoPassword('atual', 'Palavra-passe atual', 'current-password', 'required')}</label>`
+            ? `<label>Palavra-passe atual${campoPalavraPasse('atual', 'Palavra-passe atual', 'current-password', 'required')}</label>`
             : '<p>Entraste com o Google. Se definires uma palavra-passe, também podes entrar com o @nome ou o email.</p>'}
-          <label>Nova palavra-passe${campoPassword('nova', 'Nova palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-nova"')}</label>
+          <label>Nova palavra-passe${campoPalavraPasse('nova', 'Nova palavra-passe', 'new-password', 'required minlength="10" maxlength="72" id="pw-nova"')}</label>
           <div class="forca" id="forca-nova" aria-live="polite"><i></i><i></i><i></i><i></i><span></span></div>
-          <label>Confirmar${campoPassword('nova2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}</label>
+          <label>Confirmar${campoPalavraPasse('nova2', 'Confirmar a palavra-passe', 'new-password', 'required maxlength="72"')}</label>
           ${outrasSessoes ? '<label class="chk"><input type="checkbox" name="terminarOutras" checked> Terminar a sessão nos outros dispositivos</label>' : ''}
           <p class="msg" role="alert"></p>
           <button class="btn primary sm" type="submit">${d.tem_password ? 'Alterar palavra-passe' : 'Definir palavra-passe'}</button>
@@ -91,7 +91,7 @@ function htmlSeparadorSeguranca(d) {
 
         <form class="box form danger" id="f-apagar" novalidate><h3>Apagar conta</h3>
           <p>Apaga a conta e tudo o que lhe pertence (foto, avaliações, listas, projetos, mensagens). Não dá para desfazer.</p>
-          ${d.tem_password ? `<label>Palavra-passe${campoPassword('password', 'Palavra-passe', 'current-password', 'required')}</label>` : ''}
+          ${d.tem_password ? `<label>Palavra-passe${campoPalavraPasse('password', 'Palavra-passe', 'current-password', 'required')}</label>` : ''}
           <label>Para confirmar, escreve <b>@${esc(d.nome)}</b><input name="confirmacao" autocomplete="off" required></label>
           <p class="msg" role="alert"></p><button class="btn ghost sm" type="submit">Apagar a minha conta</button>
         </form>
@@ -109,7 +109,7 @@ function ligarSeparadorSeguranca(d) {
     { dados: dadosPessoais, confirmar: fPass.nova2 });
   ligarCampoEmail(document.getElementById('def-email'));
 
-  ligarForm(document.getElementById('f-email'), async dados => {
+  ligarFormulario(document.getElementById('f-email'), async dados => {
     const erro = RegrasEmail.erroFormato(dados.email);
     if (erro) throw erroCampos({ email: erro });
     const r = await api('/api/utilizadores/eu/email', 'PUT', dados);
@@ -126,7 +126,7 @@ function ligarSeparadorSeguranca(d) {
     if (r) location.href = comAviso('/definicoes.html?tab=seguranca', r.mensagem);
   });
 
-  ligarForm(fPass, async dados => {
+  ligarFormulario(fPass, async dados => {
     const erros = {};
     const analise = RegrasPalavraPasse.analisar(dados.nova, dadosPessoais());
     if (!analise.valida) erros.nova = analise.erros[0];
@@ -138,7 +138,7 @@ function ligarSeparadorSeguranca(d) {
     location.href = comAviso('/definicoes.html?tab=seguranca', r.mensagem);
   });
 
-  ligarForm(document.getElementById('f-apagar'), async dados => {
+  ligarFormulario(document.getElementById('f-apagar'), async dados => {
     if (dados.confirmacao.trim().replace(/^@/, '').toLowerCase() !== d.nome.toLowerCase()) {
       throw erroCampos({ confirmacao: `Escreve @${d.nome} para confirmar.` });
     }

@@ -104,6 +104,7 @@ let contador = 0;
 // como as contas que já existiam antes das regras novas.
 // As contas de teste vêm com o email confirmado (senão não conseguiam entrar).
 const HASH = bcrypt.hashSync('Teste12345', 10);
+// Cria a conta de teste e devolve-a (com a palavra-passe em texto, para poder entrar)
 async function criarUtilizador(extra = {}) {
   contador++;
   const sufixo = `${Date.now().toString(36)}${contador}`;

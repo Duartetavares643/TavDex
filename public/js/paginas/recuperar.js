@@ -22,7 +22,7 @@
   // Vindo do bloqueio do login: o email/@nome já vem escrito (?login=)
   form.login.value = param('login') || '';
 
-  ligarForm(form, async (dados, f) => {
+  ligarFormulario(form, async (dados, f) => {
     const escrito = dados.login.trim();
     if (!escrito) throw erroCampos({ login: 'Escreve o teu email ou @nome.' });
     if (escrito.includes('@') && !escrito.startsWith('@')) {

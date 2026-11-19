@@ -84,7 +84,7 @@ const CORES_ESTADO = {
   pendente: 35, aceite: 150, rejeitada: 0, resolvida: 150, ignorada: 215,
 };
 // Etiqueta colorida com o estado (ex.: "Pendente", "Aceite")
-function badgeEstado(estado) {
+function etiquetaEstado(estado) {
   const texto = estado.charAt(0).toUpperCase() + estado.slice(1);
   return `<span class="badge" style="--c:${CORES_ESTADO[estado] ?? 330}">${esc(texto)}</span>`;
 }
@@ -96,7 +96,7 @@ function cartaoProjeto(p) {
     <div class="pjv-capa" style="--h:${corDe(p.titulo)}"><span class="pk">${esc(p.tipo)}</span><h3>${esc(p.titulo)}</h3></div>
     <div class="pjv-txt"><p>${esc(sinopse)}</p>
       ${p.dono_nome ? `<small class="pjv-dono">por @${esc(p.dono_nome)}</small>` : ''}
-      <div class="pjv-pe"><span class="mb">👤 ${p.membros || 0} membros</span>${badgeEstado(p.estado)}</div></div></a>`;
+      <div class="pjv-pe"><span class="mb">👤 ${p.membros || 0} membros</span>${etiquetaEstado(p.estado)}</div></div></a>`;
 }
 
 // Estrelas para mostrar uma nota (ex.: ★★★★☆)

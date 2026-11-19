@@ -27,7 +27,7 @@
   caixaVagas.addEventListener('click', e => { if (e.target.closest('[data-tirar]')) e.target.closest('[data-vaga]').remove(); });
   novaVaga();
 
-  ligarForm(document.getElementById('f-novo'), async dados => {
+  ligarFormulario(document.getElementById('f-novo'), async dados => {
     dados.vagas = [...caixaVagas.querySelectorAll('[data-vaga]')]
       .map(l => ({ funcao: l.querySelector('[data-campo=funcao]').value.trim(), descricao: l.querySelector('[data-campo=descricao]').value.trim() }))
       .filter(v => v.funcao);

@@ -9,7 +9,7 @@ async function adminDenuncias(painel) {
   const NOMES = { publicacao: 'Publicação', comentario: 'Comentário', review: 'Review', mensagem: 'Mensagem' };
   moldura(`<div class="tabs links">${['pendente', 'resolvida', 'ignorada'].map(e => `<a href="/admin.html?s=denuncias&estado=${e}" class="${estado === e ? 'on' : ''}">${e[0].toUpperCase() + e.slice(1)}s</a>`).join('')}</div>
     ${d.denuncias.map(x => `<div class="box"><div class="li" style="border:0;padding:0">
-        <div><b>${NOMES[x.tipo]}</b> · ${esc(x.motivo)} ${badgeEstado(x.estado)}<small>Denunciado por ${esc(x.denunciante)} · ${tempo(x.criado_em)}</small></div>
+        <div><b>${NOMES[x.tipo]}</b> · ${esc(x.motivo)} ${etiquetaEstado(x.estado)}<small>Denunciado por ${esc(x.denunciante)} · ${tempo(x.criado_em)}</small></div>
         <div class="cact">${x.estado === 'pendente' ? `
           ${x.conteudo ? `<button class="btn primary sm" data-apagar-conteudo="${x.id}">Apagar conteúdo</button>` : ''}
           <button class="btn ghost sm" data-den="${x.id}" data-estado="resolvida">Resolvida</button>

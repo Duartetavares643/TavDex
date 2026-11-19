@@ -143,6 +143,7 @@ function eDescartavel(dominio) {
 // Desliga-se com VERIFICAR_DNS=0 (os testes automáticos fazem isso).
 const cacheDns = new Map();                    // dominio -> { existe, ate }
 const SEM_REGISTO = new Set(['ENOTFOUND', 'ENODATA']);   // o domínio não tem esse registo
+// true se o domínio existe e pode receber emails (as regras estão no comentário de cima)
 async function dominioRecebeEmail(dominio) {
   if (process.env.VERIFICAR_DNS === '0') return true;
   const guardado = cacheDns.get(dominio);
@@ -290,6 +291,7 @@ async function registarAtividade(req, utilizadorId, tipo, descricao = '') {
 // Aceita "/titulo.html?id=3"; recusa "//site.com", "/\site.com", "http:", "javascript:"
 // e as páginas de autenticação (não faz sentido voltar ao login depois do login).
 const PAGINAS_AUTENTICACAO = /^\/(login|entrar|registar|recuperar|repor|nova-palavra-passe)(\.html)?(\/|\?|#|$)/i;
+// Devolve o caminho "voltar" se for seguro; senão, "/" (a página inicial)
 function voltarSeguro(v) {
   if (typeof v !== 'string' || v.length > 300) return '/';
   if (!v.startsWith('/') || v.startsWith('//') || v.includes('\\')) return '/';
@@ -309,6 +311,7 @@ const TABELAS_SPAM = {
   mensagens: 'de_id', publicacoes: 'utilizador_id', comentarios: 'utilizador_id',
   projetos: 'dono_id', candidaturas: 'utilizador_id', denuncias: 'utilizador_id',
 };
+// true se o utilizador já fez "maximo" coisas destas nos últimos "segundos"
 async function demasiado(tabela, coluna, uid, maximo, segundos) {
   if (TABELAS_SPAM[tabela] !== coluna) return false;
   const r = await linha(`SELECT COUNT(*) AS n FROM ${tabela} WHERE ${coluna} = ? AND criado_em >= NOW() - INTERVAL ? SECOND`,

@@ -32,13 +32,13 @@
     const vagas = d.vagas.map(v => {
       let acao = '';
       if (d.pode_gerir) acao = v.pendentes ? `<a class="lk" href="/candidaturas.html?id=${p.id}">${v.pendentes} candidatura(s) por ver</a>` : '';
-      else if (v.minha_candidatura === 'pendente') acao = `${badgeEstado('pendente')} <button class="del-btn" data-retirar="${v.id}">Retirar candidatura</button>`;
-      else if (v.minha_candidatura) acao = badgeEstado(v.minha_candidatura);
+      else if (v.minha_candidatura === 'pendente') acao = `${etiquetaEstado('pendente')} <button class="del-btn" data-retirar="${v.id}">Retirar candidatura</button>`;
+      else if (v.minha_candidatura) acao = etiquetaEstado(v.minha_candidatura);
       else if (v.aberta) acao = `<details><summary class="btn primary sm">Candidatar-me</summary>
           <form class="form" data-candidatar="${v.id}"><textarea name="mensagem" minlength="10" maxlength="500" required
             placeholder="Apresenta-te: experiência, disponibilidade, porque queres participar..."></textarea>
             <p class="msg" role="alert"></p><button class="btn primary sm">Enviar candidatura</button></form></details>`;
-      return `<div class="box vaga"><b>${esc(v.funcao)}</b> ${v.aberta ? badgeEstado('Recrutamento') : '<span class="badge" style="--c:215">Fechada</span>'}
+      return `<div class="box vaga"><b>${esc(v.funcao)}</b> ${v.aberta ? etiquetaEstado('Recrutamento') : '<span class="badge" style="--c:215">Fechada</span>'}
         ${v.descricao ? `<p>${esc(v.descricao)}</p>` : ''}<div style="margin-top:10px">${acao}</div></div>`;
     }).join('') || '<p class="empty">Sem vagas de momento.</p>';
 
@@ -64,7 +64,7 @@
       <div class="dh pdh" style="--h:${corDe(p.titulo)}"><div>
         <span class="pk">${esc(p.tipo)}${p.genero ? ' · ' + esc(p.genero) : ''}</span>
         <h1>${esc(p.titulo)}</h1>
-        <p class="meta">${badgeEstado(p.estado)}<span>Criado por ${linkPerfil(d.dono)}</span><span>${dataCurta(p.criado_em)}</span>
+        <p class="meta">${etiquetaEstado(p.estado)}<span>Criado por ${linkPerfil(d.dono)}</span><span>${dataCurta(p.criado_em)}</span>
           ${d.media !== null ? `<span><i class="st">★</i> ${d.media.toFixed(1)} (${d.avaliacoes.length})</span>` : ''}<span>${d.seguidores} a acompanhar</span></p>
         <p class="desc">${paragrafos(p.sinopse)}</p>
         <div class="btns">
@@ -102,20 +102,20 @@
       if (await tentar(() => api(`/api/projetos/${p.id}/acompanhar`, 'POST'))) carregar();
     });
 
-    document.querySelectorAll('[data-candidatar]').forEach(f => ligarForm(f, async dados => {
+    document.querySelectorAll('[data-candidatar]').forEach(f => ligarFormulario(f, async dados => {
       if (!u) return abrirJanelaLogin('te candidatares a vagas');
       await api(`/api/projetos/vagas/${f.dataset.candidatar}/candidatura`, 'POST', dados);
       aviso('Candidatura enviada! O dono do projeto vai ser notificado.');
       carregar();
     }));
 
-    ligarForm(document.getElementById('f-comentar'), async dados => {
+    ligarFormulario(document.getElementById('f-comentar'), async dados => {
       await api(`/api/projetos/${p.id}/comentarios`, 'POST', dados);
       await carregar();
       document.querySelector('[data-tab="comentarios"]').click();
     });
 
-    ligarForm(document.getElementById('f-avaliar'), async dados => {
+    ligarFormulario(document.getElementById('f-avaliar'), async dados => {
       if (!dados.nota) throw new Error('Escolhe de 1 a 5 estrelas.');
       await api(`/api/projetos/${p.id}/avaliacao`, 'PUT', dados);
       await carregar();

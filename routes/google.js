@@ -39,7 +39,7 @@ function googleConfigurado() {
 }
 
 // Tem de ser EXATAMENTE igual ao URI registado na Google Cloud Console
-function redirectUri() {
+function enderecoRegresso() {
   return process.env.GOOGLE_REDIRECT_URI || `${URL_SITE}/api/auth/google/callback`;
 }
 
@@ -82,7 +82,7 @@ router.get('/', (req, res) => {
 
   const parametros = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: redirectUri(),
+    redirect_uri: enderecoRegresso(),
     response_type: 'code',
     scope: 'openid email profile',
     state,
@@ -136,7 +136,7 @@ router.get('/callback', async (req, res) => {
         code: String(req.query.code),
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: redirectUri(),
+        redirect_uri: enderecoRegresso(),
         grant_type: 'authorization_code',
         code_verifier: pedido.verifier,
       }),

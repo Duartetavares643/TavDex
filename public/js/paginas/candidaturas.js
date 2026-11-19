@@ -21,7 +21,7 @@
         ${c.estado === 'pendente'
           ? `<div class="cact"><button class="btn primary sm" data-decidir="${c.id}" data-estado="aceite">Aprovar</button>
              <button class="btn ghost sm" data-decidir="${c.id}" data-estado="rejeitada">Rejeitar</button></div>`
-          : badgeEstado(c.estado)}</div>`;
+          : etiquetaEstado(c.estado)}</div>`;
 
     mostrar(`<div class="content"><div class="left narrow">
       <div class="ah"><div><h1 class="ph">Candidaturas</h1><small>${esc(d.projeto.titulo)}</small></div>

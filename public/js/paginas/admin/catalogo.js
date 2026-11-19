@@ -27,9 +27,9 @@ async function adminCatalogo(painel) {
       <small class="muted">As pessoas juntam-se aos filmes/séries na página de edição de cada título.</small>
     </div></div>`);
 
-  ligarForm(document.getElementById('f-genero'), async dados => { await api('/api/titulos/generos', 'POST', dados); recarregar(); });
-  ligarForm(document.getElementById('f-plataforma'), async dados => { await api('/api/titulos/plataformas', 'POST', dados); recarregar(); });
-  document.querySelectorAll('[data-plataforma]').forEach(f => ligarForm(f, async dados => {
+  ligarFormulario(document.getElementById('f-genero'), async dados => { await api('/api/titulos/generos', 'POST', dados); recarregar(); });
+  ligarFormulario(document.getElementById('f-plataforma'), async dados => { await api('/api/titulos/plataformas', 'POST', dados); recarregar(); });
+  document.querySelectorAll('[data-plataforma]').forEach(f => ligarFormulario(f, async dados => {
     await api('/api/titulos/plataformas/' + f.dataset.plataforma, 'PUT', dados);
     aviso('Plataforma guardada.');
   }));
