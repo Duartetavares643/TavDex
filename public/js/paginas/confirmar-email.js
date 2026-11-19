@@ -96,6 +96,7 @@
   // Botão "Reenviar email": desativado durante 60 segundos, com contagem decrescente
   const botao = document.getElementById('reenviar');
   let relogio = null;
+  // Desativa o botão e mostra a contagem decrescente
   function esperar(segundos) {
     clearInterval(relogio);
     let falta = segundos;

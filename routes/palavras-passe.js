@@ -45,6 +45,7 @@ function versoes(p) {
   return [t, limpa(t), limpa(trocar(semFim)), limpa(trocar(t))].filter(v => v.length >= 3);
 }
 
+// A palavra-passe (ou uma das suas versões "limpas") está na lista das mais usadas?
 function eComum(p) {
   return versoes(p).some(v => COMUNS.has(v));
 }
@@ -101,4 +102,4 @@ function dadosPessoais(u) {
   return u ? { nome: u.nome, nomeExibicao: u.nome_exibicao || '', email: u.email || '' } : {};
 }
 
-module.exports = { validarPalavraPasse, cumpreRegras, eComum, apareceEmFugas, dadosPessoais };
+module.exports = { validarPalavraPasse, cumpreRegras, dadosPessoais };

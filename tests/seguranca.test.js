@@ -23,6 +23,7 @@ function novoRegisto(extra = {}) {
 }
 // Token do último email de confirmação enviado para um endereço
 const tokenConfirmacao = email => (ultimoEmail(email) || '').match(/confirmar-email\/([a-f0-9]{64})/)?.[1];
+// Espera "ms" milissegundos
 const esperar = ms => new Promise(r => setTimeout(r, ms));
 
 // ---------------------------------------------------------------------

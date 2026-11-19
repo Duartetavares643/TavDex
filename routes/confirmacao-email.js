@@ -89,6 +89,7 @@ router.get('/', async (req, res) => {
 // ---------------------------------------------------------------------
 const RESPOSTA_IGUAL = 'Se existir uma conta por confirmar com esse email, enviámos um link novo. Vê também a pasta de spam ou de promoções.';
 
+// POST /reenviar  (com a conta guardada na sessão, ou com { email } escrito pela pessoa)
 router.post('/reenviar', async (req, res) => {
   const u = await contaDaSessao(req);
   if (!u) {
@@ -128,6 +129,7 @@ async function pedidoValido(token) {
   return tipo ? { p, u, tipo } : null;
 }
 
+// GET /:token – a página do link pergunta se é válido (só mostra; NÃO confirma)
 router.get('/:token', async (req, res) => {
   const r = await pedidoValido(req.params.token);
   if (!r) return res.json({ valido: false });

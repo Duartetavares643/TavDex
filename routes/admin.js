@@ -16,12 +16,14 @@ const { exigirAdmin } = require('./middleware');
 const { ALVOS } = require('./comunidade');
 
 const router = express.Router();
-router.use(exigirAdmin);   // protege todas as rotas deste ficheiro
-const MAX_ID = 2147483647;
+// Todas as rotas deste ficheiro são só para administradores
+router.use(exigirAdmin);
+const MAX_ID = 2147483647;   // maior valor de uma coluna INT (ids)
 
 // ---------------------------------------------------------------------
 // Estatísticas
 // ---------------------------------------------------------------------
+// Números do painel (totais, registos por mês e títulos mais avaliados)
 router.get('/estatisticas', async (req, res) => {
   const contar = async sql => (await linha(sql)).n;
   const [utilizadores, titulos, avaliacoes, projetos, publicacoes, mensagens, denuncias, bloqueados] = await Promise.all([
@@ -46,6 +48,7 @@ router.get('/estatisticas', async (req, res) => {
 // ---------------------------------------------------------------------
 // Utilizadores
 // ---------------------------------------------------------------------
+// Lista de contas (25 por página), com pesquisa pelo @nome ou email
 router.get('/utilizadores', async (req, res) => {
   const q = String(req.query.q || '').trim().slice(0, 60);
   const onde = q ? ' WHERE nome LIKE ? OR email LIKE ?' : '';
@@ -58,6 +61,8 @@ router.get('/utilizadores', async (req, res) => {
   res.json({ utilizadores: lista, total: total.n, pagina: pg.pagina, porPagina: pg.porPagina });
 });
 
+// Bloquear/desbloquear uma conta ou mudar o papel (utilizador / admin).
+// O admin não pode mexer na própria conta (para não se bloquear sem querer).
 router.put('/utilizadores/:id', async (req, res) => {
   const id = a.inteiro(req.params.id, 'Utilizador', 1, MAX_ID);
   const alvo = await linha('SELECT id, nome, papel, bloqueado FROM utilizadores WHERE id = ?', [id]);
@@ -93,6 +98,7 @@ async function conteudoDe(tipo, alvoId) {
   return linha(consultas[tipo], [alvoId]);
 }
 
+// Denúncias de um estado (pendente por omissão), cada uma com o conteúdo denunciado
 router.get('/denuncias', async (req, res) => {
   const estado = ['pendente', 'resolvida', 'ignorada'].includes(req.query.estado) ? req.query.estado : 'pendente';
   const lista = await linhas(`SELECT d.id, d.tipo, d.alvo_id, d.motivo, d.estado, d.criado_em, u.nome AS denunciante
@@ -102,6 +108,7 @@ router.get('/denuncias', async (req, res) => {
   res.json({ denuncias: lista });
 });
 
+// Marcar a denúncia como resolvida, ignorada ou outra vez pendente
 router.put('/denuncias/:id', async (req, res) => {
   const id = a.inteiro(req.params.id, 'Denúncia', 1, MAX_ID);
   const estado = a.escolha(req.body.estado, ['pendente', 'resolvida', 'ignorada'], 'Estado');
@@ -109,6 +116,7 @@ router.put('/denuncias/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Apagar o conteúdo denunciado (publicação, comentário, review ou mensagem)
 router.delete('/denuncias/:id/conteudo', async (req, res) => {
   const id = a.inteiro(req.params.id, 'Denúncia', 1, MAX_ID);
   const d = await linha('SELECT * FROM denuncias WHERE id = ?', [id]);

@@ -9,6 +9,7 @@
   // Para escolher o filme/série de que se fala, usa a lista do catálogo
   let titulos = [];
 
+  // Pede o feed (com o filtro e a página escolhidos) e desenha-o
   async function carregar() {
     let d;
     try {
@@ -36,6 +37,7 @@
     }).join('');
   }
 
+  // HTML de uma publicação (texto, gosto, comentários e respostas)
   function publicacao(p) {
     const texto = p.spoiler
       ? `<details class="spoiler-d"><summary>⚠ Contém spoilers${p.titulo_nome ? ' de ' + esc(p.titulo_nome) : ''} – mostrar</summary><p>${paragrafos(p.texto)}</p></details>`
@@ -57,6 +59,7 @@
     </article>`;
   }
 
+  // Desenha a página: formulário para publicar, filtros e o feed
   function desenhar(d) {
     const formulario = u ? `<form class="box form" id="f-publicar" novalidate>
         <div class="rv">${avatar(u)}<textarea name="texto" maxlength="1000" required placeholder="O que andas a ver? Partilha com a comunidade..." style="flex:1"></textarea></div>

@@ -538,6 +538,7 @@
     // Para pré-visualizar ou testar um cenário sem página (ex.: TavDexBanner.svg('colina', 900, 214, 'x', false))
     window.TavDexBanner = { svg: svg, temas: Object.keys(TEMAS) };
 
+    // Ao abrir a página: inicia os banners que já existem e fica atento aos que aparecerem
     function arrancar() {
         iniciarBanners(document);
         // banners que aparecem mais tarde (páginas desenhadas pelo JavaScript)

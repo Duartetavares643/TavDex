@@ -102,6 +102,7 @@ async function estadoMudancaNome(u) {
 // No máximo 30 pedidos por minuto por IP (contados em memória).
 // ---------------------------------------------------------------------
 const pedidosDisponivel = new Map();   // ip -> { n, ate }
+// GET /disponivel?nome=  →  { disponivel, mensagem }
 router.get('/disponivel', async (req, res) => {
   const ip = a.ipDe(req);
   const agora = Date.now();
@@ -122,6 +123,7 @@ router.get('/disponivel', async (req, res) => {
   res.json(motivo ? { disponivel: false, mensagem: motivo } : { disponivel: true, mensagem: '✓ Disponível' });
 });
 
+// Guardar o perfil (devolve os erros de todos os campos de uma vez)
 router.put('/eu/perfil', exigirLogin, async (req, res) => {
   const v = new a.Validacao();
   const nomeExibicao = v.campo('nome_exibicao', () => a.nomeExibicao(req.body.nome_exibicao));
@@ -187,6 +189,7 @@ router.post('/eu/foto', exigirLogin, receberFoto, async (req, res) => {
   res.json({ ok: true, foto_versao: versao, mensagem: 'Foto atualizada.' });
 });
 
+// Remover a foto (volta a aparecer a inicial com a cor do avatar)
 router.delete('/eu/foto', exigirLogin, async (req, res) => {
   await executar('UPDATE utilizadores SET foto = NULL, foto_versao = 0 WHERE id = ?', [req.u.id]);
   res.json({ ok: true, mensagem: 'Foto removida.' });
@@ -201,6 +204,7 @@ router.post('/eu/banner', exigirLogin, receberBanner, async (req, res) => {
   res.json({ ok: true, banner_versao: versao, mensagem: 'Banner atualizado.' });
 });
 
+// Remover a imagem do banner (volta ao cenário escolhido)
 router.delete('/eu/banner', exigirLogin, async (req, res) => {
   await executar('UPDATE utilizadores SET banner = NULL, banner_versao = 0 WHERE id = ?', [req.u.id]);
   res.json({ ok: true, mensagem: 'Imagem do banner removida.' });
@@ -257,6 +261,7 @@ router.delete('/eu/email', exigirLogin, async (req, res) => {
   res.json({ ok: true, mensagem: 'Mudança de email cancelada.' });
 });
 
+// Alterar a palavra-passe (ou definir uma, nas contas só com Google)
 router.put('/eu/password', exigirLogin, async (req, res) => {
   const tinha = !!req.u.password_hash;
   // Quem já tem palavra-passe tem de escrever a atual (contas só com Google não têm)
@@ -285,8 +290,10 @@ router.put('/eu/password', exigirLogin, async (req, res) => {
   });
 });
 
+// Desligar a conta Google (ver routes/google.js)
 router.delete('/eu/google', exigirLogin, desligarGoogle);
 
+// Terminar uma sessão noutro dispositivo
 router.delete('/eu/sessoes/:id', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Sessão', 1, MAX_ID);
   if (id === req.sessaoId) a.falha(400, 'Para terminar esta sessão usa "Terminar sessão".');
@@ -298,12 +305,14 @@ router.delete('/eu/sessoes/:id', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Terminar todas as sessões menos esta
 router.delete('/eu/sessoes', exigirLogin, async (req, res) => {
   await executar('DELETE FROM sessoes WHERE utilizador_id = ? AND id <> ?', [req.u.id, req.sessaoId]);
   await a.registarAtividade(req, req.u.id, 'sessoes_terminadas', 'Sessões terminadas noutros dispositivos');
   res.json({ ok: true });
 });
 
+// Apagar a conta (pede a palavra-passe e o @nome escrito)
 router.delete('/eu', exigirLogin, async (req, res) => {
   const v = new a.Validacao();
   if (req.u.password_hash && !(await compararPassword(String(req.body.password || ''), req.u.password_hash))) {
@@ -353,6 +362,7 @@ router.get('/:id/banner', async (req, res) => {
 // ---------------------------------------------------------------------
 // Seguidores ou "a seguir" de uma conta, 20 de cada vez ("Ver mais")
 const POR_PAGINA_SEGUIDORES = 20;
+// tipo = "seguidores" (quem segue a conta) ou "a_seguir" (quem a conta segue)
 function listaSeguidores(id, tipo, pagina = 1) {
   const [juntar, filtrar] = tipo === 'seguidores' ? ['s.seguidor_id', 's.seguido_id'] : ['s.seguido_id', 's.seguidor_id'];
   const desde = (Math.max(1, pagina) - 1) * POR_PAGINA_SEGUIDORES;
@@ -386,6 +396,7 @@ router.get('/:nome/seguidores', async (req, res) => {
   res.json({ utilizadores: await listaSeguidores(p.id, tipo, pagina) });
 });
 
+// Perfil público: dados, números, listas, resumo e relação com quem está a ver
 router.get('/:nome', async (req, res) => {
   const p = await procurarPerfil(req.params.nome);
   if (!p) {
@@ -486,6 +497,7 @@ async function seguir(req, res) {
   const n = await linha('SELECT COUNT(*) AS n FROM seguidores WHERE seguido_id = ?', [id]);
   res.json({ a_seguir: !jaSigo, sigo: !jaSigo, seguidores: n.n });
 }
+// Seguir / deixar de seguir (o mesmo que POST /api/seguir/:id)
 router.post('/:id/seguir', exigirLogin, seguir);
 
 module.exports = router;

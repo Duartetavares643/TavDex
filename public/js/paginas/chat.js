@@ -49,6 +49,7 @@
     if (noFundo || !caixa.dataset.inicio) { caixa.scrollTop = caixa.scrollHeight; caixa.dataset.inicio = 1; }
   }
 
+  // Pede as mensagens da conversa aberta e desenha-as
   async function carregar() {
     try {
       desenhar(await api('/api/comunidade/chat/' + encodeURIComponent(com)));

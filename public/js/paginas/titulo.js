@@ -8,6 +8,7 @@
   const id = param('id');
   let d;
 
+  // Pede o título à API e desenha a página (no separador indicado)
   async function carregar(separador) {
     try {
       d = await api('/api/titulos/' + encodeURIComponent(id));
@@ -20,6 +21,7 @@
 
   const FUNCOES = { realizacao: 'Realização', argumento: 'Argumento', producao: 'Produção', musica: 'Música' };
 
+  // Desenha o título: destaque, onde ver, elenco, temporadas e avaliações
   function desenhar() {
     const t = d.titulo;
     document.title = `${t.nome} – TavDex`;
@@ -110,6 +112,7 @@
     ligarEventos();
   }
 
+  // Liga os botões (listas, avaliar, apagar, denunciar)
   function ligarEventos() {
     const t = d.titulo;
     ligarForm(document.getElementById('f-avaliar'), async dados => {

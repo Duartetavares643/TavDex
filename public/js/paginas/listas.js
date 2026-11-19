@@ -6,6 +6,7 @@
   const u = await sessao;
   if (!u) return irLogin();
 
+  // Pede as listas e mostra o separador escolhido (a ver, vistos ou favoritos)
   async function carregar(separador = location.hash.slice(1) || 'ver') {
     const [l, r] = await Promise.all([api('/api/listas'), api('/api/recomendacoes')]);
 

@@ -3,8 +3,11 @@
    Estilo "cinema premium": fundo escuro elegante, imagens em destaque,
    vermelho e magenta do logótipo só nos pormenores. Tem modo escuro
    (por omissão) e modo claro, trocados pelo botão ☀/☾ no topo.
-   Organização: 1 variáveis · 2 base · 3 estrutura · 4 topo e rodapé ·
-   5 componentes · 6 páginas · 7 telemóvel
+   Organização:
+     1 variáveis · 2 base · 3 estrutura · 4 topo e rodapé · 5 componentes ·
+     6 páginas · 7 tablet e telemóvel · 8 estilo streaming ·
+     9 onde ver e anti-spam · 10 contas, perfil e definições ·
+     11 banner do perfil · 12 contas mais seguras
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -90,7 +93,6 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -.01em; }
 .lk:hover { text-decoration: underline; }
 .lk-u { font-weight: 600; color: var(--text); transition: color var(--t); }
 .lk-u:hover { color: var(--red-2); }
-.inline { display: inline-block; }
 
 /* Títulos de página e de secção */
 .ph { font: 400 52px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; margin-bottom: 22px; }
@@ -107,9 +109,7 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -.01em; }
 .dcols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
 .grid { display: grid; gap: 20px; }
 .g5 { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
-.g4 { grid-template-columns: repeat(4, 1fr); }
 .g3 { grid-template-columns: repeat(3, 1fr); }
-.g2 { grid-template-columns: repeat(2, 1fr); gap: 14px; }
 @keyframes entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ---------------------------------------------------------------------
@@ -192,7 +192,6 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -.01em; }
 .content .flash { width: 100%; }
 .msg { color: var(--red-2); font-size: 14px; }
 .ok-msg { color: var(--ok); }
-.dev { background: var(--surface-2); border: 1px dashed var(--mag); padding: 10px 12px; border-radius: var(--raio-s); font-size: 13px; }
 
 /* Formulários */
 .form { display: flex; flex-direction: column; gap: 14px; }
@@ -299,7 +298,6 @@ tbody tr:hover { background: var(--surface-2); }
 .ac { text-align: right; white-space: nowrap; }
 .ac form { margin: 2px; }
 .uc { display: flex; align-items: center; gap: 10px; }
-.txt { max-width: 300px; font-size: 13px; color: var(--text-2); }
 
 /* Paginação */
 .pg { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 32px; }
@@ -342,17 +340,10 @@ tbody tr:hover { background: var(--surface-2); }
 .rt small { display: flex; gap: 12px; margin-top: 4px; color: var(--muted); font-size: 12px; }
 
 /* ---------- Projetos ---------- */
-.pjrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.pjc { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.pjh { display: flex; gap: 14px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); transition: transform var(--t), box-shadow var(--t), border-color var(--t); min-width: 0; }
-a.pjh:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--line-2); }
-.pjh > div:last-child { min-width: 0; }
-.pt { width: 104px; flex: none; min-height: 120px; border-radius: var(--raio-s); background: radial-gradient(circle at 50% 30%, hsl(var(--h) 85% 52%), transparent 66%), linear-gradient(180deg, hsl(var(--h) 60% 18%), #07060b); }
+.pjrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }   /* fila de projetos no início */
+.pjc { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }   /* grelha de projetos */
 .pk { color: var(--red-2); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.pjh h3 { font-size: 15px; margin: 2px 0 4px; }
-.pjh p { font-size: 13px; color: var(--muted); line-height: 1.45; margin-bottom: 8px; }
 .mb { font-size: 12px; color: var(--muted); margin-right: 6px; }
-.pf { color: var(--text-2) !important; }
 .vaga b { font-size: 15px; }
 .vaga .form { margin-top: 12px; }
 .cd { align-items: flex-start; }
@@ -404,7 +395,7 @@ a.tg:hover { background: var(--surface-3); }
    6. PÁGINAS
    --------------------------------------------------------------------- */
 /* Início: destaque com vários slides (sempre escuro, como num cinema) */
-.hero2 { position: relative; height: 480px; overflow: hidden; background: #08070b; color: #f4f0f7; }
+.hero2 { position: relative; height: min(80vh, 640px); overflow: hidden; background: #08070b; color: #f4f0f7; }
 .hero2 .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .8s ease, visibility .8s;
   background: radial-gradient(circle at 74% 26%, hsl(var(--h) 100% 58% / .85), transparent 44%),
               radial-gradient(ellipse 120px 210px at 66% 92%, #000 60%, transparent 62%),
@@ -414,7 +405,7 @@ a.tg:hover { background: var(--surface-3); }
 .hero2 .slide.on { opacity: 1; visibility: visible; }
 .hero2 .slide.on::before { transform: scale(1); }
 .hero2::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #08070b 10%, rgba(8, 7, 11, .55) 42%, transparent 70%), linear-gradient(0deg, var(--bg) 0%, transparent 28%); }
-.ht { position: relative; z-index: 2; max-width: var(--larg); margin: 0 auto; padding: 84px 48px 0; }
+.ht { position: relative; z-index: 2; max-width: var(--larg); margin: 0 auto; padding: 110px 48px 0; }
 .ht > * { max-width: 620px; }
 .ht h1 { font: 400 76px/.95 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; margin: 10px 0 14px; text-shadow: 0 4px 24px rgba(0, 0, 0, .5); }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 14px; color: inherit; opacity: .92; }
@@ -423,7 +414,7 @@ a.tg:hover { background: var(--surface-3); }
 .ht .desc { margin: 16px 0 24px; font-size: 16px; line-height: 1.6; color: #dcd4e4; }
 .ht .btn.ghost { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .25); color: #fff; backdrop-filter: blur(8px); }
 .ht .btn.ghost:hover { background: rgba(255, 255, 255, .2); }
-.hctl { position: absolute; z-index: 3; right: 48px; bottom: 36px; display: flex; align-items: center; gap: 8px; }
+.hctl { position: absolute; z-index: 3; right: 48px; bottom: 130px; display: flex; align-items: center; gap: 8px; }
 .hdots { display: flex; gap: 6px; margin-right: 10px; }
 .hdots i { width: 8px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .35); cursor: pointer; transition: width var(--t), background var(--t); }
 .hdots i.on { width: 26px; background: #fff; }
@@ -443,12 +434,6 @@ a.tg:hover { background: var(--surface-3); }
 .dh .lk { color: #ff8aa0; }
 .pdh { background: radial-gradient(circle at 85% 15%, hsl(var(--h) 85% 50% / .38), transparent 52%), linear-gradient(135deg, #160d1a, #0b0910); }
 .pdh .meta { margin: 8px 0; }
-.ig { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 24px; }
-.ig > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio-s); padding: 14px 16px; }
-.ig small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
-.seasons { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.seasons .box { margin: 0; padding: 16px; }
-.seasons small { display: block; color: var(--muted); margin-top: 4px; }
 .score { display: flex; align-items: center; gap: 12px; margin: 6px 0; }
 .score b { font: 400 56px/1 "Bebas Neue", "Inter", sans-serif; }
 .cast { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 16px; }
@@ -456,22 +441,7 @@ a.tg:hover { background: var(--surface-3); }
 .pp .av { margin: 0 auto 10px; }
 .pp b { display: block; font-size: 14px; }
 .pp small { color: var(--muted); font-size: 12px; }
-.rate { gap: 12px; }
 
-/* Perfil */
-.pbn { display: flex; align-items: center; gap: 24px; padding: 28px; position: relative; overflow: hidden;
-  background: radial-gradient(circle at 90% 0%, rgba(196, 43, 216, .22), transparent 55%), radial-gradient(circle at 0% 100%, rgba(255, 45, 85, .14), transparent 50%), var(--surface); }
-.pbn .av.l { width: 96px; height: 96px; font-size: 38px; box-shadow: 0 0 0 4px var(--surface), 0 10px 30px rgba(196, 43, 216, .35); }
-.pinfo { flex: 1; min-width: 0; }
-.pinfo h2 { font-size: 26px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.hd { color: var(--muted); font-size: 13px; }
-.bio { margin-top: 8px; color: var(--text-2); font-size: 14px; }
-.pstats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 14px 0; }
-.ps { text-align: center; padding: 16px 8px; margin: 0; }
-.ps b { display: block; font: 400 34px/1 "Bebas Neue", "Inter", sans-serif; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.ps span { font-size: 12px; color: var(--muted); }
-.epv { display: flex; align-items: center; gap: 16px; }
-.epv b { display: block; color: var(--text); margin-bottom: 8px; }
 .sw label { display: inline-block; cursor: pointer; }
 .sw input { position: absolute; opacity: 0; }
 .sw i { display: inline-block; width: 28px; height: 28px; margin-right: 4px; border-radius: 50%; border: 2px solid transparent; transition: transform var(--t); }
@@ -485,7 +455,6 @@ a.tg:hover { background: var(--surface-3); }
 .chip input:checked + span { border-color: var(--red); background: rgba(255, 45, 85, .14); color: var(--text); }
 .chip input:focus-visible + span { outline: 2px solid var(--red); }
 .gp2 input[name=novo_genero] { flex: 1 1 180px; width: auto; }
-.cprev { width: 120px; }
 
 /* Catálogo e listas */
 .cf { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
@@ -561,21 +530,16 @@ a.tg:hover { background: var(--surface-3); }
   /* 16px nos campos para o iPhone não fazer zoom */
   input, select, textarea, .form input:not([type=checkbox]):not([type=radio]), .cf input, .cf select, .inline-form input, #chat input { font-size: 16px !important; }
   .ph { font-size: 40px; }
-  .hero2 { height: 520px; }
   .ht { padding: 56px 20px 0; }
   .ht h1 { font-size: 54px; }
   .ht .desc { font-size: 15px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
   .hctl { right: 16px; bottom: 20px; }
   .hrow { grid-auto-columns: 46%; }
-  .g4, .g3 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(2, 1fr); }
   .g5 { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-  .pjc { grid-template-columns: 1fr; }
   .dh { flex-direction: column; padding: 22px; gap: 20px; }
   .dh .poster { width: 150px; }
   .dh h1 { font-size: 42px; }
-  .pbn { flex-direction: column; text-align: center; padding: 24px 18px; }
-  .pinfo h2 { justify-content: center; }
-  .pstats { grid-template-columns: repeat(3, 1fr); }
   .msgx { grid-template-columns: 1fr; height: auto; }
   .convs { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
   .cv { flex: 0 0 200px; border-bottom: 0; border-right: 1px solid var(--line); }
@@ -597,14 +561,10 @@ a.tg:hover { background: var(--surface-3); }
 @media (max-width: 600px) {
   .hrow { grid-auto-columns: 64%; }
   .pjrow { grid-template-columns: 1fr; }
-  .pjh { flex-direction: column; }
-  .pt { width: 100%; min-height: 110px; }
   .sg { gap: 10px; }
   .sc { padding: 14px; gap: 10px; }
   .si { width: 38px; height: 38px; font-size: 17px; }
   .sc b { font-size: 28px; }
-  .pstats { gap: 8px; }
-  .ps b { font-size: 28px; }
   .cms { margin-left: 6px; padding-left: 12px; }
   .cd { flex-wrap: wrap; }
   .cd > .badge, .cd .cact { margin-left: 48px; }
@@ -616,12 +576,11 @@ a.tg:hover { background: var(--surface-3); }
 }
 @media (max-width: 380px) {
   .bl span { display: none; }
-  .pstats { grid-template-columns: repeat(2, 1fr); }
   .g5 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 }
 
 /* =====================================================================
-   8. ESTILO STREAMING (organização ao estilo Netflix)
+   8. ESTILO STREAMING (cartazes, filas, top 10 e páginas de detalhe)
    ===================================================================== */
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .btn.light { background: #fff; color: #111; }
@@ -640,12 +599,9 @@ a.tg:hover { background: var(--surface-3); }
 .rc .poster.art { padding: 12px 14px; }
 .rc .poster.art b { font-size: 26px; }
 
-/* Destaque do início, maior e com as filas por cima do fundo */
-.hero2 { height: min(80vh, 640px); }
-.ht { padding-top: 110px; }
+/* Destaque do início: as filas ficam por cima do fundo */
 .rank { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #fff; }
 .rank b { background: var(--red); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; letter-spacing: .08em; }
-.hctl { bottom: 130px; }
 .filas { position: relative; z-index: 3; margin-top: -96px; }
 .filas > .row:first-child, .filas > .cta:first-child { margin-top: 0; }
 
@@ -695,8 +651,6 @@ a.tg:hover { background: var(--surface-3); }
 .s-n { font: 400 44px/1 "Bebas Neue", "Inter", sans-serif; color: var(--red-2); min-width: 30px; text-align: center; }
 
 /* Projetos em cartões com capa */
-.pjrow { grid-template-columns: repeat(4, 1fr); }
-.pjc { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
 .pjv { display: flex; flex-direction: column; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); overflow: hidden; transition: transform var(--t), box-shadow var(--t), border-color var(--t); }
 .pjv:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--line-2); }
 .pjv-capa { position: relative; aspect-ratio: 16 / 9; padding: 14px 16px; display: flex; flex-direction: column; justify-content: flex-end; color: #fff;
@@ -708,20 +662,6 @@ a.tg:hover { background: var(--surface-3); }
 .pjv-txt p { font-size: 13px; line-height: 1.5; color: var(--text-2); }
 .pjv-pe { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
-/* Perfil com faixa colorida no topo */
-.pbn { flex-wrap: wrap; align-items: flex-end; padding: 0 28px 24px; background: var(--surface); }
-.pbn::before { content: ""; flex: 0 0 calc(100% + 56px); height: 130px; margin: 0 -28px;
-  background: radial-gradient(circle at 82% 0%, hsl(var(--h, 330) 85% 58% / .85), transparent 60%), linear-gradient(120deg, hsl(var(--h, 330) 60% 24%), hsl(calc(var(--h, 330) + 60) 55% 12%)); }
-.pbn .av.l { margin-top: -52px; }
-
-/* Imagens no formulário de títulos */
-.imgs-ver { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; }
-.fprev { flex: 1; aspect-ratio: 16 / 9; border-radius: var(--raio-s); background: var(--surface-2) center / cover no-repeat; }
-.ft .tmdb { border: 0; padding-top: 0; }
-
-@media (max-width: 1100px) {
-  .pjrow { grid-template-columns: repeat(2, 1fr); }
-}
 @media (max-width: 900px) {
   .hero2 { height: 560px; }
   .ht { padding-top: 64px; }
@@ -734,39 +674,14 @@ a.tg:hover { background: var(--surface-3); }
   .det .poster { width: 150px; }
   .det h1 { font-size: 50px; }
   .det .desc { font-size: 15px; }
-  .pbn { flex-direction: column; align-items: center; padding: 0 18px 22px; }
-  .pbn::before { flex: 0 0 110px; width: calc(100% + 36px); margin: 0 -18px; }
 }
 @media (max-width: 600px) {
   .hrow.cartazes { grid-auto-columns: 44%; }
-  .pjrow { grid-template-columns: 1fr; }
   .poster.art b { font-size: 22px; }
-  .imgs-ver { flex-direction: column; align-items: stretch; }
 }
 
 /* =====================================================================
-   9. PÁGINA DE TESTE (teste.php)
-   ===================================================================== */
-.teste .bl { display: inline-flex; margin-top: 8px; }
-.t-resumo { border-left: 4px solid var(--ok); }
-.t-resumo.meio { border-left-color: var(--gold); }
-.t-resumo.mau { border-left-color: var(--red); }
-.t-resumo b { font-size: 18px; }
-.t-lista { padding: 6px 20px; }
-.t-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--line); }
-.t-item:last-child { border-bottom: 0; }
-.t-item p { font-size: 13px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
-.t-ic { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; }
-.t-ic.ok { background: var(--ok); }
-.t-ic.aviso { background: var(--gold); }
-.t-ic.erro { background: var(--red); }
-.t-ic.info { background: var(--surface-3); color: var(--text-2); }
-.t-manual .t-item { cursor: pointer; }
-.t-manual input { margin-top: 3px; flex: none; }
-.t-manual input:checked + div a { text-decoration: line-through; opacity: .6; }
-
-/* =====================================================================
-   10. ONDE VER, COMPATIBILIDADE E ANTI-SPAM
+   9. ONDE VER (plataformas) E ANTI-SPAM
    ===================================================================== */
 .plat { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; font-size: 13px; font-weight: 600;
   background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); color: #fff; transition: background var(--t); }
@@ -774,28 +689,12 @@ a.plat:hover { background: rgba(255, 255, 255, .16); }
 .plat i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; }
 .onde { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 14px; }
 .onde > span { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #a79fb2; margin-right: 4px; }
-.onde-box .plat { background: var(--surface-2); border-color: var(--line-2); color: var(--text); }
-.onde-box a.plat:hover { background: var(--surface-3); }
-.plats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-
-/* Compatibilidade de gostos (perfil de outro utilizador) */
-.compat { text-align: center; }
-.anel { --p: 0; width: 132px; height: 132px; margin: 6px auto 10px; border-radius: 50%; display: grid; place-items: center;
-  background: conic-gradient(var(--red) calc(var(--p) * 1%), var(--surface-3) 0); }
-.anel::before { content: ""; grid-area: 1 / 1; width: 106px; height: 106px; border-radius: 50%; background: var(--surface); }
-.anel b { grid-area: 1 / 1; z-index: 1; font: 400 44px/1 "Bebas Neue", "Inter", sans-serif; }
-.compat .frase { font-weight: 600; margin-bottom: 4px; }
-.compat-l { text-align: left; margin-top: 14px; }
-.compat-l h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 6px; }
-.compat-l li { list-style: none; display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
-.compat-l li:last-child { border-bottom: 0; }
-.compat-l li span:last-child { color: var(--muted); white-space: nowrap; }
 
 /* Campo-armadilha contra robôs (fica invisível para as pessoas) */
 .hp { position: absolute !important; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
 /* =====================================================================
-   PASSOS 4 A 10 – contas, visitante, perfil e definições
+   10. CONTAS, VISITANTE, PERFIL E DEFINIÇÕES (passos 4 a 10)
    ===================================================================== */
 
 /* Avatar com foto */
@@ -878,10 +777,6 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
 /* Definições: perfil + pré-visualização lado a lado */
 .def-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
 .pre-perfil { position: sticky; top: 90px; display: flex; flex-direction: column; gap: 12px; }
-.pre-cab { display: flex; align-items: center; gap: 14px; min-width: 0; }
-.pre-cab b { display: block; font-size: 18px; overflow-wrap: anywhere; }
-.pre-cab small { display: block; overflow-wrap: anywhere; }
-#pre-bio { overflow-wrap: anywhere; }
 .foto-campo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .foto-campo small { flex-basis: 100%; }
 .foto-campo .btn { cursor: pointer; }
@@ -915,19 +810,14 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
 .lista-simples { margin: 0 0 8px 20px; color: var(--text-2); line-height: 1.7; }
 
 /* =====================================================================
-   BANNER DO PERFIL
-   Começou como o bloco css-banner do banner_perfil.html (com as variáveis de cor
-   do site: --surface, --text, --text-2, --line); o desenho passou depois a SVG.
-   ===================================================================== */
-
-/* =====================================================================
-   TavDex — Banner e cabeçalho do perfil (Passo 9)
+   11. BANNER E CABEÇALHO DO PERFIL (passo 9)
 
    • O desenho é uma ilustração em SVG (vetorial, nítida em qualquer ecrã),
      feita por js/banner-perfil.js com o tamanho da caixa e animada com CSS.
    • Há 5 cenários de cinema, escolhidos com data-tema no banner:
        colina | pipocas | claquete | pelicula | marquise
    • A cor do letreiro TAVDEX segue a cor do avatar: style="--h: <cor_avatar>".
+   • A pessoa também pode pôr uma imagem sua (.pbanner__foto), que tapa o cenário.
    • "Container queries": o perfil adapta-se à largura da caixa onde
      está, por isso fica bem no telemóvel e em colunas estreitas.
    ===================================================================== */
@@ -1098,9 +988,7 @@ svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor
     .pnums small { font-size: 10.5px; max-width: 100%; }
 }
 
-/* =====================================================================
-   BANNER DO PERFIL – partes do site (não vêm do banner_perfil.html)
-   ===================================================================== */
+/* ---------- Cartão do perfil e escolha do cenário nas Definições ---------- */
 
 /* Cartão onde fica o perfil (o banner fica escuro nos dois modos, de propósito) */
 .cartao-perfil { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
@@ -1121,7 +1009,6 @@ svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor
 .tema-op input:checked + .tema-op__caixa { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255, 45, 85, .16); }
 .tema-op input:checked + .tema-op__caixa .tema-op__nome { color: var(--text); }
 .tema-op input:focus-visible + .tema-op__caixa { outline: 2px solid var(--red); outline-offset: 3px; }
-@media (max-width: 600px) { .temas-banner { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Definições: pré-visualização com a mesma estrutura do perfil */
 .pre-perfil .cartao-perfil { margin: 0; }
@@ -1132,7 +1019,7 @@ svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor
 .modal-aviso .modal-btns .btn { flex: 1 1 140px; width: auto; }
 
 /* =====================================================================
-   CONTAS MAIS SEGURAS (confirmação do email, sessões, perfil e Definições)
+   12. CONTAS MAIS SEGURAS (confirmação do email, sessões, perfil e Definições)
    ===================================================================== */
 
 /* "Confirma o teu email", "Terminar sessão" e "Link inválido" */
@@ -1144,9 +1031,6 @@ svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor
 .fm-simples { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px; text-align: left; }
 .fm-simples label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-2); }
 .pw-conta { color: var(--red-2); overflow-wrap: anywhere; }
-
-/* Menu da conta: "Terminar sessão em todos os dispositivos" */
-.dd .sair-todos { font-size: 13px; color: var(--muted); }
 
 /* Proteção da conta: linha só informativa ("Última alteração da palavra-passe") */
 .protecao .info b { background: var(--surface-2); color: var(--muted); }

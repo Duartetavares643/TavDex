@@ -31,6 +31,7 @@ function arrancar() {
   });
 }
 
+// No fim dos testes: apaga as contas de teste e fecha o servidor e a base de dados
 async function parar() {
   await apagarTestes();
   if (servidor) await new Promise(resolve => servidor.close(resolve));

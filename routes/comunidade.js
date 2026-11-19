@@ -58,6 +58,7 @@ router.get('/feed', async (req, res) => {
   res.json({ publicacoes, total: total.n, pagina: pg.pagina, porPagina: pg.porPagina });
 });
 
+// Publicar no feed (pode ligar a publicação a um filme/série ou a um projeto)
 router.post('/publicacoes', exigirLogin, async (req, res) => {
   const texto = a.texto(req.body.texto, 'Publicação', 1, 1000);
   const tituloId = a.inteiroOuNulo(req.body.titulo_id, 'Filme/série', 1, MAX_ID);
@@ -74,6 +75,7 @@ router.post('/publicacoes', exigirLogin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Apagar uma publicação (só o autor ou um admin)
 router.delete('/publicacoes/:id', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Publicação', 1, MAX_ID);
   const p = await linha('SELECT utilizador_id FROM publicacoes WHERE id = ?', [id]);
@@ -83,6 +85,7 @@ router.delete('/publicacoes/:id', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Gosto: interruptor (se já gostava, tira o gosto)
 router.post('/publicacoes/:id/gosto', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Publicação', 1, MAX_ID);
   const p = await linha('SELECT id, utilizador_id FROM publicacoes WHERE id = ?', [id]);
@@ -98,6 +101,7 @@ router.post('/publicacoes/:id/gosto', exigirLogin, async (req, res) => {
   res.json({ gostei: !ja, gostos: n.n });
 });
 
+// Comentar uma publicação (ou responder a um comentário, com pai_id)
 router.post('/publicacoes/:id/comentarios', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Publicação', 1, MAX_ID);
   const p = await linha('SELECT id, utilizador_id FROM publicacoes WHERE id = ?', [id]);
@@ -120,6 +124,7 @@ router.post('/publicacoes/:id/comentarios', exigirLogin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Apagar um comentário do feed (só o autor ou um admin)
 router.delete('/comentarios/:id', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Comentário', 1, MAX_ID);
   const c = await linha('SELECT utilizador_id FROM comentarios WHERE id = ?', [id]);
@@ -178,6 +183,7 @@ router.get('/chat/:com', exigirLogin, async (req, res) => {
   res.json({ com: outro, mensagens });
 });
 
+// Enviar uma mensagem (na sala geral ou a uma pessoa)
 router.post('/chat/:com', exigirLogin, async (req, res) => {
   const outro = await conversa(req);
   const texto = a.texto(req.body.texto, 'Mensagem', 1, 1000);
@@ -203,6 +209,7 @@ async function obterMensagem(id) {
   return m;
 }
 
+// Editar uma mensagem minha
 router.put('/chat/mensagens/:id', exigirLogin, async (req, res) => {
   const m = await obterMensagem(req.params.id);
   if (m.de_id !== req.u.id) a.falha(403, 'Só podes editar as tuas mensagens.');
@@ -212,6 +219,7 @@ router.put('/chat/mensagens/:id', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Apagar uma mensagem (a minha, ou qualquer uma se for admin)
 router.delete('/chat/mensagens/:id', exigirLogin, async (req, res) => {
   const m = await obterMensagem(req.params.id);
   if (m.de_id !== req.u.id && req.u.papel !== 'admin') a.falha(403, 'Só podes apagar as tuas mensagens.');
@@ -224,6 +232,7 @@ router.delete('/chat/mensagens/:id', exigirLogin, async (req, res) => {
 // =====================================================================
 const TIPOS_NOTIF = ['seguidor', 'comentario', 'gosto', 'candidatura', 'mensagem', 'projeto', 'sistema'];
 
+// As minhas notificações (20 por página), com filtro por tipo
 router.get('/notificacoes', exigirLogin, async (req, res) => {
   const pg = a.paginacao(req, 20);
   const filtro = TIPOS_NOTIF.includes(req.query.tipo) ? ' AND tipo = ?' : '';
@@ -235,11 +244,13 @@ router.get('/notificacoes', exigirLogin, async (req, res) => {
   res.json({ notificacoes: lista, total: total.n, pagina: pg.pagina, porPagina: pg.porPagina, silenciadas, tipos: TIPOS_NOTIF });
 });
 
+// Marcar todas as notificações como lidas
 router.post('/notificacoes/lidas', exigirLogin, async (req, res) => {
   await executar('UPDATE notificacoes SET lida = 1 WHERE utilizador_id = ?', [req.u.id]);
   res.json({ ok: true });
 });
 
+// Marcar uma notificação como lida (só se for minha)
 router.post('/notificacoes/:id/lida', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Notificação', 1, MAX_ID);
   await executar('UPDATE notificacoes SET lida = 1 WHERE id = ? AND utilizador_id = ?', [id, req.u.id]);
@@ -261,6 +272,7 @@ router.put('/notificacoes/silenciadas', exigirLogin, async (req, res) => {
 const ALVOS = { publicacao: 'publicacoes', comentario: 'comentarios', review: 'avaliacoes', mensagem: 'mensagens' };
 const MOTIVOS = ['Spam', 'Ofensivo', 'Spoilers', 'Assédio', 'Conteúdo impróprio', 'Outro'];
 
+// Denunciar uma publicação, comentário, review ou mensagem
 router.post('/denuncias', exigirLogin, async (req, res) => {
   const tipo = a.escolha(req.body.tipo, Object.keys(ALVOS), 'Tipo');
   const alvoId = a.inteiro(req.body.alvo_id, 'Conteúdo', 1, MAX_ID);

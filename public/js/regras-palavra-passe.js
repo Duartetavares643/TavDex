@@ -65,6 +65,7 @@
     return [...partes];
   }
 
+  // A palavra-passe contém o nome, o @nome ou o início do email?
   function contemPessoal(p, dados) {
     const t = simplificar(p);
     return partesPessoais(dados).some(parte => t.includes(parte));

@@ -155,6 +155,7 @@ function ligarCampoEmail(campo, { verificar = false } = {}) {
   });
   campo.addEventListener('blur', () => { clearTimeout(relogio); verificarAgora(); });
 
+  // Verifica o email escrito: formato, sugestão e (no registo) pergunta ao servidor
   async function verificarAgora() {
     if (verificado === campo.value) return;
     verificado = campo.value;
@@ -365,15 +366,18 @@ function confirmarJanela({ titulo, texto, sim = 'Confirmar', nao = 'Cancelar' })
 // BroadcastChannel (e o evento "storage" nos browsers que não o têm).
 // =====================================================================
 const PAGINAS_PRIVADAS = /^\/(definicoes|listas|chat|notificacoes|admin|candidaturas|projeto-novo|projeto-editar)(\.html)?$/;
+// true se a página atual só abre com sessão iniciada
 const paginaPrivada = () => PAGINAS_PRIVADAS.test(location.pathname);
 let canalSessao = null;
 try { canalSessao = new BroadcastChannel('tavdex-sessao'); } catch (erro) { /* browser antigo: usa o "storage" */ }
 
+// Avisa os outros separadores abertos ("saiu" ou "entrou")
 function avisarOutrosSeparadores(tipo) {
   if (canalSessao) canalSessao.postMessage({ tipo });
   try { localStorage.setItem('tavdex-sessao', JSON.stringify({ tipo, t: Date.now() })); } catch (erro) { /* ignora */ }
 }
 
+// Recebe o aviso de outro separador e atualiza esta página
 function sessaoMudouNoutroSeparador(tipo) {
   if (tipo === 'saiu' && sessaoAtual) {
     // Página privada -> início; pública -> fica nela, agora como visitante
@@ -497,6 +501,7 @@ function corValida(cor) {
   const n = Math.round(Number(cor));
   return Number.isFinite(n) && n >= 0 && n <= 359 ? n : 330;
 }
+// Cenário do banner: só um dos 5 (senão, o primeiro)
 function temaValido(tema) {
   return Object.prototype.hasOwnProperty.call(TEMAS_BANNER, tema) ? tema : 'colina';
 }
@@ -514,6 +519,7 @@ const ICONES_PERFIL = {
   recomendados: '<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
   generos: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
 };
+// SVG de um dos ícones de cima (ex.: iconePerfil("seguidores"))
 function iconePerfil(nome) {
   return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONES_PERFIL[nome] || ''}</svg>`;
 }
@@ -580,11 +586,13 @@ const LOGO_GOOGLE = `<svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true">
 function manterSessaoGuardado() {
   try { return localStorage.getItem('tavdex-manter') === '1'; } catch (erro) { return false; }
 }
+// O botão em si (link para /api/auth/google, que volta à página "voltar")
 function botaoGoogle(texto = 'Continuar com Google', voltar = paginaAtual()) {
   const manter = manterSessaoGuardado() ? '&manter=1' : '';
   return `<a class="btn google" data-google href="/api/auth/google?voltar=${encodeURIComponent(voltar)}${manter}">${LOGO_GOOGLE}<span>${esc(texto)}</span></a>`;
 }
 
+// Link para o perfil de uma pessoa (mostra o nome; o @nome aparece ao passar o rato)
 function linkPerfil(u) {
   return `<a class="lk-u" href="/perfil.html?u=${encodeURIComponent(u.nome)}" title="@${esc(u.nome)}">${esc(nomeVisivel(u))}</a>`;
 }
@@ -610,6 +618,7 @@ function cartaz(t, classe = 'poster') {
     <span class="p-gen">${esc(t.genero1 || '')}</span></div>`;
 }
 
+// Média das estrelas com uma casa decimal ("–" se ainda não há avaliações)
 function media(t) {
   return t.media === null || t.media === undefined ? '–' : Number(t.media).toFixed(1);
 }
@@ -640,6 +649,7 @@ const CORES_ESTADO = {
   Ideia: 270, Recrutamento: 330, 'Pré-produção': 35, 'Em produção': 150, 'Concluído': 215,
   pendente: 35, aceite: 150, rejeitada: 0, resolvida: 150, ignorada: 215,
 };
+// Etiqueta colorida com o estado (ex.: "Pendente", "Aceite")
 function badgeEstado(estado) {
   const texto = estado.charAt(0).toUpperCase() + estado.slice(1);
   return `<span class="badge" style="--c:${CORES_ESTADO[estado] ?? 330}">${esc(texto)}</span>`;
@@ -663,6 +673,7 @@ function estrelas(nota) {
 
 // Campo para escolher de 1 a 5 estrelas (funciona só com HTML e CSS)
 let contadorEstrelas = 0;
+// Campo de 1 a 5 estrelas (botões de opção, da direita para a esquerda por causa do CSS)
 function campoEstrelas(atual = 0, nome = 'nota') {
   const n = ++contadorEstrelas;
   let html = '<div class="stars-in" role="radiogroup" aria-label="Classificação">';
@@ -684,6 +695,7 @@ function tempo(data) {
   if (s < 2592000) return `há ${Math.floor(s / 86400)} dias`;
   return dataCurta(data);
 }
+// Só a data: "12/03/2026"
 function dataCurta(data) {
   return data ? new Date(data.replace(' ', 'T')).toLocaleDateString('pt-PT') : '';
 }
@@ -725,6 +737,7 @@ function limparErrosCampos(form) {
   form.querySelectorAll('.erro-campo').forEach(s => s.remove());
 }
 
+// Põe cada campo errado a vermelho com a mensagem por baixo; o foco vai para o primeiro
 function marcarErrosCampos(form, erros) {
   let primeiro = null;
   for (const [nome, mensagem] of Object.entries(erros)) {
@@ -747,6 +760,7 @@ function marcarErrosCampos(form, erros) {
   if (primeiro) primeiro.focus();
 }
 
+// Liga o formulário (ver a explicação no bloco de cima)
 function ligarForm(form, funcao) {
   if (!form) return;
   // Ao corrigir um campo, a marca de erro do último envio desaparece.
@@ -857,6 +871,7 @@ const ICONES = {
   sino: '<svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"/></svg>',
 };
 
+// Barra do topo: logótipo, menu, pesquisa, modo claro/escuro e menu da conta (ou Entrar)
 function desenharTopo(u) {
   const ativo = document.body.dataset.menu || '';
   const menu = [['/', 'Início'], ['/catalogo.html?tipo=filme', 'Filmes'], ['/catalogo.html?tipo=serie', 'Séries'],
@@ -901,6 +916,7 @@ function desenharTopo(u) {
   });
 }
 
+// Rodapé com o logótipo e as ligações
 function desenharRodape(u) {
   const rodape = document.createElement('footer');
   rodape.className = 'ft';

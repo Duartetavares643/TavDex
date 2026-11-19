@@ -7,6 +7,7 @@
   const id = param('id');
   let d;
 
+  // Pede o projeto à API e desenha a página
   async function carregar() {
     try {
       d = await api('/api/projetos/' + encodeURIComponent(id));
@@ -16,6 +17,7 @@
     desenhar();
   }
 
+  // Desenha o projeto: capa, equipa, vagas, avaliações e comentários
   function desenhar() {
     const p = d.projeto;
     document.title = `${p.titulo} – TavDex`;
@@ -91,6 +93,7 @@
     ligarEventos();
   }
 
+  // Liga os botões (acompanhar, candidatar, avaliar, comentar, …)
   function ligarEventos() {
     const p = d.projeto;
 

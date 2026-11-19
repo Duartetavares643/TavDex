@@ -42,6 +42,7 @@ async function obterProjeto(id) {
 function podeGerir(u, p) {
   return !!u && (u.id === p.dono_id || u.papel === 'admin');
 }
+// Pára a rota com 403 se o utilizador não puder gerir o projeto
 function exigirGerir(u, p) {
   if (!podeGerir(u, p)) a.falha(403, 'Só o dono do projeto pode fazer isto.');
 }
@@ -160,6 +161,7 @@ router.put('/:id', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Apagar o projeto (só o dono ou um admin)
 router.delete('/:id', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   exigirGerir(req.u, p);
@@ -190,6 +192,7 @@ router.post('/:id/equipa', exigirLogin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Tirar alguém da equipa
 router.delete('/:id/equipa/:membro', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   exigirGerir(req.u, p);
@@ -211,6 +214,7 @@ router.post('/:id/vagas', exigirLogin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Abrir ou fechar uma vaga
 router.put('/:id/vagas/:vaga', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   exigirGerir(req.u, p);
@@ -219,6 +223,7 @@ router.put('/:id/vagas/:vaga', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Apagar uma vaga
 router.delete('/:id/vagas/:vaga', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   exigirGerir(req.u, p);
@@ -237,6 +242,7 @@ async function obterVaga(id) {
   return v;
 }
 
+// Candidatar-me a uma vaga aberta (com uma mensagem para o dono)
 router.post('/vagas/:vaga/candidatura', exigirLogin, async (req, res) => {
   const v = await obterVaga(req.params.vaga);
   if (!v.aberta) a.falha(400, 'Esta vaga já fechou.');
@@ -251,6 +257,7 @@ router.post('/vagas/:vaga/candidatura', exigirLogin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Retirar a minha candidatura (só enquanto está pendente)
 router.delete('/vagas/:vaga/candidatura', exigirLogin, async (req, res) => {
   const v = await obterVaga(req.params.vaga);
   const r = await executar("DELETE FROM candidaturas WHERE vaga_id = ? AND utilizador_id = ? AND estado = 'pendente'", [v.id, req.u.id]);
@@ -259,6 +266,7 @@ router.delete('/vagas/:vaga/candidatura', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Candidaturas recebidas pelo projeto (só o dono vê)
 router.get('/:id/candidaturas', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   exigirGerir(req.u, p);
@@ -269,6 +277,7 @@ router.get('/:id/candidaturas', exigirLogin, async (req, res) => {
   res.json({ projeto: { id: p.id, titulo: p.titulo }, candidaturas });
 });
 
+// Aceitar ou rejeitar uma candidatura (quem aceita entra na equipa)
 router.put('/candidaturas/:id', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Candidatura', 1, MAX_ID);
   const estado = a.escolha(req.body.estado, ['aceite', 'rejeitada'], 'Decisão');
@@ -311,6 +320,7 @@ router.post('/:id/acompanhar', exigirLogin, async (req, res) => {
   res.json({ acompanho: !ja });
 });
 
+// Comentar o projeto
 router.post('/:id/comentarios', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   const texto = a.texto(req.body.texto, 'Comentário', 1, 1000);
@@ -320,6 +330,7 @@ router.post('/:id/comentarios', exigirLogin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Apagar um comentário do projeto
 router.delete('/comentarios/:id', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Comentário', 1, MAX_ID);
   const c = await linha(`SELECT c.utilizador_id, p.dono_id FROM comentarios c JOIN projetos p ON p.id = c.projeto_id WHERE c.id = ?`, [id]);
@@ -330,6 +341,7 @@ router.delete('/comentarios/:id', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Avaliar o projeto (1 a 5 estrelas; o dono não pode)
 router.put('/:id/avaliacao', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   if (p.dono_id === req.u.id) a.falha(400, 'Não podes avaliar o teu próprio projeto.');
@@ -342,6 +354,7 @@ router.put('/:id/avaliacao', exigirLogin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Apagar a minha avaliação do projeto
 router.delete('/:id/avaliacao', exigirLogin, async (req, res) => {
   const p = await obterProjeto(req.params.id);
   await executar('DELETE FROM projeto_avaliacoes WHERE projeto_id = ? AND utilizador_id = ?', [p.id, req.u.id]);

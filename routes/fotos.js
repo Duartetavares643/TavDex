@@ -75,4 +75,4 @@ async function fotoDoGoogle(url) {
   }
 }
 
-module.exports = { receberFoto, processarFoto, receberBanner, processarBanner, fotoDoGoogle, urlGoogleValido };
+module.exports = { receberFoto, processarFoto, receberBanner, processarBanner, fotoDoGoogle };

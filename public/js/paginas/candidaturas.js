@@ -6,6 +6,7 @@
   if (!(await sessao)) return irLogin();
   const id = param('id');
 
+  // Pede as candidaturas à API e desenha a página
   async function carregar() {
     let d;
     try {

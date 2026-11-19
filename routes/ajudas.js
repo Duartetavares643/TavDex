@@ -49,6 +49,7 @@ class Validacao {
     if (!this.erros[nome]) this.erros[nome] = mensagem;
   }
 
+  // true se pelo menos um campo tem erro
   get temErros() { return Object.keys(this.erros).length > 0; }
 
   // O mesmo que campo(), para validações que esperam por algo (ex.: DNS do email)
@@ -62,6 +63,7 @@ class Validacao {
     }
   }
 
+  // No fim: se algum campo falhou, responde 400 com todos os erros juntos
   verificar() {
     if (this.temErros) falha(400, 'Corrige os campos assinalados.', { erros: this.erros });
   }
@@ -270,6 +272,7 @@ function nomeDispositivo(ua) {
     /Linux/.test(ua) ? 'Linux' : 'Dispositivo';
   return `${sistema} · ${browser}`;
 }
+// O mesmo, a partir do pedido (lê o cabeçalho User-Agent)
 function dispositivoDe(req) {
   return nomeDispositivo(req.get('User-Agent'));
 }
@@ -376,6 +379,7 @@ function colunasPublicas(t = 'u') {
 
 // Cores possíveis para o avatar (as mesmas das Definições)
 const CORES_AVATAR = [330, 0, 25, 45, 150, 199, 215, 270];
+// Uma dessas cores ao calhas (para as contas novas)
 function corAleatoria() {
   return CORES_AVATAR[Math.floor(Math.random() * CORES_AVATAR.length)];
 }
@@ -388,10 +392,11 @@ function temaBanner(valor) {
   return TEMAS_BANNER.includes(valor) ? valor : TEMAS_BANNER[0];
 }
 
+// (linhas, linha e executar vêm do db.js e são reexportadas por comodidade)
 module.exports = {
   falha, Validacao, texto, inteiro, inteiroOuNulo, escolha, booleano, email, urlImagem,
-  validarEmail, eDescartavel, dominioRecebeEmail, esconderEmail,
-  NOMES_RESERVADOS, nomeIndisponivel, nomeExibicao, REGRA_NOME_PESSOA,
+  validarEmail, esconderEmail,
+  nomeIndisponivel, nomeExibicao, REGRA_NOME_PESSOA,
   sha256, tokenAleatorio, ipDe, nomeDispositivo, dispositivoDe, registarAtividade, voltarSeguro,
   colunasPublicas, CORES_AVATAR, corAleatoria, TEMAS_BANNER, temaBanner,
   demasiado, nLinks, verificarSpam, notificar, paginacao, marcadores, publico,

@@ -77,6 +77,7 @@ router.get('/eu', async (req, res) => {
 //  quisesse usar isto para descobrir emails.)
 // ---------------------------------------------------------------------
 const pedidosEmail = new Map();   // ip -> { n, ate }
+// GET /email-disponivel?email=  →  o formulário de registo pergunta enquanto se escreve
 router.get('/email-disponivel', async (req, res) => {
   const ip = a.ipDe(req);
   const agora = Date.now();
@@ -109,6 +110,7 @@ router.post('/registo-inicio', (req, res) => {
   res.json({ ok: true });
 });
 
+// Criar conta (fica por confirmar: só entra depois de abrir o link do email)
 router.post('/registar', async (req, res) => {
   // Campo-armadilha: as pessoas não o veem, os robôs preenchem-no
   if (req.body.website) a.falha(400, 'Pedido inválido.');
@@ -167,6 +169,7 @@ router.post('/registar', async (req, res) => {
 // ---------------------------------------------------------------------
 const ERRO_LOGIN = 'Nome de utilizador/email ou palavra-passe incorretos.';
 
+// Entrar com o @nome ou o email e a palavra-passe
 router.post('/login', async (req, res) => {
   const login = a.texto(req.body.login, 'Nome de utilizador ou email', 1, 120).replace(/^@/, '');
   const password = a.texto(req.body.password, 'Palavra-passe', 1, 200);
@@ -249,6 +252,7 @@ function dataHora(d = new Date()) {
   return `${p.day}/${p.month}/${p.year} às ${p.hour}:${p.minute}`;
 }
 
+// Email "A tua palavra-passe foi alterada" (com data, dispositivo e "Não foste tu?")
 async function avisarPalavraPasseAlterada(req, u) {
   const nome = u.nome_exibicao || u.nome;
   const quando = `${dataHora()} · ${a.dispositivoDe(req)}`;
@@ -331,6 +335,7 @@ router.get('/repor/:token', async (req, res) => {
   res.json({ valido: true, nome: u.nome, nome_exibicao: u.nome_exibicao || '', email: u.email });
 });
 
+// Guardar a nova palavra-passe pedida pelo link do email (o link só serve uma vez)
 router.post('/repor', async (req, res) => {
   const pedido = await pedidoValido(req.body.token);
   if (!pedido) a.falha(400, 'Este link não é válido ou já expirou.', { codigo: 'link_invalido' });

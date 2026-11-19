@@ -14,8 +14,9 @@ const { exigirLogin } = require('./middleware');
 const { listaDe, recomendacoes } = require('./consultas');
 
 const router = express.Router();
-const MAX_ID = 2147483647;
+const MAX_ID = 2147483647;   // maior valor de uma coluna INT (ids)
 
+// Procura o título pelo id (valida o número); se não existir, responde 404
 async function obterTitulo(id) {
   const t = await linha('SELECT id, nome FROM titulos WHERE id = ?', [a.inteiro(id, 'Título', 1, MAX_ID)]);
   if (!t) a.falha(404, 'Filme ou série não encontrado.');
@@ -25,6 +26,7 @@ async function obterTitulo(id) {
 // ---------------------------------------------------------------------
 // Avaliações (uma por utilizador e por título)
 // ---------------------------------------------------------------------
+// Avaliar (ou editar a avaliação que já existe)
 router.put('/avaliacoes/titulo/:id', exigirLogin, async (req, res) => {
   const t = await obterTitulo(req.params.id);
   const nota = a.inteiro(req.body.nota, 'Classificação', 1, 5);
@@ -45,12 +47,14 @@ router.put('/avaliacoes/titulo/:id', exigirLogin, async (req, res) => {
   res.json({ ok: true, editada: !!existe });
 });
 
+// Apagar a minha avaliação de um título
 router.delete('/avaliacoes/titulo/:id', exigirLogin, async (req, res) => {
   const t = await obterTitulo(req.params.id);
   await executar('DELETE FROM avaliacoes WHERE utilizador_id = ? AND titulo_id = ?', [req.u.id, t.id]);
   res.json({ ok: true });
 });
 
+// Apagar uma avaliação pelo id (só o autor ou um admin)
 router.delete('/avaliacoes/:id', exigirLogin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Avaliação', 1, MAX_ID);
   const av = await linha('SELECT utilizador_id FROM avaliacoes WHERE id = ?', [id]);
@@ -65,6 +69,7 @@ router.delete('/avaliacoes/:id', exigirLogin, async (req, res) => {
 // ---------------------------------------------------------------------
 const TIPOS_LISTA = ['favorito', 'ver', 'visto'];
 
+// As três listas do utilizador de uma vez
 router.get('/listas', exigirLogin, async (req, res) => {
   const [favorito, ver, visto] = await Promise.all(TIPOS_LISTA.map(tipo => listaDe(req.u.id, tipo)));
   res.json({ favorito, ver, visto });
@@ -88,6 +93,7 @@ router.post('/listas/:id/:tipo', exigirLogin, async (req, res) => {
 // ---------------------------------------------------------------------
 // Recomendações
 // ---------------------------------------------------------------------
+// 24 títulos recomendados com base nos gostos do utilizador (consultas.js)
 router.get('/recomendacoes', exigirLogin, async (req, res) => {
   res.json({ titulos: await recomendacoes(req.u.id, 24) });
 });

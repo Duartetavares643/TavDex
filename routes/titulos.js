@@ -248,6 +248,7 @@ router.post('/', exigirAdmin, async (req, res) => {
   res.status(201).json({ id });
 });
 
+// Editar um título (admin)
 router.put('/:id', exigirAdmin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Título', 1, MAX_ID);
   if (!(await linha('SELECT id FROM titulos WHERE id = ?', [id]))) a.falha(404, 'Título não encontrado.');
@@ -261,6 +262,7 @@ router.put('/:id', exigirAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Apagar um título (admin)
 router.delete('/:id', exigirAdmin, async (req, res) => {
   const id = a.inteiro(req.params.id, 'Título', 1, MAX_ID);
   await executar('DELETE FROM titulos WHERE id = ?', [id]);   // avaliações, listas, temporadas... em cascata
@@ -277,6 +279,7 @@ router.post('/generos', exigirAdmin, async (req, res) => {
   res.status(201).json({ id: r.insertId });
 });
 
+// Apagar um género (admin)
 router.delete('/generos/:id', exigirAdmin, async (req, res) => {
   await executar('DELETE FROM generos WHERE id = ?', [a.inteiro(req.params.id, 'Género', 1, MAX_ID)]);
   res.json({ ok: true });
@@ -292,12 +295,14 @@ router.get('/pessoas/lista', exigirAdmin, async (req, res) => {
   res.json({ pessoas });
 });
 
+// Criar uma pessoa (ator, realizador, …) para o elenco (admin)
 router.post('/pessoas', exigirAdmin, async (req, res) => {
   const nome = a.texto(req.body.nome, 'Nome', 2, 100);
   const r = await executar('INSERT INTO pessoas (nome, foto) VALUES (?, ?)', [nome, a.urlImagem(req.body.foto)]);
   res.status(201).json({ id: r.insertId });
 });
 
+// Apagar uma pessoa (admin)
 router.delete('/pessoas/:id', exigirAdmin, async (req, res) => {
   await executar('DELETE FROM pessoas WHERE id = ?', [a.inteiro(req.params.id, 'Pessoa', 1, MAX_ID)]);
   res.json({ ok: true });
@@ -320,6 +325,7 @@ router.post('/:id/pessoas', exigirAdmin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Tirar uma pessoa do elenco de um título (admin)
 router.delete('/:id/pessoas/:pessoa/:funcao', exigirAdmin, async (req, res) => {
   await executar('DELETE FROM titulo_pessoas WHERE titulo_id = ? AND pessoa_id = ? AND funcao = ?', [
     a.inteiro(req.params.id, 'Título', 1, MAX_ID), a.inteiro(req.params.pessoa, 'Pessoa', 1, MAX_ID), a.escolha(req.params.funcao, FUNCOES, 'Função')]);
@@ -337,6 +343,7 @@ function dadosPlataforma(b) {
   return { nome: a.texto(b.nome, 'Nome', 2, 40), cor, url: url.slice(0, 200), logo: a.urlImagem(b.logo) };
 }
 
+// Criar uma plataforma de streaming (admin)
 router.post('/plataformas', exigirAdmin, async (req, res) => {
   const d = dadosPlataforma(req.body);
   if (await linha('SELECT id FROM plataformas WHERE nome = ?', [d.nome])) a.falha(400, 'Essa plataforma já existe.');
@@ -344,6 +351,7 @@ router.post('/plataformas', exigirAdmin, async (req, res) => {
   res.status(201).json({ id: r.insertId });
 });
 
+// Editar uma plataforma (admin)
 router.put('/plataformas/:id', exigirAdmin, async (req, res) => {
   const d = dadosPlataforma(req.body);
   await executar('UPDATE plataformas SET nome = ?, cor = ?, url = ?, logo = ? WHERE id = ?',
@@ -351,6 +359,7 @@ router.put('/plataformas/:id', exigirAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Apagar uma plataforma (admin)
 router.delete('/plataformas/:id', exigirAdmin, async (req, res) => {
   await executar('DELETE FROM plataformas WHERE id = ?', [a.inteiro(req.params.id, 'Plataforma', 1, MAX_ID)]);
   res.json({ ok: true });
@@ -388,11 +397,13 @@ router.post('/:id/temporadas', exigirAdmin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Apagar uma temporada e os seus episódios (admin)
 router.delete('/temporadas/:id', exigirAdmin, async (req, res) => {
   await executar('DELETE FROM temporadas WHERE id = ?', [a.inteiro(req.params.id, 'Temporada', 1, MAX_ID)]);
   res.json({ ok: true });
 });
 
+// Acrescentar um episódio a uma temporada (admin)
 router.post('/temporadas/:id/episodios', exigirAdmin, async (req, res) => {
   const temporada = a.inteiro(req.params.id, 'Temporada', 1, MAX_ID);
   if (!(await linha('SELECT id FROM temporadas WHERE id = ?', [temporada]))) a.falha(404, 'Temporada não encontrada.');
@@ -407,6 +418,7 @@ router.post('/temporadas/:id/episodios', exigirAdmin, async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+// Apagar um episódio (admin)
 router.delete('/episodios/:id', exigirAdmin, async (req, res) => {
   await executar('DELETE FROM episodios WHERE id = ?', [a.inteiro(req.params.id, 'Episódio', 1, MAX_ID)]);
   res.json({ ok: true });

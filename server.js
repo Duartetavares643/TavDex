@@ -61,6 +61,7 @@ app.use(helmet({
 // Lê o corpo dos pedidos em JSON (o JavaScript das páginas envia assim)
 // e em formulário normal. O limite evita pedidos gigantes.
 app.use(express.json({ limit: '100kb' }));
+// Formulários enviados à moda antiga (também até 100 KB)
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
 // ---------------------------------------------------------------------
@@ -101,6 +102,7 @@ app.get('/api/csrf', (req, res) => {
   res.json({ token: req.session.csrf });
 });
 
+// CSRF: os pedidos que mudam dados têm de trazer o cabeçalho X-CSRF-Token certo
 app.use((req, res, next) => {
   const alteraDados = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
   if (!alteraDados) return next();
@@ -176,6 +178,7 @@ const comToken = (req, res, next) => {
   res.set({ 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store' });
   next();
 };
+// Página do link "nova palavra-passe" e do link "confirmar email"
 app.get(['/repor', '/repor.html', '/nova-palavra-passe'], comToken, pagina('repor.html'));
 app.get(['/confirmar-email', '/confirmar-email.html', '/confirmar-email/:token'], comToken, pagina('confirmar-email.html'));
 
@@ -191,6 +194,7 @@ app.get('/perfil/:nome', async (req, res) => {
   res.redirect(novo ? 301 : 302, '/perfil.html?u=' + encodeURIComponent(novo || req.params.nome));
 });
 
+// Ficheiros da pasta public/ (páginas, CSS, JavaScript, imagens)
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // Página que não existe -> 404.html

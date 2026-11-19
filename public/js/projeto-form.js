@@ -5,6 +5,7 @@
 const TIPOS_PROJETO = ['Filme', 'Série', 'Curta-metragem', 'Documentário', 'Videoclipe'];
 const ESTADOS_PROJETO = ['Ideia', 'Recrutamento', 'Pré-produção', 'Em produção', 'Concluído'];
 
+// HTML dos campos (vazios ao criar; com os valores de "p" ao editar)
 function camposProjeto(p = {}) {
   const opcoes = (lista, atual) => lista.map(x => `<option ${x === atual ? 'selected' : ''}>${esc(x)}</option>`).join('');
   return `

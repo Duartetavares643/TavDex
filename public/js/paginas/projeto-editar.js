@@ -6,6 +6,7 @@
   const id = param('id');
   let d;
 
+  // Pede o projeto à API (só o dono consegue editar)
   async function carregar() {
     try {
       d = await api('/api/projetos/' + encodeURIComponent(id));
@@ -16,6 +17,7 @@
     desenhar();
   }
 
+  // Desenha os formulários: dados, equipa e vagas
   function desenhar() {
     const p = d.projeto;
     mostrar(`<div class="content"><div class="left narrow">
@@ -51,6 +53,7 @@
     ligarEventos();
   }
 
+  // Liga os formulários e os botões de apagar
   function ligarEventos() {
     const p = d.projeto;
     ligarForm(document.getElementById('f-dados'), async dados => {

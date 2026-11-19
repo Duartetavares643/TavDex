@@ -20,10 +20,11 @@ const HTTPS = (process.env.URL_SITE || '').startsWith('https');
 const NOME_COOKIE = 'tavdex.sid';
 const OPCOES_COOKIE = { path: '/', httpOnly: true, sameSite: 'lax', secure: HTTPS };
 
-const HORAS_SEM_ATIVIDADE = 12;
-const DIAS_MANTER = 30;
-const DIAS_MAXIMO = 90;
-const MS_MANTER = DIAS_MANTER * 24 * 60 * 60 * 1000;
+// Durações das sessões (ver o topo do ficheiro)
+const HORAS_SEM_ATIVIDADE = 12;   // sem "Manter sessão": termina depois de 12 h sem atividade
+const DIAS_MANTER = 30;           // com "Manter sessão": 30 dias, renovados com a atividade
+const DIAS_MAXIMO = 90;           // ... mas nunca mais de 90 dias desde o login
+const MS_MANTER = DIAS_MANTER * 24 * 60 * 60 * 1000;   // os 30 dias em milissegundos (para o cookie)
 
 // Procura a sessão deste browser na tabela sessoes e diz se já expirou
 async function procurarSessao(req) {
@@ -36,6 +37,8 @@ async function procurarSessao(req) {
       (ultimo_acesso < NOW() - INTERVAL 5 MINUTE)                                AS renovar
     FROM sessoes WHERE token_hash = ? AND utilizador_id = ?`, [sha256(token), uid]);
 }
+
+// true se a sessão encontrada já expirou por um dos três motivos acima
 const expirada = s => !!(s && (s.expirou_data || s.expirou_inatividade || s.expirou_maximo));
 
 // Lê a sessão e confirma que:
@@ -86,7 +89,6 @@ function exigirLogin(req, res, next) {
   if (!req.u) falha(401, 'Inicia sessão para continuar.', { codigo: 'login_necessario' });
   next();
 }
-const exigirLoginApi = exigirLogin;   // o mesmo, com o nome usado no anteprojeto
 
 // API: só deixa passar administradores
 function exigirAdmin(req, res, next) {
@@ -143,6 +145,6 @@ async function terminarSessao(req, res) {
 }
 
 module.exports = {
-  utilizadorAtual, exigirLogin, exigirLoginApi, exigirAdmin, exigirLoginPagina, iniciarSessao, terminarSessao,
-  NOME_COOKIE, OPCOES_COOKIE, DIAS_MANTER, HORAS_SEM_ATIVIDADE,
+  utilizadorAtual, exigirLogin, exigirAdmin, exigirLoginPagina, iniciarSessao, terminarSessao,
+  NOME_COOKIE, OPCOES_COOKIE,
 };

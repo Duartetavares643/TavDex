@@ -210,6 +210,7 @@
   const corEscolhida = () => corValida(fPerfil.querySelector('[name=cor]:checked')?.value);
   const temaEscolhido = () => temaValido(fPerfil.querySelector('[name=tema_banner]:checked')?.value);
 
+  // Atualiza a pré-visualização do perfil com o que está escrito no formulário
   function preVisualizar() {
     const f = fPerfil.elements;
     const cor = corEscolhida();
@@ -291,6 +292,7 @@
   // Géneros favoritos: no máximo 3 (os outros ficam desativados quando já há 3)
   const caixasGeneros = [...fPerfil.querySelectorAll('[data-genero]')];
   const generosEscolhidos = () => caixasGeneros.filter(c => c.checked).map(c => Number(c.value));
+  // Com 3 géneros escolhidos, os outros ficam desativados
   function limitarGeneros() {
     const cheio = generosEscolhidos().length >= 3;
     caixasGeneros.forEach(c => { c.disabled = cheio && !c.checked; });
@@ -553,6 +555,7 @@
       tela: [360, 200], zona: [170, 170 / 3], circulo: false, saida: [1500, 500], classe: 'banner',
     },
   };
+  // Abre a janela de recorte; devolve o Blob JPEG recortado, ou null se cancelar
   function recortarFoto(ficheiro, tipo = 'foto') {
     const cfg = RECORTES[tipo];
     return new Promise(resolve => {
