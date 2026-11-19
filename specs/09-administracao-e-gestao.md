@@ -1,45 +1,59 @@
 # Administração e gestão do sistema
 
 ## Objetivo
-A área administrativa do TavDex permite gerir a plataforma, controlar interações, decidir sobre candidaturas e tratar denúncias. Esta funcionalidade é essencial para manter o sistema funcional, seguro e bem organizado.
+A área de administração do TavDex permite gerir a plataforma, moderar a comunidade e manter o catálogo. É essencial para manter o sistema funcional, seguro e organizado.
 
-## Papel administrativo
-O utilizador com perfil de administrador tem acesso a ações de gestão que não estão disponiveis para utilizadores comuns.
+## Papel de administrador
+O utilizador com o papel de administrador tem acesso ao **painel de administração** (`admin.html`), que os utilizadores comuns não veem.
 
-Funções principais:
-- consultar área administrativa;
-- gerir denúncias;
-- verificar projetos e candidaturas quando necessário;
-- controlar acesso às secções restritas.
+## Estatísticas
+O painel mostra:
+- totais de utilizadores, títulos, avaliações, projetos, publicações e mensagens;
+- denúncias pendentes e contas bloqueadas;
+- novos registos nos últimos 6 meses (gráfico de barras);
+- os títulos mais avaliados.
 
-## Gestão de candidaturas
-Se o dono do projeto não puder acompanhar o processo ou se houver necessidade de gestão central, um administrador pode intervir. O sistema valida quem pode ver e decidir sobre candidaturas.
+## Gestão de utilizadores
+- Pesquisa de contas pelo @nome ou email (25 por página);
+- Bloquear ou desbloquear uma conta: uma conta bloqueada perde logo todas as sessões abertas e não consegue entrar;
+- Dar ou tirar o papel de administrador;
+- Um administrador não pode alterar a sua própria conta neste painel;
+- O último administrador do site não pode apagar a sua conta (o TavDex precisa sempre de pelo menos um).
 
 ## Gestão de denúncias
-As denúncias podem ser tratadas para:
-- validar a gravidade do conteúdo;
-- bloquear ou remover ações problemáticas;
-- manter um ambiente respeitador e seguro.
+As denúncias aparecem com o conteúdo denunciado, o autor e o motivo, separadas por estado (pendentes, resolvidas, ignoradas). O administrador pode:
+- marcar a denúncia como resolvida ou ignorada;
+- apagar o conteúdo denunciado (todas as denúncias sobre esse conteúdo ficam resolvidas);
+- bloquear a conta responsável.
+
+## Gestão do catálogo
+O administrador mantém o catálogo:
+- criar, editar e apagar filmes e séries;
+- criar e apagar géneros;
+- criar pessoas e juntá-las ao elenco e à equipa de um título;
+- criar, editar e apagar plataformas de streaming e indicar onde ver cada título;
+- criar temporadas e episódios das séries.
+
+## Gestão de projetos e candidaturas
+O administrador pode editar ou apagar qualquer projeto e ver e decidir as suas candidaturas, se o dono não o puder fazer.
 
 ## Segurança e controlo
-A gestão administrativa inclui:
-- controlo de sessão;
-- acesso restrito por perfil;
-- validação de ações sensíveis;
-- mensagens de erro e de confirmação;
-- rejeição de pedidos inválidos.
+- Todas as rotas da API de administração exigem sessão de administrador (`exigirAdmin`);
+- A página `admin.html` só abre com sessão iniciada;
+- Os dados recebidos são sempre validados no servidor;
+- Os pedidos sem permissão recebem 401 (sem sessão) ou 403 (sem autorização), com uma mensagem clara.
 
-## Regras relevantes
-- Um utilizador comum não pode aceder a páginas administrativas;
-- A página de administração exige autenticação e autorização;
-- O exemplo de código do projeto usa a função exigir_admin();
-- a interface mostra mensagens claras quando o utilizador não tem acesso.
+## Ficheiros associados
+- `routes/admin.js` — estatísticas, utilizadores e denúncias;
+- `routes/titulos.js` — gestão do catálogo (rotas só para administradores);
+- `routes/middleware.js` — `exigirAdmin`;
+- `public/js/paginas/admin.js` — a página do painel.
 
 ## Casos de uso
-- O administrador valida uma denúncia de mensagem ofensiva;
-- O administrador acompanha uma candidatura em projeto de outra pessoa;
-- O utilizador sem privilégio tenta entrar na área admin e recebe acesso restrito;
-- O administrador faz gestão de rotinas e manutenção da plataforma.
+- O administrador valida a denúncia de uma mensagem ofensiva e apaga-a;
+- O administrador bloqueia uma conta que faz spam;
+- O administrador acrescenta um filme novo ao catálogo;
+- Um utilizador sem permissão tenta abrir a área de administração e recebe acesso negado.
 
 ## Resultado esperado
-A área administrativa garante que o TavDex permanece organizado, moderado e funcional, preservando a qualidade da experiência para todos os utilizadores.
+A área de administração garante que o TavDex permanece organizado, moderado e funcional, preservando a qualidade da experiência para todos os utilizadores.

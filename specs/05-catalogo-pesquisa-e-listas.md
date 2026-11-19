@@ -1,62 +1,70 @@
 # Catálogo, pesquisa e listas pessoais
 
 ## Objetivo
-O TavDex pretende funcionar como um centro de organização e descoberta de filmes e séries. Para isso, reúne as funcionalidades de catálogo, pesquisa, filtros, paginação e gestão de listas pessoais.
+O TavDex funciona como um centro de organização e descoberta de filmes e séries. Para isso, reúne o catálogo, a pesquisa, os filtros, a paginação e as listas pessoais.
+
+## Página inicial
+A página inicial mostra:
+- um destaque grande com vários títulos a passar;
+- filas de cartazes (novidades, mais populares e alguns géneros);
+- o top 10 dos mais bem avaliados;
+- os projetos mais recentes;
+- para quem tem sessão, as recomendações.
 
 ## Catálogo
-A página catalogo.php apresenta os títulos disponíveis, com:
+A página do catálogo (`catalogo.html`) mostra os títulos com:
 - filtro por tipo: filme ou série;
 - pesquisa por título ou realizador;
-- filtro por género;
+- filtro por género (botões no topo);
 - filtro por ano;
-- filtro por avaliação mínima;
 - filtro por plataforma de streaming;
-- ordenação por nome, data, avaliação ou popularidade;
-- paginação de resultados.
+- ordenação: mais recentes, nome, ano, melhor avaliados ou mais populares;
+- paginação (24 títulos por página).
 
 ## Pesquisa e filtros
-A busca usa parâmetros de query string e constrói a consulta de forma segura, sem concatenar diretamente texto sem validação.
+A pesquisa geral (barra do topo) procura ao mesmo tempo títulos, projetos, pessoas e utilizadores.
 
-Filtros implementados:
-- tipo de conteúdo;
-- palavra-chave;
-- género;
-- ano;
-- avaliação mínima;
-- plataforma;
-- ordem de apresentação.
+Segurança das consultas:
+- Os valores dos filtros vão sempre em *prepared statements* (`?`);
+- A ordenação só aceita uma das opções de uma lista fixa (não se pode pôr `?` no `ORDER BY`).
+
+## Página de um título
+Para cada filme ou série, o sistema mostra:
+- cartaz (ou um cartaz desenhado com a cor do título, quando não há imagem);
+- nome, ano, tipo, duração e géneros;
+- sinopse e realizador;
+- avaliação média e número de avaliações;
+- onde ver (plataformas de streaming);
+- elenco e equipa;
+- temporadas e episódios (séries);
+- avaliações e reviews dos utilizadores.
 
 ## Listas pessoais
-Cada utilizador pode guardar conteúdos em listas de:
+Cada utilizador pode guardar títulos em três listas:
 - Favoritos;
-- Para ver;
+- A ver;
 - Vistos.
 
-Essas listas são geridas em listas.php e ações por acoes.php. Quando um utilizador marca um título como visto, o sistema remove automaticamente a opção de “para ver” para esse mesmo item.
+Na página de um título, cada botão funciona como um interruptor (põe ou tira da lista). A página "As minhas listas" mostra as três listas em separadores.
 
-## Regras de lista
-- Um utilizador não pode repetir o mesmo item na mesma lista;
-- Cada lista é específica para o utilizador;
-- A listagem pode ser visualizada por categoria;
-- É possível remover itens da lista.
+## Regras das listas
+- Um título não pode aparecer duas vezes na mesma lista (chave única);
+- Cada lista pertence a um só utilizador;
+- Marcar como visto (ou avaliar) tira o título da lista "a ver";
+- No perfil público, as listas só aparecem se o dono o permitir.
 
-## Conteúdo associado
-Para cada título, o sistema pode mostrar:
-- cartaz;
-- nome;
-- tipo;
-- género;
-- avaliação média;
-- número de avaliações;
-- sinopse;
-- plataformas de visualização.
+## Ficheiros associados
+- `routes/titulos.js` — catálogo, página inicial, pesquisa e página do título;
+- `routes/avaliacoes.js` — listas pessoais e recomendações;
+- `routes/consultas.js` — SQL partilhado dos cartões;
+- `public/js/paginas/index.js`, `catalogo.js`, `pesquisa.js`, `titulo.js`, `listas.js` — as páginas.
 
 ## Casos de uso
-- O utilizador procura um filme por nome;
-- O utilizador escolhe apenas séries com avaliação acima de 4 estrelas;
+- O utilizador procura um filme pelo nome;
+- O utilizador vê só séries de um género, ordenadas pelas melhor avaliadas;
 - O utilizador guarda itens nos favoritos;
 - O utilizador marca um título como já visto;
-- O utilizador consulta o histórico das suas listas pessoais.
+- O utilizador consulta as suas listas pessoais.
 
 ## Resultado esperado
-O utilizador consegue encontrar conteúdos rapidamente, organizar os seus interesses e manter uma gestão pessoal eficaz de filmes e séries na plataforma.
+O utilizador encontra conteúdos rapidamente, organiza os seus interesses e gere as suas listas de filmes e séries na plataforma.

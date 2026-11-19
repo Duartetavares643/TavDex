@@ -1,62 +1,81 @@
 # Login, registo e recuperação de conta
 
 ## Objetivo
-Esta funcionalidade permite que os utilizadores acedam ao TavDex com segurança, criem a sua conta e recuperem a palavra-passe quando necessário.
+Esta funcionalidade permite que os utilizadores criem a sua conta, entrem no TavDex com segurança e recuperem a palavra-passe quando a esquecem.
 
 ## Fluxo de registo
-A funcionalidade de registo permite criar uma conta com:
-- nome de utilizador;
+O registo pede:
+- nome (ex.: "Duarte Tavares");
+- @nome de utilizador;
 - email;
-- palavra-passe;
-- biometria mínima do perfil (bio, localização e cor de avatar, opcionalmente).
+- palavra-passe e confirmação;
+- aceitação das regras da comunidade.
+
+Também é possível criar conta com o botão **"Registar com Google"**.
 
 Regras de negócio:
-- O nome de utilizador deve ter um formato válido;
-- O email deve ser único e válido;
-- A palavra-passe deve cumprir critérios de segurança;
-- A conta é registada com papel padrão de utilizador;
-- O sistema deve impedir duplicações de email e username.
+- O **nome** só aceita letras (com acentos), espaços, hífen e apóstrofo: sem números, símbolos ou caracteres invisíveis;
+- O **@nome** tem 3 a 30 caracteres (letras, números, `_` e `.`), é único e não pode ser um nome reservado (`admin`, `tavdex`, `suporte`, …) nem o @nome antigo de outra pessoa;
+- O **email** tem de ter um formato válido, não pode ser de um serviço de emails temporários e o domínio tem de existir e receber emails;
+- A **palavra-passe** tem de ter pelo menos 10 caracteres, maiúsculas, minúsculas, números e símbolos. Não pode conter o nome, o @nome ou o email, nem ser uma das palavras-passe mais comuns ou ter aparecido em fugas de dados;
+- A conta é criada com o papel de utilizador e **por confirmar**: só entra depois de abrir o link enviado para o email (válido 24 horas).
+
+Ajudas no formulário:
+- Enquanto se escreve, cada campo errado fica a vermelho com a mensagem por baixo;
+- O @nome mostra "Disponível" ou "Já está a ser usado";
+- O email sugere correções de erros de escrita ("Querias dizer …@gmail.com?");
+- A palavra-passe mostra a lista de requisitos e uma barra de força.
+
+Proteção contra robôs:
+- Campo-armadilha invisível;
+- Tempo mínimo para preencher o formulário;
+- No máximo 15 contas novas por IP em 10 minutos.
+
+Depois de criar a conta, o utilizador vai para a página de login com o aviso "Conta criada!" e um botão para reenviar o email de confirmação.
 
 ## Fluxo de login
-O login valida as credenciais do utilizador e inicia a sessão no sistema. Se o utilizador estiver bloqueado ou a conta não existir, a resposta é tratada como erro.
+O login aceita o @nome ou o email e a palavra-passe, ou o botão **"Continuar com Google"**. A opção **"Manter sessão iniciada"** escolhe a duração da sessão.
 
-A sessão é mantida através de:
-- armazenamento do identificador do utilizador em $_SESSION;
-- validação por função exigir_login();
-- proteção por CSRF em formulários POST;
-- controlo de acesso em páginas que exigem autenticação.
+- Credenciais erradas dão sempre a mesma mensagem, para não revelar se a conta existe;
+- Depois de 5 tentativas falhadas numa conta (ou 20 a partir do mesmo IP) em 15 minutos, o login fica bloqueado durante 15 minutos (com uma ligação para recuperar a palavra-passe);
+- Uma conta com o email por confirmar não entra: aparece o botão para reenviar o link;
+- Uma conta bloqueada pela administração não entra;
+- Depois do login, o utilizador volta à página onde estava.
 
 ## Recuperação de palavra-passe
-O utilizador pode solicitar reset da password com base no email.
+O utilizador pede a recuperação com o **email ou o @nome**.
 
 Processo:
-1. O sistema verifica se o email existe;
-2. Gera um token seguro;
-3. Guarda o token em hash na base de dados;
-4. Envia o link de recuperação ao email ou disponibiliza o link em modo de desenvolvimento;
-5. O utilizador define uma nova palavra-passe;
-6. O token expira após um período definido (1 hora, no projeto).
+1. O sistema responde sempre com a mesma mensagem, exista ou não a conta;
+2. Se a conta existir, gera um token aleatório e guarda só o seu hash (SHA-256);
+3. Envia para o email um link para definir uma nova palavra-passe (o email mostra o @nome);
+4. O link é válido durante 30 minutos e só serve uma vez;
+5. O utilizador define a nova palavra-passe (com as mesmas regras do registo);
+6. As sessões abertas noutros dispositivos são terminadas e é enviado o email "A tua palavra-passe foi alterada".
+
+Limites: no máximo 3 pedidos por hora por conta e 10 por hora por IP.
 
 ## Regras de segurança
-- O token é guardado em hash SHA-256;
-- O link tem validade temporária;
-- A mesma mensagem é usada para qualquer email, para não revelar se a conta existe;
-- O utilizador é redirecionado para a página de login após as operações principais;
-- As operações de alteração e reset são protegidas por token CSRF.
+- Os tokens (recuperação e confirmação do email) são guardados apenas em hash;
+- Os links têm validade curta e são de uso único;
+- A página do link tira o token da barra de endereço e não o envia a outros sites (`no-referrer`);
+- Todas as ações que mudam dados exigem o token CSRF;
+- As mensagens nunca revelam se um email ou @nome tem conta (exceto no registo, com limite de pedidos).
 
-## Páginas associadas
-- login.php
-- registar.php
-- recuperar.php
-- repor.php
-- lib.php (funções exige_login, token_csrf, verificar_csrf)
+## Ficheiros associados
+- `routes/auth.js` — registo, login, logout, recuperação;
+- `routes/confirmacao-email.js` — confirmação do email por link;
+- `routes/google.js` — login com o Google;
+- `routes/palavras-passe.js` e `public/js/regras-palavra-passe.js` — regras das palavras-passe;
+- `public/js/regras-email.js` — regras do email;
+- `public/js/paginas/registar.js`, `login.js`, `recuperar.js`, `repor.js`, `confirmar-email.js` — as páginas.
 
 ## Cenários de uso
-- O utilizador entra no sistema pela primeira vez;
-- O utilizador esquece a palavra-passe;
-- O utilizador tenta aceder a uma página sem sessão;
-- O utilizador tenta autenticar-se com credenciais inválidas;
-- O utilizador altera a password após o login.
+- O utilizador cria conta e confirma o email;
+- O utilizador entra com o Google;
+- O utilizador esquece a palavra-passe e recebe o link no email;
+- O utilizador tenta abrir uma página privada sem sessão e é levado ao login;
+- O utilizador tenta entrar com credenciais erradas.
 
 ## Resultado esperado
-O utilizador consegue criar uma conta, iniciar sessão, recuperar o acesso e navegar no sistema de forma segura e controlada.
+O utilizador consegue criar uma conta verdadeira, entrar, recuperar o acesso e navegar no sistema de forma segura e controlada.

@@ -1,27 +1,26 @@
 # TavDex — documentação funcional
 
 ## Visão geral
-O TavDex é uma plataforma web de descoberta, organização e avaliação de filmes e séries. A ideia central é reunir num único espaço informação sobre conteúdos audiovisuais, para além de permitir a criação de projetos cinematográficos e a interação entre utilizadores.
+O TavDex é uma plataforma web de descoberta, organização e avaliação de filmes e séries. A ideia central é reunir num único espaço informação sobre conteúdos audiovisuais, permitir a criação de projetos cinematográficos e a interação entre utilizadores.
 
-O projeto foi pensado como um sistema dinâmico e responsivo, com base de dados relacional, acesso autenticado e perfis pessoais. A documentação abaixo organiza as principais funcionalidades do sistema em ficheiros separados, para facilitar manutenção, análise e apresentação da PAP.
+O projeto é um site dinâmico e responsivo, com base de dados relacional, contas com autenticação segura e perfis pessoais. A documentação abaixo organiza as principais funcionalidades em ficheiros separados, para facilitar a manutenção, a análise e a apresentação da PAP.
 
 ## Objetivo do projeto
-- Centralizar catálogo de filmes e séries;
-- Permitir pesquisa, filtros e organização por género, ano e avaliação;
+- Centralizar um catálogo de filmes e séries;
+- Permitir pesquisa, filtros e organização por género, ano, plataforma e avaliação;
 - Dar ao utilizador a possibilidade de guardar conteúdo em listas pessoais;
-- Permitir avaliação com classificação 1 a 5 e reviews;
-- Criar comunidade com perfis, seguidores e chat;
-- Facilitar a partilha de projetos cinematográficos e candidaturas;
-- Garantir gestão administrativa e controlo de segurança.
+- Permitir avaliações de 1 a 5 estrelas com reviews;
+- Criar uma comunidade com perfis, seguidores, feed e chat;
+- Facilitar a partilha de projetos cinematográficos e as candidaturas;
+- Garantir a gestão administrativa e a segurança das contas.
 
 ## Estrutura funcional principal
-- Autenticação e sessão do utilizador;
-- Gestão de perfil e seguidores;
-- Catálogo, pesquisa e filtros;
-- Listas pessoais;
-- Avaliações, reviews e recomendações;
+- Autenticação, sessões e segurança das contas;
+- Perfil e seguidores;
+- Catálogo, pesquisa, filtros e listas pessoais;
+- Avaliações, reviews, recomendações e notificações;
 - Projetos cinematográficos;
-- Comunicação e comunidade;
+- Comunidade, chat e denúncias;
 - Administração.
 
 ## Documentação por funcionalidade
@@ -36,19 +35,22 @@ O projeto foi pensado como um sistema dinâmico e responsivo, com base de dados 
 9. [09-administracao-e-gestao.md](./09-administracao-e-gestao.md)
 
 ## Tecnologias e base de dados
-O projeto utiliza:
-- PHP para a lógica do servidor;
-- HTML, CSS e JavaScript para a interface web;
-- MySQL como base de dados relacional;
-- Sessões para autenticação e controlo de acesso;
-- PDO para consulta e segurança das queries;
-- CSRF e validação de inputs para reduzir vulnerabilidades.
+- **Node.js + Express** no servidor (uma API que responde em JSON);
+- **HTML, CSS e JavaScript** no browser (cada página pede os dados à API);
+- **MySQL** como base de dados relacional, com *prepared statements* (`?`) em todas as consultas;
+- **express-session** para as sessões, guardadas na base de dados;
+- **bcrypt** para as palavras-passe, **helmet** para os cabeçalhos de segurança;
+- **Nodemailer** (Gmail) para os emails, **sharp** e **multer** para as imagens;
+- **Login com o Google** (OAuth 2.0 com PKCE);
+- **Testes automáticos** com `node:test` (`npm test`).
 
 ## Ficheiros relevantes do projeto
-- login.php, registar.php, recuperar.php, repor.php — fluxo de autenticação;
-- lib.php — funções de sessão, validação, segurança e apresentação;
-- catalogo.php — pesquisa, filtros e paginação;
-- listas.php — listas pessoais de favoritos e conteúdos;
-- projeto_novo.php e projeto_form.php — criação de projetos;
-- chat.php e chat_api.php — comunidade e mensagens;
-- admin.php — gestão administrativa.
+- `server.js` — arranque do servidor, segurança, sessões e ligação das rotas;
+- `db.js` — ligação ao MySQL;
+- `routes/` — a API, um ficheiro por área (ver `routes/README.md`);
+- `public/*.html` — as páginas (uma por ecrã);
+- `public/js/main.js` e `public/js/api.js` — partes comuns a todas as páginas;
+- `public/js/paginas/` — o JavaScript de cada página;
+- `public/css/style.css` — o aspeto do site (modo escuro e modo claro);
+- `database/` — scripts SQL (criar a base de dados, dados de exemplo e alterações);
+- `tests/` — testes automáticos.

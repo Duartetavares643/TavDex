@@ -1,48 +1,72 @@
-# Avaliações, reviews e notificações
+# Avaliações, reviews, recomendações e notificações
 
 ## Objetivo
-A experiência do TavDex não se resume à consulta de conteúdo. O sistema permite que cada utilizador exprima a sua opinião e receba informação relevante sobre interações dentro da comunidade.
+O TavDex não se resume à consulta de conteúdo. Cada utilizador pode dar a sua opinião, receber sugestões à medida e ser avisado das interações da comunidade.
 
 ## Avaliações
 Os utilizadores podem classificar títulos de 1 a 5 estrelas.
 
 Regras:
-- cada utilizador pode avaliar cada título apenas uma vez;
-- a nota é guardada com validação de intervalo 1 a 5;
-- a avaliação pode incluir review opcional;
-- existe suporte para marcar spoiler.
+- cada utilizador avalia cada título uma única vez (se avaliar outra vez, a avaliação é editada);
+- a nota é validada no servidor (1 a 5);
+- a avaliação pode ter uma review opcional (até 2000 caracteres);
+- quem avalia passa a ter o título nos "vistos".
 
-As avaliações são guardadas em `avaliacoes` e a média resultante pode ser apresentada em páginas de catálogo e detalhe.
+As avaliações ficam na tabela `avaliacoes`. A média e o total vêm da vista `vw_titulos_avaliacao` e aparecem no catálogo e na página do título.
 
 ## Reviews
-A review permite deixar um comentário mais completo sobre o conteúdo, com possibilidade de:
-- texto livre;
-- identificação de spoilers;
-- edição posterior da revisão;
-- visualização da data da última edição.
+A review permite deixar uma opinião mais completa sobre o conteúdo, com:
+- texto livre (no máximo 2 links);
+- aviso de spoiler (o texto fica escondido até se clicar);
+- edição posterior, com a data da última edição;
+- botão para denunciar.
+
+## Recomendações
+O "Recomendado para ti" sugere títulos com base:
+- nos géneros dos títulos que o utilizador avaliou bem ou marcou como favoritos;
+- nos géneros favoritos escolhidos no perfil (útil enquanto há poucas avaliações).
+
+Não sugere títulos que o utilizador já viu ou avaliou.
 
 ## Notificações
-O sistema produz notificações para informar os utilizadores sobre eventos importantes, como:
-- início de seguimento;
-- resposta a candidatura;
-- nova mensagem recebida;
-- alterações no estado de um projeto;
-- interação relevante na comunidade.
+O sistema cria notificações para avisar os utilizadores de:
+- novo seguidor;
+- comentário numa publicação ou projeto;
+- gosto numa publicação;
+- candidatura recebida ou resposta a uma candidatura;
+- nova mensagem privada;
+- novidades num projeto que acompanha;
+- avisos do sistema.
+
+A página de notificações:
+- tem filtros por tipo;
+- permite marcar como lidas (uma ou todas);
+- permite silenciar tipos de notificação.
+
+O utilizador pode também receber as notificações por email. O número de notificações por ler aparece no topo do site.
 
 ## Feedback ao utilizador
-A plataforma usa mensagens flash para confirmar ações e informar o utilizador de erros. Isso melhora a experiência e facilita o entendimento dos estados do sistema.
+A plataforma mostra avisos verdes (sucesso) e vermelhos (erro) no topo da página. Nos formulários, os campos errados ficam a vermelho com a mensagem por baixo.
 
 ## Regras de segurança
-- O sistema valida a informação antes de guardar;
-- as ações de avaliação e comentários dependem de sessão autenticada;
-- as notificações são associadas ao respetivo utilizador;
-- há controlo para prevenir abuso e excesso de ações num curto intervalo de tempo.
+- O servidor valida tudo antes de guardar;
+- Avaliar e comentar exige sessão iniciada;
+- Cada notificação pertence a um utilizador e só ele a vê;
+- Ninguém é notificado das suas próprias ações;
+- Há limites contra o excesso de ações em pouco tempo.
+
+## Ficheiros associados
+- `routes/avaliacoes.js` — avaliações, listas e recomendações;
+- `routes/consultas.js` — cálculo das recomendações;
+- `routes/comunidade.js` — notificações;
+- `routes/ajudas.js` — função `notificar()`;
+- `public/js/paginas/titulo.js` e `notificacoes.js` — as páginas.
 
 ## Casos de uso
 - O utilizador avalia um filme com 4 estrelas;
 - O utilizador escreve uma review com aviso de spoiler;
 - O utilizador recebe uma notificação de novo seguidor;
-- O utilizador recebe uma mensagem privada ou uma resposta a uma candidatura.
+- O utilizador recebe uma mensagem privada ou a resposta a uma candidatura.
 
 ## Resultado esperado
-O utilizador consegue classificar, comentar e receber feedback contextualizado, tornando a plataforma mais dinâmica e interativa.
+O utilizador consegue classificar, comentar, receber sugestões e ser avisado do que acontece, tornando a plataforma mais dinâmica e interativa.

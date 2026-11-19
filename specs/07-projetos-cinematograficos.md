@@ -1,35 +1,32 @@
 # Projetos cinematográficos
 
 ## Objetivo
-Uma das funcionalidades mais distintivas do TavDex é a criação de projetos cinematográficos pelos próprios utilizadores. A ideia é permitir que pessoas publiquem ideias de filmes, séries, curtas, documentários ou videoclipes e encontrem colaboradores.
+Uma das funcionalidades mais distintivas do TavDex é a criação de projetos cinematográficos pelos próprios utilizadores. As pessoas podem publicar ideias de filmes, séries, curtas, documentários ou videoclipes e encontrar colaboradores.
 
 ## Estrutura do projeto
 Cada projeto tem:
-- título;
-- sinopse;
-- tipo de projeto;
+- título e sinopse;
+- tipo: Filme, Série, Curta-metragem, Documentário ou Videoclipe;
 - género;
-- estado de desenvolvimento;
+- estado: Ideia, Recrutamento, Pré-produção, Em produção ou Concluído;
 - dono do projeto;
 - equipa;
-- vagas abertas.
+- vagas;
+- comentários e avaliações.
 
-Os dados são armazenados nas tabelas de projetos, equipa e vagas.
+Os dados ficam nas tabelas `projetos`, `projeto_equipa`, `projeto_vagas`, `candidaturas`, `comentarios` e `projeto_avaliacoes`.
 
 ## Criação de um projeto
-Um utilizador autenticado pode criar um projeto preenchendo:
-- nome do projeto;
-- descrição;
-- tipo;
-- género;
-- estado atual;
-- função no projeto;
-- vagas que procura.
+Um utilizador com sessão pode criar um projeto preenchendo:
+- título e sinopse;
+- tipo, género e estado;
+- a sua função no projeto;
+- as vagas que procura.
 
-O criador entra automaticamente na equipa e é identificado como membro inicial do projeto.
+O criador entra automaticamente na equipa com a função que escolheu.
 
 ## Equipa e candidaturas
-Cada projeto pode ter uma equipa composta por diferentes funções, como:
+A equipa pode ter várias funções, por exemplo:
 - realizador;
 - produtor;
 - argumentista;
@@ -37,28 +34,40 @@ Cada projeto pode ter uma equipa composta por diferentes funções, como:
 - diretor de fotografia;
 - editor de vídeo.
 
-Outros utilizadores podem candidatar-se a uma vaga. O dono do projeto pode aceitar ou rejeitar candidaturas e, ao aceitar, a pessoa passa a fazer parte da equipa.
+Os membros podem ser utilizadores do TavDex ou pessoas de fora (só com o nome).
+
+Outros utilizadores candidatam-se a uma vaga aberta, com uma mensagem para o dono. O dono vê as candidaturas e aceita ou rejeita cada uma: quem é aceite entra na equipa e recebe uma notificação. Uma candidatura pode ser retirada enquanto está pendente.
 
 ## Vagas
-A funcionalidade de vagas permite criar anúncios para posições abertas no projeto. Cada vaga pode ter:
+Cada vaga tem:
 - função;
 - descrição;
-- estado aberto/fechado;
-- candidatos.
+- estado aberta ou fechada;
+- candidaturas.
 
 ## Visibilidade e interação
-Os utilizadores podem:
-- consultar projetos publicamente;
-- acompanhar o progresso do projeto;
-- avaliar o projeto;
-- interagir com a equipa;
-- consultar candidaturas submetidas.
+Qualquer pessoa pode:
+- ver a lista de projetos, com pesquisa e filtros por tipo, estado e "com vagas abertas";
+- abrir a página de um projeto.
+
+Com sessão, também pode:
+- acompanhar o projeto (recebe notificações de novidades);
+- avaliar o projeto de 1 a 5 estrelas, com texto (o dono não pode avaliar o seu);
+- comentar;
+- candidatar-se a vagas.
 
 ## Regras de negócio
-- Só utilizadores autenticados podem criar ou candidatar-se a projetos;
-- O dono do projeto tem controlo sobre as candidaturas;
-- O sistema limita o número de projetos criados num curto intervalo de tempo;
-- Candidaturas repetidas são impedidas por chave única.
+- Só utilizadores com sessão podem criar projetos ou candidatar-se;
+- Só o dono (ou um administrador) edita o projeto, gere a equipa e as vagas e decide as candidaturas;
+- Ninguém se pode candidatar ao próprio projeto;
+- No máximo 3 projetos novos por hora e 5 candidaturas em 10 minutos;
+- As candidaturas repetidas são impedidas por uma chave única;
+- Apagar um projeto apaga também a equipa, as vagas e as candidaturas (em cascata).
+
+## Ficheiros associados
+- `routes/projetos.js` — toda a API dos projetos;
+- `public/js/paginas/projetos.js`, `projeto.js`, `projeto-novo.js`, `projeto-editar.js`, `candidaturas.js` — as páginas;
+- `public/js/projeto-form.js` — campos do formulário (criar e editar).
 
 ## Resultado esperado
-O TavDex permite transformar a ideia de comunidade de cinema em uma plataforma de produção colaborativa, onde utilizadores podem apresentarem ideias criativas e encontrar parceiros.
+O TavDex transforma a comunidade de cinema numa plataforma de produção colaborativa, onde os utilizadores apresentam ideias criativas e encontram parceiros.

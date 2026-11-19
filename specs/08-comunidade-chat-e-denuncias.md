@@ -1,30 +1,30 @@
 # Comunidade, chat e denúncias
 
 ## Objetivo
-A dimensão social do TavDex é essencial para diferenciar o projeto de um simples catálogo. Além de seguir perfis e avaliar conteúdos, os utilizadores podem comunicar entre si e reportar conteúdos inadequados.
+A dimensão social do TavDex distingue o projeto de um simples catálogo. Além de seguir perfis e avaliar conteúdos, os utilizadores podem publicar, conversar entre si e denunciar conteúdos impróprios.
 
-## Comunidade
-A comunidade do TavDex é baseada em:
-- perfis públicos;
-- seguidores;
-- interações e mensagens;
-- partilha de projetos e opiniões.
-
-Cada utilizador pode seguir outro e, com isso, desenvolver uma rede de contacto dentro da plataforma.
+## Comunidade (feed)
+A página da comunidade tem um feed de publicações:
+- cada publicação pode ser ligada a um filme/série ou a um projeto;
+- pode ter aviso de spoiler;
+- tem gostos, comentários e respostas a comentários;
+- tem dois separadores: "Todos" e "A seguir" (só quem o utilizador segue);
+- o autor (ou um administrador) pode apagar as suas publicações e comentários.
 
 ## Chat
-A funcionalidade de chat inclui:
-- sala geral da comunidade;
+O chat inclui:
+- uma sala geral para toda a comunidade;
 - conversas privadas entre utilizadores;
-- criação de nova conversa pelo nome do utilizador;
-- atualização automática via polling em intervalos curtos.
+- uma conversa nova a partir do @nome de outra pessoa (ou do botão "Mensagem" no perfil);
+- editar e apagar as próprias mensagens;
+- atualização automática a cada 4 segundos.
 
-Os utilizadores podem enviar mensagens com texto livre, e os administradores podem ter acesso a essas interações se necessário, conforme regras aplicáveis ao projeto.
+O destinatário de uma mensagem privada recebe uma notificação.
 
 ## Denúncias
-A funcionalidade de denúncias permite que um utilizador informe os administradores sobre conteúdos ou mensagens que considerem inadequados.
+Qualquer utilizador com sessão pode denunciar conteúdo impróprio. A denúncia chega à administração.
 
-Tipos de denúncia:
+Tipos de conteúdo que se podem denunciar:
 - publicação;
 - comentário;
 - review;
@@ -34,19 +34,33 @@ Motivos possíveis:
 - Spam;
 - Ofensivo;
 - Spoilers;
+- Assédio;
+- Conteúdo impróprio;
 - Outro.
 
-## Regras de abuso
-O sistema limita a quantidade de denúncias num período curto para evitar abuso ou spam. Também evita duplicação de denúncias pendentes sobre o mesmo alvo.
+## Regras contra abuso
+- Publicações: no máximo 3 em 5 minutos;
+- Comentários: 5 por minuto;
+- Mensagens: 8 em 20 segundos;
+- Denúncias: 10 por hora;
+- Textos com mais de 2 links são recusados;
+- Não se pode denunciar duas vezes o mesmo conteúdo enquanto a primeira denúncia está pendente.
 
-## Relacionamento com a administração
-As denúncias são uma ponte direta com a gestão do sistema. Os administradores podem receber, rever e tratar as denúncias para manter a plataforma segura e saudável.
+## Relação com a administração
+Os administradores recebem as denúncias no painel e decidem:
+- marcá-las como resolvidas ou ignoradas;
+- apagar o conteúdo denunciado;
+- bloquear a conta responsável.
+
+## Ficheiros associados
+- `routes/comunidade.js` — feed, chat, notificações e denúncias;
+- `public/js/paginas/comunidade.js` e `chat.js` — as páginas.
 
 ## Casos de uso
+- O utilizador publica a sua opinião sobre uma série;
 - O utilizador inicia uma conversa com um membro da comunidade;
 - O utilizador manda uma mensagem na sala geral;
-- O utilizador denuncia uma mensagem ofensiva;
-- O utilizador segue outro membro e começa a interagir com ele.
+- O utilizador denuncia uma mensagem ofensiva.
 
 ## Resultado esperado
-A comunidade do TavDex é ativa, interconectada e segura, permitindo comunicação útil entre utilizadores sem comprometer a qualidade do ambiente.
+A comunidade do TavDex é ativa, ligada e segura, permitindo comunicação útil entre utilizadores sem prejudicar a qualidade do ambiente.
