@@ -111,7 +111,7 @@ routes/              API – ver routes/README.md
   auth.js            registo, login, logout (também em todos os dispositivos), recuperação da palavra-passe
   google.js          login com o Google (OAuth 2.0 + PKCE com fetch), ligar e desligar
   utilizadores.js    perfil público, seguir, definições, fotos, sessões, apagar conta
-  fotos.js           multer + sharp: valida o conteúdo e reduz a 256×256
+  fotos.js           multer + sharp: valida o conteúdo; foto 256×256 e banner 1500×500
   consultas.js       SQL partilhado (cartões) e recomendações
   email.js           Nodemailer (smtp / ficheiro / consola) e o modelo HTML dos emails
 public/              páginas .html (uma por ecrã)
@@ -127,7 +127,6 @@ dados/               palavras-passe-comuns.txt e dominios-descartaveis.txt (ver 
 database/            scripts SQL e modelo ER
 tests/               testes automáticos (npm test)
 specs/               documentação funcional
-antigo_php/          versão anterior em PHP (só como referência)
 ```
 
 ## Como funciona (para explicar ao júri)
