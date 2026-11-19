@@ -6,7 +6,7 @@
 
 // =====================================================================
 // CABEÇALHO DO PERFIL COM BANNER (perfil público e pré-visualização nas Definições)
-// O banner é desenhado pelo /js/banner-perfil.js (tem de estar carregado na página).
+// O banner é desenhado pelos ficheiros de /js/banner/ (têm de estar carregados na página).
 // =====================================================================
 
 // Cenários do banner (os mesmos da coluna utilizadores.tema_banner)

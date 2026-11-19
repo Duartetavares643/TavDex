@@ -111,7 +111,7 @@ function ligarSeparadorPerfil(d) {
   function preVisualizar() {
     const f = fPerfil.elements;
     const cor = corEscolhida();
-    // Cenário e cor: o banner-perfil.js redesenha sozinho quando data-tema ou --h mudam.
+    // Cenário e cor: o js/banner/motor.js redesenha sozinho quando data-tema ou --h mudam.
     // A cor vai também para cada miniatura, para mudar logo (mesmo com "reduzir movimento").
     prePerfil.style.setProperty('--h', cor);
     preBanner.dataset.tema = temaEscolhido();

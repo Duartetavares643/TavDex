@@ -813,7 +813,7 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
    11. BANNER E CABEÇALHO DO PERFIL (passo 9)
 
    • O desenho é uma ilustração em SVG (vetorial, nítida em qualquer ecrã),
-     feita por js/banner-perfil.js com o tamanho da caixa e animada com CSS.
+     feita por js/banner/ (um ficheiro por cenário) com o tamanho da caixa e animada com CSS.
    • Há 5 cenários de cinema, escolhidos com data-tema no banner:
        colina | pipocas | claquete | pelicula | marquise
    • A cor do letreiro TAVDEX segue a cor do avatar: style="--h: <cor_avatar>".
