@@ -94,7 +94,7 @@
         <a class="btn ghost sm" href="/definicoes.html">Completar o perfil</a></div></div>`;
 
   // Cabeçalho com o banner em pixel art (cenário e cor escolhidos pelo dono do perfil).
-  // cabecalhoPerfil() (main.js) valida a cor e o cenário e escapa todo o texto.
+  // cabecalhoPerfil() (js/comum/cabecalho-perfil.js) valida a cor e o cenário e escapa todo o texto.
   mostrar(`<div class="content"><div class="left">
     ${cabecalhoPerfil(p, { acoes: botoes, contagens: c, segueTe: d.segue_te, generos: d.generos_escolhidos.map(g => g.nome) })}
     ${boasVindas}

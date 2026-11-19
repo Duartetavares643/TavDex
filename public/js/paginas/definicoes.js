@@ -305,8 +305,8 @@
 
   // Verificações de cada campo (o servidor volta a verificar tudo ao guardar)
   const verificacoes = {
-    nome_exibicao: erroNomePessoa,   // só letras, espaços, hífen e apóstrofo (main.js)
-    nome: erroFormatoNome,           // letras sem acentos, números, _ e . (main.js)
+    nome_exibicao: erroNomePessoa,   // só letras, espaços, hífen e apóstrofo (js/comum/campos.js)
+    nome: erroFormatoNome,           // letras sem acentos, números, _ e . (js/comum/campos.js)
     localizacao: v => v.trim().length > 40 ? 'A localização tem no máximo 40 caracteres.' : '',
     bio: v => v.length > 160 ? 'A biografia tem no máximo 160 caracteres.' : '',
   };

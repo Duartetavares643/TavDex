@@ -6,7 +6,7 @@
 (async () => {
   const filtros = new URLSearchParams(location.search);
   const tipo = filtros.get('tipo');
-  // Marca "Filmes" ou "Séries" na barra de navegação (é desenhada a seguir pelo main.js)
+  // Marca "Filmes" ou "Séries" na barra de navegação (é desenhada a seguir pelo js/comum/topo-e-rodape.js)
   document.body.dataset.menu = tipo === 'filme' ? 'Filmes' : tipo === 'serie' ? 'Séries' : '';
 
   let d, opcoes;
