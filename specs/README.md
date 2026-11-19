@@ -49,8 +49,10 @@ O projeto é um site dinâmico e responsivo, com base de dados relacional, conta
 - `db.js` — ligação ao MySQL;
 - `routes/` — a API, um ficheiro por área (ver `routes/README.md`);
 - `public/*.html` — as páginas (uma por ecrã);
-- `public/js/main.js` e `public/js/api.js` — partes comuns a todas as páginas;
+- `public/js/api.js` e `public/js/comum/` — partes comuns a todas as páginas;
+- `public/js/regras-*.js` — regras partilhadas com o servidor (palavras-passe, email, nome e @nome);
 - `public/js/paginas/` — o JavaScript de cada página;
 - `public/css/style.css` — o aspeto do site (modo escuro e modo claro);
-- `database/` — scripts SQL (criar a base de dados, dados de exemplo e alterações);
-- `tests/` — testes automáticos.
+- `database/tavdex_site.sql` — instala a base de dados (tabelas e dados de exemplo) com um só script;
+- `tests/` — testes automáticos;
+- `GUIA-DO-CODIGO.md` — onde está cada coisa no código.

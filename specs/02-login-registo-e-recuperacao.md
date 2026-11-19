@@ -68,6 +68,8 @@ Limites: no máximo 3 pedidos por hora por conta e 10 por hora por IP.
 - `routes/google.js` — login com o Google;
 - `routes/palavras-passe.js` e `public/js/regras-palavra-passe.js` — regras das palavras-passe;
 - `public/js/regras-email.js` — regras do email;
+- `public/js/regras-nomes.js` — regras do nome e do @nome (as mesmas no browser e no servidor);
+- `public/js/comum/campos.js` — campos com os erros a vermelho enquanto se escreve;
 - `public/js/paginas/registar.js`, `login.js`, `recuperar.js`, `repor.js`, `confirmar-email.js` — as páginas.
 
 ## Cenários de uso

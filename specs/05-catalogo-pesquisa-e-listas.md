@@ -54,7 +54,7 @@ Na página de um título, cada botão funciona como um interruptor (põe ou tira
 - No perfil público, as listas só aparecem se o dono o permitir.
 
 ## Ficheiros associados
-- `routes/titulos.js` — catálogo, página inicial, pesquisa e página do título;
+- `routes/titulos/publico.js` — catálogo, página inicial, pesquisa e página do título;
 - `routes/avaliacoes.js` — listas pessoais e recomendações;
 - `routes/consultas.js` — SQL partilhado dos cartões;
 - `public/js/paginas/index.js`, `catalogo.js`, `pesquisa.js`, `titulo.js`, `listas.js` — as páginas.

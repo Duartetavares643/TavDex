@@ -7,20 +7,14 @@ Site dinâmico e responsivo para descobrir, organizar e avaliar filmes e séries
 > **bcryptjs ou bcrypt?** O `bcryptjs` é o mesmo algoritmo bcrypt escrito em JavaScript. Os hashes são iguais aos do `bcrypt` e não é preciso compilar nada no Windows.
 
 ## Instalação
-1. Instalar o **Node.js 20** (ou mais recente) e o **MySQL 8** (ou o MySQL do XAMPP).
-2. No MySQL Workbench, executar **por esta ordem**:
-   1. `database/01_criar_bd.sql`: cria a base de dados `TavDex` (apaga-a se já existir)
-   2. `database/02_inserir_dados.sql`: dados de exemplo
-   3. `database/extras.sql`: tabelas e colunas das Fases 2 a 6 (sessões, atividade, gostos, elenco, episódios, …)
-   4. `database/03_contas.sql`: nome de exibição, foto de perfil, email confirmado, último login e `via` das sessões (Passos 4 a 10)
-   5. `database/04_banner_perfil.sql`: cenário do banner do perfil (`tema_banner`)
-   6. `database/05_banner_cinema.sql`: troca os cenários pelos 4 de cinema (fachada, estreia, noir, cartaz)
-   7. `database/06_seguranca_contas.sql`: confirmação do email, @nomes antigos, géneros favoritos, privacidade do perfil e "Manter sessão iniciada" (põe as contas que já existem como confirmadas)
-   8. `database/07_banners_novos.sql`: troca os cenários do banner pelos 5 novos (colina, pipocas, claquete, pelicula, marquise)
-   9. `database/08_banner_imagem.sql`: permite carregar uma imagem própria para o banner (colunas `banner` e `banner_versao`)
+1. Instalar o **Node.js 20** (ou mais recente) e o **MySQL 8** (ou o WAMP).
+2. Criar a base de dados com **um só script**, `database/tavdex_site.sql` (tabelas + dados de exemplo):
+   - phpMyAdmin: **Importar** → escolher o ficheiro → Executar; ou
+   - na linha de comandos: `mysql -u root < database/tavdex_site.sql`
 
-   > ⚠️ Cuidado com o `TavDex.sql` antigo ("versão 2", que está fora desta pasta): começa com `DROP DATABASE tavdex` e apaga a base de dados do site.
-3. Copiar `.env.example` para `.env` e preencher pelo menos `BD_PASSWORD` e `SEGREDO_SESSAO`.
+   Cria a base de dados `tavdex_site` (apaga-a se já existir).
+   > A pasta `database/alteracoes-antigas/` tem os scripts com que a base de dados foi crescendo. Só servem para pôr em dia uma base de dados antiga **sem perder os dados**; para instalar, não são precisos.
+3. Copiar `.env.example` para `.env` e preencher pelo menos `BD_PASSWORD` (vazia no WAMP), `BD_NOME=tavdex_site` e `SEGREDO_SESSAO`.
    O Google e o Gmail são opcionais (ver as secções abaixo).
 4. Na pasta do projeto:
    ```
@@ -97,34 +91,26 @@ basta mudar a função `enviarEmail` em `routes/email.js`.
 - Acrescentar o domínio e o URI de redirecionamento na Google Cloud Console (ver acima).
 
 ## Estrutura
+O mapa completo (onde está cada coisa e em que ordem as páginas carregam os ficheiros) está no **[GUIA-DO-CODIGO.md](GUIA-DO-CODIGO.md)**.
 ```
-server.js            servidor Express: helmet, sessões, CSRF, rotas, páginas privadas, erros, limpeza diária
+server.js            servidor Express: helmet, sessões, CSRF, rotas, páginas privadas, erros, limpeza, verificação da BD
 db.js                ligação ao MySQL: linhas(), linha(), executar()
 .env                 segredos (não vai para o GitHub)
 routes/              API – ver routes/README.md
-  middleware.js      utilizadorAtual, exigirLogin (401), exigirAdmin, exigirLoginPagina, iniciar/terminar sessão,
-                     "Manter sessão iniciada" e expiração das sessões
-  ajudas.js          validação (Validacao: todos os erros juntos), validarEmail (formato, descartáveis, DNS),
-                     @nomes reservados, voltarSeguro, dispositivo, atividade, anti-spam
-  palavras-passe.js  regras do servidor: lista das mais comuns e fugas de dados (Have I Been Pwned)
-  confirmacao-email.js  links de confirmação do email (registo e mudança de email)
-  auth.js            registo, login, logout (também em todos os dispositivos), recuperação da palavra-passe
-  google.js          login com o Google (OAuth 2.0 + PKCE com fetch), ligar e desligar
-  utilizadores.js    perfil público, seguir, definições, fotos, sessões, apagar conta
-  fotos.js           multer + sharp: valida o conteúdo; foto 256×256 e banner 1500×500
-  consultas.js       SQL partilhado (cartões) e recomendações
-  email.js           Nodemailer (smtp / ficheiro / consola) e o modelo HTML dos emails
+  auth.js · google.js · confirmacao-email.js   contas: registo, login, Google, confirmação do email, recuperação
+  utilizadores/      perfil público e seguir · Definições · foto, banner e sessões
+  titulos/           catálogo (parte pública) · gestão do catálogo (admin)
+  projetos.js · comunidade.js · avaliacoes.js · admin.js
+  middleware.js · ajudas.js · palavras-passe.js · fotos.js · consultas.js · email.js   (apoio)
 public/              páginas .html (uma por ecrã)
-  js/api.js          api() (fetch + token CSRF), esc() (contra XSS) e TavDex.pedido()
-  js/main.js         topo, rodapé, tema, cartões, janela "Inicia sessão para continuar", botão Google, formulários,
-                     cabecalhoPerfil() (cartão do perfil com o banner)
-  js/banner-perfil.js  banner do perfil: 5 ilustrações de cinema em SVG, animadas com CSS, sem imagens
-  js/regras-palavra-passe.js  regras das palavras-passe (o MESMO ficheiro no browser e no servidor)
-  js/regras-email.js formato do email e "Querias dizer …?" (também partilhado com o servidor)
-  js/paginas/        o JavaScript de cada página
+  js/api.js          api() (fetch + token CSRF) e esc() (contra XSS)
+  js/regras-*.js     regras partilhadas com o servidor: palavras-passe, email, nome e @nome
+  js/comum/          partes comuns a todas as páginas (sessão, desenho, janelas, campos, formulários, topo e rodapé, arranque)
+  js/banner/         banner do perfil: um ficheiro por cenário + o motor
+  js/paginas/        o JavaScript de cada página (as Definições e o painel de admin têm uma pasta com as partes)
   css/style.css      tema escuro vermelho/magenta (e modo claro)
 dados/               palavras-passe-comuns.txt e dominios-descartaveis.txt (ver "Segurança das contas")
-database/            scripts SQL e modelo ER
+database/            tavdex_site.sql (instalação), modelo ER e alteracoes-antigas/
 tests/               testes automáticos (npm test)
 specs/               documentação funcional
 ```
@@ -141,6 +127,8 @@ specs/               documentação funcional
 
 ## Segurança das contas
 Melhorias à Fase 2 do anteprojeto (registo, login, logout, recuperação, perfil e edição do perfil).
+
+**Regras partilhadas.** As regras das palavras-passe, dos emails e do nome/@nome estão em `public/js/regras-palavra-passe.js`, `regras-email.js` e `regras-nomes.js`: o browser usa-as para mostrar os erros enquanto se escreve e o servidor usa os mesmos ficheiros para validar a sério.
 
 **Palavras-passe.** Pelo menos 10 caracteres (e no máximo 72 bytes, o limite do bcrypt), com maiúscula, minúscula, número e símbolo; sem `aaaa` nem sequências como `1234` ou `qwer`; sem o @nome, o nome ou o email. As regras estão num só ficheiro, `public/js/regras-palavra-passe.js`, que o browser usa para a lista de requisitos ao vivo e o servidor usa para validar a sério. O servidor recusa também as 10 000 palavras-passe mais comuns (comparando a versão "limpa": `Password1!` conta como `password`) e as que aparecem em fugas de dados, com a API *Pwned Passwords* do Have I Been Pwned por **k-anonimidade**: só os 5 primeiros caracteres do SHA-1 saem do servidor. Se a API falhar, não bloqueia. As contas antigas com palavras-passe fracas continuam a entrar, mas recebem um aviso para a mudar.
 
@@ -160,22 +148,22 @@ Melhorias à Fase 2 do anteprojeto (registo, login, logout, recuperação, perfi
 | Fase | O quê | Páginas | API |
 |---|---|---|---|
 | 1 ✔ | Base de dados e servidor | – | `/api/estado` |
-| 2 ✔ | Registo, login (+ Google), recuperação, perfil, seguidores, definições | index, registar, login, recuperar, repor, perfil, definicoes | `routes/auth.js`, `routes/utilizadores.js` |
+| 2 ✔ | Registo, login (+ Google), recuperação, perfil, seguidores, definições | index, registar, login, recuperar, repor, perfil, definicoes | `routes/auth.js`, `routes/utilizadores/` |
 | 3 ✔ | Projetos, equipa, vagas, candidaturas, acompanhar, comentários, avaliações | projetos, projeto, projeto-novo, projeto-editar, candidaturas | `routes/projetos.js` |
 | 4 ✔ | Feed, gostos, chat, notificações (silenciar), denúncias, admin | comunidade, chat, notificacoes, admin | `routes/comunidade.js`, `routes/admin.js` |
-| 5 ✔ | Catálogo, filtros, pesquisa, página do título, elenco, temporadas/episódios, CRUD | catalogo, titulo, pesquisa, admin (Filmes e séries) | `routes/titulos.js` |
+| 5 ✔ | Catálogo, filtros, pesquisa, página do título, elenco, temporadas/episódios, CRUD | catalogo, titulo, pesquisa, admin (Filmes e séries) | `routes/titulos/` |
 | 6 ✔ | Estrelas, reviews com spoilers, listas, recomendações | titulo, listas, perfil, index | `routes/avaliacoes.js` |
-| Passos 4–10 ✔ | Modo visitante (janela de login), registo e login com o Google no topo, Google com PKCE, sessões por dispositivo, recuperação com email HTML, perfil com foto, definições com erros por campo | index, login, registar, recuperar, repor, perfil, definicoes, privacidade, termos | `routes/auth.js`, `routes/google.js`, `routes/utilizadores.js`, `routes/fotos.js` |
+| Passos 4–10 ✔ | Modo visitante (janela de login), registo e login com o Google no topo, Google com PKCE, sessões por dispositivo, recuperação com email HTML, perfil com foto, definições com erros por campo | index, login, registar, recuperar, repor, perfil, definicoes, privacidade, termos | `routes/auth.js`, `routes/google.js`, `routes/utilizadores/`, `routes/fotos.js` |
 
 ## Testar no browser (roteiro para a apresentação)
 1. **Sem conta:** página inicial → catálogo (filtrar por género, ordenar por nota) → abrir *Breaking Bad* (elenco, temporadas e episódios) → pesquisar "nolan".
 2. **Visitante:** carregar em "+ Seguir" num perfil ou em "Favorito" num filme → abre a janela "Inicia sessão para continuar" → entrar → volta à mesma página.
-3. **Registo:** criar conta (lista de requisitos ao vivo, "Querias dizer …?" com `duarte@gmial.com`, @nome disponível) → página "Quase pronto!" → abrir o link do email (pasta `emails/` com `EMAIL_MODE=ficheiro`) → "Confirmar email" → entra.
+3. **Registo:** criar conta (campos errados a vermelho enquanto se escreve, "Querias dizer …?" com `duarte@gmial.com`, @nome disponível) → vai para o login com o aviso "Conta criada!" → abrir o link do email (no Gmail, ou na pasta `emails/` se o Gmail não estiver configurado) → "Confirmar email" → entra.
    **Definições:** recortar a foto, cor, nome, géneros favoritos, privacidade e pré-visualização ao vivo.
    **Banner do perfil:** escolher um dos 5 cenários (Colina das estrelas, Sessão de pipocas, Claquete antiga, Rolo de película, Cinema à noite) e ver o TAVDEX mudar com a cor do avatar.
    Mudar um campo e carregar num link do topo → aparece "Tens alterações por guardar".
 4. **Login falhado 5 vezes** com a mesma conta → aparece o bloqueio de 15 minutos.
-5. **Recuperar palavra-passe:** o link aparece na consola do servidor (ou no Gmail, se estiver configurado).
+5. **Recuperar palavra-passe:** o link chega ao Gmail (ou fica na pasta `emails/`, se o Gmail não estiver configurado).
 6. **Como lara@mail.pt:** avaliar um filme com review e spoiler, pôr em favoritos, ver as recomendações em "As minhas listas".
 7. **Projetos:** criar um projeto com uma vaga → entrar com outra conta e candidatar-se → voltar ao dono e aprovar (o candidato passa para a equipa).
 8. **Comunidade e chat:** publicar, gostar, comentar e responder; mandar uma mensagem privada (aparece sozinha na outra conta).

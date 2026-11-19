@@ -16,7 +16,7 @@ O projeto vai além do catálogo tradicional, porque também inclui uma área de
 ## Arquitetura da solução
 O TavDex separa a parte que o utilizador vê (o browser) da parte que guarda e protege os dados (o servidor):
 
-- **Apresentação (browser):** páginas `.html` em `public/` que só têm a "moldura". O JavaScript de cada página (`public/js/paginas/`) pede os dados à API e desenha o conteúdo. As partes comuns (topo, rodapé, cartões, formulários, modo claro/escuro) estão em `public/js/main.js`.
+- **Apresentação (browser):** páginas `.html` em `public/` que só têm a "moldura". O JavaScript de cada página (`public/js/paginas/`) pede os dados à API e desenha o conteúdo. As partes comuns (topo, rodapé, cartões, janelas, formulários, modo claro/escuro) estão em `public/js/comum/`, e as regras partilhadas com o servidor em `public/js/regras-*.js`. O mapa completo está no `GUIA-DO-CODIGO.md`.
 - **API (servidor):** Node.js com Express (`server.js`). Cada área do site tem um ficheiro em `routes/` (autenticação, utilizadores, títulos, projetos, comunidade, administração, …). A API responde sempre em JSON.
 - **Regras de negócio:** ficam no servidor, nas rotas e em ficheiros de apoio (`routes/ajudas.js`, `routes/palavras-passe.js`, `routes/consultas.js`). Tudo o que o browser envia é validado outra vez no servidor.
 - **Acesso a dados:** MySQL através do `mysql2` (`db.js`), sempre com *prepared statements*.

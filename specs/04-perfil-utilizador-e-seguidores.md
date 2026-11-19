@@ -55,10 +55,11 @@ O perfil público (`/perfil/<@nome>`) mostra:
 A privacidade é respeitada pela própria API: quem não tem permissão não recebe as listas escondidas. As listas de seguidores mostram 20 de cada vez ("Ver mais").
 
 ## Ficheiros associados
-- `routes/utilizadores.js` — perfil, seguir, definições, foto, banner, sessões, apagar conta;
+- `routes/utilizadores/` — `perfil-publico.js` (perfil e seguir), `definicoes.js` (Definições, email, palavra-passe, apagar conta) e `fotos-e-sessoes.js` (foto, banner e sessões);
 - `routes/fotos.js` — validação e redução das imagens;
-- `public/js/paginas/perfil.js` e `definicoes.js` — as páginas;
-- `public/js/banner-perfil.js` — os cenários do banner (SVG animado).
+- `public/js/paginas/perfil.js` e `definicoes.js` (com `definicoes/separador-perfil.js`, `separador-seguranca.js` e `recortar-imagem.js`) — as páginas;
+- `public/js/comum/cabecalho-perfil.js` — o cartão do perfil (banner, avatar, nome e números);
+- `public/js/banner/` — os cenários do banner (SVG animado): um ficheiro por cenário e o `motor.js`.
 
 ## Casos de uso
 - O utilizador atualiza o perfil e escolhe um banner;

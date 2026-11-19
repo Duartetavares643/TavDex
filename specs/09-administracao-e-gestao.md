@@ -45,9 +45,9 @@ O administrador pode editar ou apagar qualquer projeto e ver e decidir as suas c
 
 ## Ficheiros associados
 - `routes/admin.js` — estatísticas, utilizadores e denúncias;
-- `routes/titulos.js` — gestão do catálogo (rotas só para administradores);
+- `routes/titulos/gestao.js` — gestão do catálogo (rotas só para administradores);
 - `routes/middleware.js` — `exigirAdmin`;
-- `public/js/paginas/admin.js` — a página do painel.
+- `public/js/paginas/admin.js` — a página do painel, com uma secção por ficheiro em `public/js/paginas/admin/` (resumo, utilizadores, denúncias, filmes e séries, catálogo).
 
 ## Casos de uso
 - O administrador valida a denúncia de uma mensagem ofensiva e apaga-a;
