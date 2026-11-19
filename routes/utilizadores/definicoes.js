@@ -1,51 +1,28 @@
 // =====================================================================
-//  TavDex – utilizadores, seguidores e definições (Passos 9 e 10)
-//  Endereço base: /api/utilizadores
-//  GET    /?q=                    procurar utilizadores (chat, pesquisa)
+//  TavDex – Definições da própria conta (Passo 10)     Base: /api/utilizadores
 //  GET    /eu/definicoes          dados da página Definições
-//  PUT    /eu/perfil              alterar perfil (devolve os erros de todos os campos)
-//  POST   /eu/foto                carregar foto de perfil (multipart, campo "foto")
-//  DELETE /eu/foto                remover a foto
-//  POST   /eu/banner              carregar imagem própria para o banner (multipart, campo "banner")
-//  DELETE /eu/banner              tirar a imagem (volta ao cenário escolhido)
-//  PUT    /eu/email               mudar email
-//  PUT    /eu/password            alterar ou definir palavra-passe
-//  DELETE /eu/google              desligar a conta Google (igual a POST /api/conta/google/desligar)
-//  DELETE /eu/sessoes/:id         terminar uma sessão noutro dispositivo
-//  DELETE /eu/sessoes             terminar todas as outras sessões
+//  GET    /disponivel?nome=       o @nome está livre? (registo e Definições)
+//  PUT    /eu/perfil              alterar o perfil (devolve os erros de todos os campos)
+//  PUT    /eu/email               mudar o email (só muda depois de confirmado)
+//  POST   /eu/email/reenviar      reenviar o link para o email novo
+//  DELETE /eu/email               cancelar a mudança de email
+//  PUT    /eu/password            alterar ou definir a palavra-passe
+//  DELETE /eu/google              desligar a conta Google
 //  DELETE /eu                     apagar a conta
-//  GET    /:id/foto               a foto de perfil (JPEG)
-//  GET    /:id/banner             a imagem do banner (JPEG)
-//  GET    /:nome                  perfil público
-//  POST   /:id/seguir             seguir / deixar de seguir (também em POST /api/seguir/:id)
 // =====================================================================
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { linha, linhas, executar } = require('../db');
-const a = require('./ajudas');
-const { exigirLogin, terminarSessao } = require('./middleware');
-const { enviarEmail, modeloEmail } = require('./email');
-const { SQL_PROJETOS, listaDe, recomendacoes } = require('./consultas');
-const { compararPassword, validarPassword, validarNome, avisarPalavraPasseAlterada } = require('./auth');
-const { dadosPessoais } = require('./palavras-passe');
-const { enviarConfirmacao, limiteEnvios } = require('./confirmacao-email');
-const { desligarGoogle } = require('./google');
-const { receberFoto, processarFoto, receberBanner, processarBanner } = require('./fotos');
+const { linha, linhas, executar } = require('../../db');
+const a = require('../ajudas');
+const { exigirLogin, terminarSessao } = require('../middleware');
+const { enviarEmail, modeloEmail } = require('../email');
+const { compararPassword, validarPassword, validarNome, avisarPalavraPasseAlterada } = require('../auth');
+const { dadosPessoais } = require('../palavras-passe');
+const { enviarConfirmacao, limiteEnvios } = require('../confirmacao-email');
+const { desligarGoogle } = require('../google');
 
 const router = express.Router();
-const MAX_ID = 2147483647;
-const COLUNAS = a.colunasPublicas('u');
-
-// ---------------------------------------------------------------------
-// Procurar utilizadores pelo nome
-// ---------------------------------------------------------------------
-router.get('/', async (req, res) => {
-  const q = String(req.query.q || '').trim().replace(/^@/, '').slice(0, 40);
-  if (q.length < 1) return res.json({ utilizadores: [] });
-  const lista = await linhas(`SELECT ${COLUNAS} FROM utilizadores u
-    WHERE (u.nome LIKE ? OR u.nome_exibicao LIKE ?) AND u.bloqueado = 0 ORDER BY u.nome LIMIT 20`, ['%' + q + '%', '%' + q + '%']);
-  res.json({ utilizadores: lista });
-});
+const MAX_ID = 2147483647;   // maior valor de uma coluna INT (ids)
 
 // ---------------------------------------------------------------------
 // Definições (só o próprio)
@@ -180,36 +157,6 @@ router.put('/eu/perfil', exigirLogin, async (req, res) => {
   res.json({ ok: true, nome, mensagem: 'Perfil atualizado.' });
 });
 
-// Foto de perfil: validada pelo conteúdo, recortada e reduzida a 256×256 JPEG
-router.post('/eu/foto', exigirLogin, receberFoto, async (req, res) => {
-  const foto = await processarFoto(req.file && req.file.buffer);
-  const versao = Math.floor(Date.now() / 1000);
-  // A foto antiga é substituída (apagada) pela nova
-  await executar('UPDATE utilizadores SET foto = ?, foto_versao = ? WHERE id = ?', [foto, versao, req.u.id]);
-  res.json({ ok: true, foto_versao: versao, mensagem: 'Foto atualizada.' });
-});
-
-// Remover a foto (volta a aparecer a inicial com a cor do avatar)
-router.delete('/eu/foto', exigirLogin, async (req, res) => {
-  await executar('UPDATE utilizadores SET foto = NULL, foto_versao = 0 WHERE id = ?', [req.u.id]);
-  res.json({ ok: true, mensagem: 'Foto removida.' });
-});
-
-// Banner com uma imagem própria: validada pelo conteúdo e guardada em 1500×500 JPEG.
-// Enquanto houver imagem, ela aparece no lugar do cenário desenhado.
-router.post('/eu/banner', exigirLogin, receberBanner, async (req, res) => {
-  const banner = await processarBanner(req.file && req.file.buffer);
-  const versao = Math.floor(Date.now() / 1000);
-  await executar('UPDATE utilizadores SET banner = ?, banner_versao = ? WHERE id = ?', [banner, versao, req.u.id]);
-  res.json({ ok: true, banner_versao: versao, mensagem: 'Banner atualizado.' });
-});
-
-// Remover a imagem do banner (volta ao cenário escolhido)
-router.delete('/eu/banner', exigirLogin, async (req, res) => {
-  await executar('UPDATE utilizadores SET banner = NULL, banner_versao = 0 WHERE id = ?', [req.u.id]);
-  res.json({ ok: true, mensagem: 'Imagem do banner removida.' });
-});
-
 // Mudar o email: o novo NÃO substitui logo o antigo. Fica em email_pendente e
 // recebe um link de confirmação (24 horas); só ao abrir o link é que o email muda
 // (ver routes/confirmacao-email.js). Assim um erro de escrita não faz perder a conta.
@@ -293,25 +240,6 @@ router.put('/eu/password', exigirLogin, async (req, res) => {
 // Desligar a conta Google (ver routes/google.js)
 router.delete('/eu/google', exigirLogin, desligarGoogle);
 
-// Terminar uma sessão noutro dispositivo
-router.delete('/eu/sessoes/:id', exigirLogin, async (req, res) => {
-  const id = a.inteiro(req.params.id, 'Sessão', 1, MAX_ID);
-  if (id === req.sessaoId) a.falha(400, 'Para terminar esta sessão usa "Terminar sessão".');
-  // "AND utilizador_id = ?": ninguém consegue terminar sessões de outra pessoa
-  const s = await linha('SELECT dispositivo FROM sessoes WHERE id = ? AND utilizador_id = ?', [id, req.u.id]);
-  if (!s) a.falha(404, 'Essa sessão já não existe.');
-  await executar('DELETE FROM sessoes WHERE id = ? AND utilizador_id = ?', [id, req.u.id]);
-  await a.registarAtividade(req, req.u.id, 'sessao_terminada', `Sessão terminada noutro dispositivo (${s.dispositivo})`);
-  res.json({ ok: true });
-});
-
-// Terminar todas as sessões menos esta
-router.delete('/eu/sessoes', exigirLogin, async (req, res) => {
-  await executar('DELETE FROM sessoes WHERE utilizador_id = ? AND id <> ?', [req.u.id, req.sessaoId]);
-  await a.registarAtividade(req, req.u.id, 'sessoes_terminadas', 'Sessões terminadas noutros dispositivos');
-  res.json({ ok: true });
-});
-
 // Apagar a conta (pede a palavra-passe e o @nome escrito)
 router.delete('/eu', exigirLogin, async (req, res) => {
   const v = new a.Validacao();
@@ -334,172 +262,4 @@ router.delete('/eu', exigirLogin, async (req, res) => {
   res.json({ ok: true, aviso: 'A tua conta foi apagada.' });
 });
 
-// ---------------------------------------------------------------------
-// Foto de perfil (pública). O ?v= muda quando a foto muda, por isso o
-// browser pode guardá-la em cache durante muito tempo.
-// ---------------------------------------------------------------------
-router.get('/:id/foto', async (req, res) => {
-  const id = a.inteiro(req.params.id, 'Utilizador', 1, MAX_ID);
-  const r = await linha('SELECT foto FROM utilizadores WHERE id = ?', [id]);
-  if (!r || !r.foto) return res.status(404).end();
-  res.set('Content-Type', 'image/jpeg');
-  res.set('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'no-cache');
-  res.send(r.foto);
-});
-
-// Imagem do banner (pública), com a mesma cache da foto
-router.get('/:id/banner', async (req, res) => {
-  const id = a.inteiro(req.params.id, 'Utilizador', 1, MAX_ID);
-  const r = await linha('SELECT banner FROM utilizadores WHERE id = ?', [id]);
-  if (!r || !r.banner) return res.status(404).end();
-  res.set('Content-Type', 'image/jpeg');
-  res.set('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'no-cache');
-  res.send(r.banner);
-});
-
-// ---------------------------------------------------------------------
-// Perfil público (qualquer visitante pode ver)
-// ---------------------------------------------------------------------
-// Seguidores ou "a seguir" de uma conta, 20 de cada vez ("Ver mais")
-const POR_PAGINA_SEGUIDORES = 20;
-// tipo = "seguidores" (quem segue a conta) ou "a_seguir" (quem a conta segue)
-function listaSeguidores(id, tipo, pagina = 1) {
-  const [juntar, filtrar] = tipo === 'seguidores' ? ['s.seguidor_id', 's.seguido_id'] : ['s.seguido_id', 's.seguidor_id'];
-  const desde = (Math.max(1, pagina) - 1) * POR_PAGINA_SEGUIDORES;
-  return linhas(`SELECT ${COLUNAS} FROM seguidores s JOIN utilizadores u ON u.id = ${juntar}
-    WHERE ${filtrar} = ? ORDER BY s.criado_em DESC LIMIT ${POR_PAGINA_SEGUIDORES} OFFSET ${desde}`, [id]);
-}
-
-// Procura o perfil pelo @nome (sem distinguir maiúsculas: /perfil/duarte = @Duarte)
-async function procurarPerfil(nome) {
-  return linha(`SELECT id, nome, nome_exibicao, cor, tema_banner, foto_versao, banner_versao, papel, bio, localizacao, criado_em,
-      mostrar_listas, mostrar_seguidores
-    FROM utilizadores WHERE nome = ?`, [String(nome).replace(/^@/, '').slice(0, 40)]);
-}
-
-// @nome antigo (mudado há menos de 30 dias)? Devolve o @nome novo, ou null
-async function nomeNovo(nomeAntigo) {
-  const r = await linha(`SELECT u.nome FROM nomes_antigos n JOIN utilizadores u ON u.id = n.utilizador_id
-    WHERE n.nome = ? AND n.data >= NOW() - INTERVAL 30 DAY`, [String(nomeAntigo).replace(/^@/, '').slice(0, 40)]);
-  return r ? r.nome : null;
-}
-
-// Mais seguidores ou "a seguir" (botão "Ver mais"): ?tipo=seguidores|a_seguir&p=2
-// Respeita a privacidade, tal como o perfil.
-router.get('/:nome/seguidores', async (req, res) => {
-  const p = await procurarPerfil(req.params.nome);
-  if (!p) a.falha(404, 'Este perfil não existe.');
-  const meu = !!req.u && req.u.id === p.id;
-  if (!meu && !p.mostrar_seguidores) return res.json({ utilizadores: [], privado: true });
-  const tipo = req.query.tipo === 'a_seguir' ? 'a_seguir' : 'seguidores';
-  const pagina = Math.max(1, Math.min(500, Math.floor(Number(req.query.p)) || 1));
-  res.json({ utilizadores: await listaSeguidores(p.id, tipo, pagina) });
-});
-
-// Perfil público: dados, números, listas, resumo e relação com quem está a ver
-router.get('/:nome', async (req, res) => {
-  const p = await procurarPerfil(req.params.nome);
-  if (!p) {
-    // @nome antigo: a página vai para o perfil novo
-    const novo = await nomeNovo(req.params.nome);
-    if (novo) return res.json({ redirecionar: novo });
-    a.falha(404, 'Este perfil não existe.');
-  }
-  p.tema_banner = a.temaBanner(p.tema_banner);
-  const id = p.id;
-  const meu = !!req.u && req.u.id === id;
-  // Privacidade escolhida nas Definições (o dono vê sempre tudo).
-  // É a API que esconde: não chega esconder no browser.
-  const verListas = meu || !!p.mostrar_listas;
-  const verSeguidores = meu || !!p.mostrar_seguidores;
-
-  const [nSeg, nASeg, seguidores, aSeguir, favoritos, paraVer, vistos, avaliacoes, projetos, generos, distribuicao, generosAvaliados, escolhidos, relacao] = await Promise.all([
-    linha('SELECT COUNT(*) AS n FROM seguidores WHERE seguido_id = ?', [id]),
-    linha('SELECT COUNT(*) AS n FROM seguidores WHERE seguidor_id = ?', [id]),
-    verSeguidores ? listaSeguidores(id, 'seguidores') : [],
-    verSeguidores ? listaSeguidores(id, 'a_seguir') : [],
-    verListas ? listaDe(id, 'favorito') : [],
-    verListas ? listaDe(id, 'ver') : [],
-    listaDe(id, 'visto'),   // o número de vistos aparece sempre; a lista só com permissão
-    linhas(`SELECT a.id, a.nota, a.review, a.spoiler, a.criado_em, t.id AS titulo_id, t.nome AS titulo
-            FROM avaliacoes a JOIN titulos t ON t.id = a.titulo_id WHERE a.utilizador_id = ? ORDER BY a.criado_em DESC`, [id]),
-    linhas(`${SQL_PROJETOS} WHERE p.dono_id = ? OR p.id IN (SELECT projeto_id FROM projeto_equipa WHERE utilizador_id = ?)
-            ORDER BY p.criado_em DESC`, [id, id]),
-    // Géneros preferidos: géneros dos favoritos e das avaliações com 4 ou 5 estrelas
-    linhas(`SELECT g.nome, COUNT(*) AS n FROM generos g JOIN titulo_generos tg ON tg.genero_id = g.id
-            WHERE tg.titulo_id IN (SELECT titulo_id FROM listas WHERE utilizador_id = ? AND tipo = 'favorito')
-               OR tg.titulo_id IN (SELECT titulo_id FROM avaliacoes WHERE utilizador_id = ? AND nota >= 4)
-            GROUP BY g.nome ORDER BY n DESC, g.nome LIMIT 5`, [id, id]),
-    // Resumo: quantas avaliações de cada nota (1 a 5 estrelas)
-    linhas('SELECT nota, COUNT(*) AS n FROM avaliacoes WHERE utilizador_id = ? GROUP BY nota', [id]),
-    // Resumo: os 3 géneros que mais avalia
-    linhas(`SELECT g.nome, COUNT(*) AS n FROM avaliacoes a JOIN titulo_generos tg ON tg.titulo_id = a.titulo_id
-            JOIN generos g ON g.id = tg.genero_id WHERE a.utilizador_id = ? GROUP BY g.nome ORDER BY n DESC, g.nome LIMIT 3`, [id]),
-    // Géneros favoritos escolhidos pela pessoa (etiquetas por baixo da biografia)
-    linhas(`SELECT g.id, g.nome FROM utilizador_generos ug JOIN generos g ON g.id = ug.genero_id
-            WHERE ug.utilizador_id = ? ORDER BY g.nome`, [id]),
-    // Eu sigo esta pessoa? Ela segue-me? (independente da privacidade das listas)
-    req.u ? linha(`SELECT EXISTS(SELECT 1 FROM seguidores WHERE seguidor_id = ? AND seguido_id = ?) AS sigo,
-                          EXISTS(SELECT 1 FROM seguidores WHERE seguidor_id = ? AND seguido_id = ?) AS segue_me`,
-      [req.u.id, id, id, req.u.id]) : null,
-  ]);
-
-  // Média das estrelas que dá e distribuição de 1 a 5
-  const porNota = [1, 2, 3, 4, 5].map(n => Number((distribuicao.find(d => Number(d.nota) === n) || {}).n || 0));
-  const total = porNota.reduce((s, n) => s + n, 0);
-  const mediaNotas = total ? porNota.reduce((s, n, i) => s + n * (i + 1), 0) / total : null;
-
-  // O dono vê tudo, mas com a nota "Só tu vês isto" nas listas que escondeu dos outros
-  const privacidade = {
-    listas: !verListas, seguidores: !verSeguidores,
-    so_tu_listas: meu && !p.mostrar_listas, so_tu_seguidores: meu && !p.mostrar_seguidores,
-  };
-  delete p.mostrar_listas;
-  delete p.mostrar_seguidores;
-  res.json({
-    perfil: p,
-    meu,
-    sigo: !!(relacao && relacao.sigo),
-    segue_te: !meu && !!(relacao && relacao.segue_me),
-    contagens: {
-      seguidores: nSeg.n, a_seguir: nASeg.n, avaliacoes: avaliacoes.length,
-      vistos: vistos.length, projetos: projetos.length,
-    },
-    // listas/seguidores = escondidos a quem vê (o dono escolheu não mostrar)
-    privacidade,
-    resumo: { media: mediaNotas, por_nota: porNota, generos: generosAvaliados, recentes: avaliacoes.slice(0, 5) },
-    generos_escolhidos: escolhidos,
-    seguidores, aSeguir, favoritos, paraVer,
-    vistos: verListas ? vistos : [],
-    avaliacoes, projetos, generos,
-    por_pagina_seguidores: POR_PAGINA_SEGUIDORES,
-    recomendados: meu ? await recomendacoes(id, 10) : [],
-  });
-});
-
-// ---------------------------------------------------------------------
-// Seguir / deixar de seguir (alterna). Devolve { a_seguir, seguidores }.
-// ---------------------------------------------------------------------
-async function seguir(req, res) {
-  const id = a.inteiro(req.params.id, 'Utilizador', 1, MAX_ID);
-  if (id === req.u.id) a.falha(400, 'Não te podes seguir a ti próprio.');
-  const alvo = await linha('SELECT id FROM utilizadores WHERE id = ?', [id]);
-  if (!alvo) a.falha(404, 'Este perfil não existe.');
-
-  const jaSigo = await linha('SELECT 1 FROM seguidores WHERE seguidor_id = ? AND seguido_id = ?', [req.u.id, id]);
-  if (jaSigo) {
-    await executar('DELETE FROM seguidores WHERE seguidor_id = ? AND seguido_id = ?', [req.u.id, id]);
-  } else {
-    await executar('INSERT INTO seguidores (seguidor_id, seguido_id) VALUES (?, ?)', [req.u.id, id]);
-    // Notificação (não é criada se a pessoa silenciou este tipo)
-    await a.notificar(id, 'seguidor', `@${req.u.nome} começou a seguir-te.`, `perfil.html?u=${encodeURIComponent(req.u.nome)}`, req.u.id);
-  }
-  const n = await linha('SELECT COUNT(*) AS n FROM seguidores WHERE seguido_id = ?', [id]);
-  res.json({ a_seguir: !jaSigo, sigo: !jaSigo, seguidores: n.n });
-}
-// Seguir / deixar de seguir (o mesmo que POST /api/seguir/:id)
-router.post('/:id/seguir', exigirLogin, seguir);
-
 module.exports = router;
-module.exports.seguir = seguir;
-module.exports.nomeNovo = nomeNovo;
