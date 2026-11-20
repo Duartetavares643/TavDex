@@ -583,6 +583,11 @@ a.tg:hover { background: var(--surface-3); }
 .rank b { background: var(--red); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; letter-spacing: .08em; }
 .filas { position: relative; z-index: 3; margin-top: -48px; }
 .filas > .row:first-child, .filas > .cta:first-child { margin-top: 0; }
+/* Modo claro: o destaque continua escuro (como num cinema), mas acaba com uma borda limpa:
+   desvanece para o seu próprio escuro (não para o branco) e as filas começam por baixo dele,
+   para os títulos escuros das filas não ficarem por cima do fundo escuro. */
+:root[data-tema="claro"] .hero2::after { background: linear-gradient(90deg, #08070b 10%, rgba(8, 7, 11, .55) 42%, transparent 70%), linear-gradient(0deg, #08070b 0%, transparent 28%); }
+:root[data-tema="claro"] .filas { margin-top: 0; padding-top: 32px; }
 
 /* Filas de cartazes verticais */
 .hrow.cartazes { grid-auto-columns: 172px; }
