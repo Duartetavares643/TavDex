@@ -288,4 +288,3 @@ router.post('/denuncias', exigirLogin, async (req, res) => {
 
 module.exports = router;
 module.exports.ALVOS = ALVOS;
-module.exports.MOTIVOS = MOTIVOS;
