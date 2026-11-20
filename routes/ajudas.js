@@ -403,6 +403,6 @@ module.exports = {
   nomeIndisponivel, nomeExibicao, validarArroba,
   sha256, tokenAleatorio, ipDe, nomeDispositivo, dispositivoDe, registarAtividade, voltarSeguro,
   colunasPublicas, CORES_AVATAR, corAleatoria, TEMAS_BANNER, temaBanner,
-  demasiado, nLinks, verificarSpam, notificar, paginacao, marcadores, publico,
+  nLinks, verificarSpam, notificar, paginacao, marcadores, publico,
   linhas, linha, executar,
 };

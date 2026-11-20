@@ -10,7 +10,7 @@
     var TEMAS = B.TEMAS;
 
     TEMAS.pelicula = function (E) {
-        var W = E.W, H = E.H, id = E.id, est = E.estreito, i;
+        var W = E.W, H = E.H, id = E.id, i;
         var fb = H * 0.17, periodo = fb * 1.9;              // altura das películas e tamanho de um fotograma
         var s = Math.min(H * 0.34, W * 0.12), x0 = W * 0.04, cy = H * 0.5;
         var lx = x0 + s * 1.85;                              // ponta da lente: começa o feixe
