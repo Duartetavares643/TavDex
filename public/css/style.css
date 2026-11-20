@@ -395,7 +395,7 @@ a.tg:hover { background: var(--surface-3); }
    6. PÁGINAS
    --------------------------------------------------------------------- */
 /* Início: destaque com vários slides (sempre escuro, como num cinema) */
-.hero2 { position: relative; height: min(80vh, 640px); overflow: hidden; background: #08070b; color: #f4f0f7; }
+.hero2 { position: relative; height: 60vh; min-height: 420px; overflow: hidden; background: #08070b; color: #f4f0f7; }
 .hero2 .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .8s ease, visibility .8s;
   background: radial-gradient(circle at 74% 26%, hsl(var(--h) 100% 58% / .85), transparent 44%),
               radial-gradient(ellipse 120px 210px at 66% 92%, #000 60%, transparent 62%),
@@ -405,7 +405,7 @@ a.tg:hover { background: var(--surface-3); }
 .hero2 .slide.on { opacity: 1; visibility: visible; }
 .hero2 .slide.on::before { transform: scale(1); }
 .hero2::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #08070b 10%, rgba(8, 7, 11, .55) 42%, transparent 70%), linear-gradient(0deg, var(--bg) 0%, transparent 28%); }
-.ht { position: relative; z-index: 2; max-width: var(--larg); margin: 0 auto; padding: 110px 48px 0; }
+.ht { position: relative; z-index: 2; max-width: var(--larg); margin: 0 auto; padding: 64px 48px 0; }
 .ht > * { max-width: 620px; }
 .ht h1 { font: 400 76px/.95 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; margin: 10px 0 14px; text-shadow: 0 4px 24px rgba(0, 0, 0, .5); }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 14px; color: inherit; opacity: .92; }
@@ -414,7 +414,7 @@ a.tg:hover { background: var(--surface-3); }
 .ht .desc { margin: 16px 0 24px; font-size: 16px; line-height: 1.6; color: #dcd4e4; }
 .ht .btn.ghost { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .25); color: #fff; backdrop-filter: blur(8px); }
 .ht .btn.ghost:hover { background: rgba(255, 255, 255, .2); }
-.hctl { position: absolute; z-index: 3; right: 48px; bottom: 130px; display: flex; align-items: center; gap: 8px; }
+.hctl { position: absolute; z-index: 3; right: 48px; bottom: 76px; display: flex; align-items: center; gap: 8px; }
 .hdots { display: flex; gap: 6px; margin-right: 10px; }
 .hdots i { width: 8px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .35); cursor: pointer; transition: width var(--t), background var(--t); }
 .hdots i.on { width: 26px; background: #fff; }
@@ -599,7 +599,7 @@ a.tg:hover { background: var(--surface-3); }
 /* Destaque do início: as filas ficam por cima do fundo */
 .rank { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #fff; }
 .rank b { background: var(--red); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; letter-spacing: .08em; }
-.filas { position: relative; z-index: 3; margin-top: -96px; }
+.filas { position: relative; z-index: 3; margin-top: -48px; }
 .filas > .row:first-child, .filas > .cta:first-child { margin-top: 0; }
 
 /* Filas de cartazes verticais */
@@ -660,10 +660,10 @@ a.tg:hover { background: var(--surface-3); }
 .pjv-pe { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
 @media (max-width: 900px) {
-  .hero2 { height: 560px; }
-  .ht { padding-top: 64px; }
-  .hctl { bottom: 70px; }
-  .filas { margin-top: -50px; }
+  .hero2 { height: 60vh; min-height: 480px; }
+  .ht { padding-top: 48px; }
+  .hctl { bottom: 64px; }
+  .filas { margin-top: -40px; }
   .hrow.cartazes { grid-auto-columns: 40%; }
   .t10-n { font-size: 128px; -webkit-text-stroke-width: 2px; margin-right: -12px; }
   .t10 .poster { width: 112px; }
