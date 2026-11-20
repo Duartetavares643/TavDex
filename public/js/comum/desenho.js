@@ -44,12 +44,12 @@ function urlSegura(url) {
 }
 
 // Cartaz de um filme/série: a imagem, se existir; senão um cartaz desenhado
+// só com a cor do título e o nome em letras grandes (o ano e o tipo ficam por baixo do cartão)
 function cartaz(t, classe = 'poster') {
   const img = urlSegura(t.cartaz);
   if (img) return `<div class="${classe} has-img" style="--img:url('${img}')" role="img" aria-label="Cartaz de ${esc(t.nome)}"></div>`;
   return `<div class="${classe} art" style="--h:${corDe(t.nome)}" role="img" aria-label="${esc(t.nome)}">
-    <span class="p-ano">${Number(t.ano) || ''}</span><b>${esc(String(t.nome).toUpperCase())}</b>
-    <span class="p-gen">${esc(t.genero1 || '')}</span></div>`;
+    <b>${esc(String(t.nome).toUpperCase())}</b></div>`;
 }
 
 // Média das estrelas com uma casa decimal ("–" se ainda não há avaliações)

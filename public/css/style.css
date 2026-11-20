@@ -586,16 +586,13 @@ a.tg:hover { background: var(--surface-3); }
 .btn.light { background: #fff; color: #111; }
 .btn.light:hover { background: #e8e6eb; transform: translateY(-1px); }
 
-/* Cartaz desenhado (quando não há imagem): cor do título, ano, nome e género */
-.poster.art { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 14px 13px 12px; color: #fff;
+/* Cartaz desenhado (quando não há imagem): só a cor do título e o nome em letras grandes.
+   A sombra suave em baixo vem do .poster::before e ajuda a ler o nome. */
+.poster.art { flex-direction: column; align-items: stretch; justify-content: flex-end; padding: 14px 13px 14px; color: #fff;
   background: radial-gradient(120% 70% at 85% 0%, hsl(var(--h) 90% 56% / .9), transparent 60%),
               radial-gradient(90% 60% at 0% 100%, hsl(calc(var(--h) + 40) 80% 42% / .55), transparent 62%),
               linear-gradient(160deg, hsl(var(--h) 60% 22%), hsl(var(--h) 50% 6%)); }
-.poster.art::before { inset: 7px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 6px; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 10px); }
-.poster.art::after { content: ""; position: absolute; left: -30%; top: 26%; width: 160%; height: 34%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .09), transparent); transform: rotate(-24deg); pointer-events: none; }
-.poster.art .p-ano { position: relative; z-index: 1; font-size: 11px; font-weight: 600; letter-spacing: .22em; color: rgba(255, 255, 255, .78); }
-.poster.art b { margin-top: auto; padding: 0; text-align: left; font-size: 27px; line-height: .95; letter-spacing: .03em; overflow-wrap: anywhere; }
-.poster.art .p-gen { position: relative; z-index: 1; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(255, 255, 255, .28); font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: rgba(255, 255, 255, .78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poster.art b { padding: 0; text-align: left; font-size: 27px; line-height: .95; letter-spacing: .03em; overflow-wrap: anywhere; }
 .rc .poster.art { padding: 12px 14px; }
 .rc .poster.art b { font-size: 26px; }
 
