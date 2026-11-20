@@ -56,7 +56,8 @@
           : `<p>${paragrafos(a.review)}</p>`) : ''}</div>`).join('');
 
   // ---------------------------------------------------------------
-  // Resumo: média das estrelas, distribuição de 1 a 5, géneros mais avaliados, atividade recente
+  // Resumo: média das estrelas, distribuição de 1 a 5 e atividade recente
+  // (os géneros que mais avalia estão na caixa "Géneros preferidos", ao lado)
   // ---------------------------------------------------------------
   const r = d.resumo;
   const totalNotas = r.por_nota.reduce((s, n) => s + n, 0);
@@ -70,7 +71,6 @@
         ${[5, 4, 3, 2, 1].map(n => `<div class="rb" role="listitem"><span class="gname">${n} ★</span>
           <div class="bar"><i style="width:${Math.round(r.por_nota[n - 1] * 100 / maxNota)}%"></i></div><span>${r.por_nota[n - 1]}</span></div>`).join('')}
       </div>
-      ${r.generos.length ? `<div><h3>Géneros que mais avalia</h3><ul class="ptags">${r.generos.map(g => `<li>${esc(g.nome)} <small>${Number(g.n)}</small></li>`).join('')}</ul></div>` : ''}
       <div><h3>Atividade recente</h3><div class="tl">
         ${r.recentes.map(a => `<p>Avaliou <a class="lk" href="/titulo.html?id=${a.titulo_id}">${esc(a.titulo)}</a> com ${Number(a.nota)}★<small>${tempo(a.criado_em)}</small></p>`).join('')}
         <p>Juntou-se ao TavDex<small>${tempo(p.criado_em)}</small></p>
@@ -134,6 +134,8 @@
               <span class="genero-pct">${Math.round(g.n * 100 / totalGeneros)}%</span></div>
               <div class="bar"><i style="width:${Math.round(g.n * 100 / max)}%"></i></div></div>
           </div>`).join('') : vazio('Ainda não há dados: avalia ou marca favoritos.', linkCatalogo)}
+        ${r.generos.length ? `<div class="generos-avaliados"><h4>Os que mais avalia</h4>
+          <ul class="ptags">${r.generos.map(g => `<li>${esc(g.nome)} <small>${Number(g.n)}</small></li>`).join('')}</ul></div>` : ''}
       </div>
     </div></div>
   </div></div>`);
@@ -150,7 +152,10 @@
       b.textContent = resposta.a_seguir ? 'A seguir ✓' : '+ Seguir';
       b.className = `btn ${resposta.a_seguir ? 'ghost' : 'primary'} sm`;
       b.setAttribute('aria-pressed', resposta.a_seguir);
-      document.getElementById('n-seg').textContent = resposta.seguidores;
+      // O número muda na linha de cima e no separador "Seguidores"
+      document.getElementById('n-seg').textContent = contagem(resposta.seguidores, 'seguidor', 'seguidores');
+      const pastilha = document.querySelector('[data-tab="seg"] .tab-n');
+      if (pastilha) pastilha.textContent = resposta.seguidores;
     } catch (erro) {
       aviso(erro.message, 'erro');
     } finally {

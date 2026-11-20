@@ -46,10 +46,16 @@ function iconePerfil(nome) {
   return `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONES_PERFIL[nome] || ''}</svg>`;
 }
 
-// Avatar grande, nome, @nome, data, localização, biografia e números.
+// "1 seguidor", "9 seguidores" (o número com a palavra no singular ou no plural)
+function contagem(n, singular, plural) {
+  const numero = Number(n) || 0;
+  return `${numero} ${numero === 1 ? singular : plural}`;
+}
+
+// Avatar grande, nome, @nome, data, localização, biografia e uma linha com os números.
 //  p         = perfil (id, nome, nome_exibicao, papel, foto_versao, localizacao, bio, criado_em)
 //  acoes     = HTML dos botões (Editar perfil, ou Seguir / Mensagem)
-//  contagens = { seguidores, a_seguir, avaliacoes, vistos, projetos } (ou null para não mostrar)
+//  contagens = { seguidores, a_seguir, avaliacoes } (ou null para não mostrar)
 //  fotoUrl   = foto escolhida e ainda não guardada (pré-visualização nas Definições)
 //  segueTe   = esta pessoa segue quem está a ver (etiqueta "Segue-te" ao lado do nome)
 //  generos   = géneros favoritos escolhidos pela pessoa (etiquetas por baixo da biografia)
@@ -61,16 +67,13 @@ function partesPerfil(p, { acoes = '', contagens = null, fotoUrl = null, segueTe
     : `<div class="phead__av" aria-hidden="true">${esc((nomeVisivel(p) || '?').charAt(0).toUpperCase())}</div>`;
   const desde = p.criado_em ? `<span>Membro desde ${dataCurta(p.criado_em).slice(3)}</span>` : '';
   const local = p.localizacao ? `<span>📍 ${esc(p.localizacao)}</span>` : '';
-  // Números em cartões com ícone (o de seguidores tem id, porque muda ao carregar em Seguir)
-  const cartaoNumero = (icone, valor, rotulo, id = '') => `<li>${iconePerfil(icone)}
-      <b${id ? ` id="${id}"` : ''}>${Number(valor) || 0}</b><small>${rotulo}</small></li>`;
-  const numeros = !contagens ? '' : `<ul class="pnums">
-      ${cartaoNumero('seguidores', contagens.seguidores, 'Seguidores', 'n-seg')}
-      ${cartaoNumero('aSeguir', contagens.a_seguir, 'A seguir')}
-      ${cartaoNumero('avaliacoes', contagens.avaliacoes, 'Avaliações')}
-      ${cartaoNumero('vistos', contagens.vistos, 'Vistos')}
-      ${cartaoNumero('projetos', contagens.projetos, 'Projetos')}
-    </ul>`;
+  // Uma linha simples: "9 seguidores · 14 a seguir · 22 avaliações"
+  // (o de seguidores tem id, porque muda ao carregar em Seguir; os outros números estão nos separadores)
+  const numeros = !contagens ? '' : `<p class="pnums">
+      <span id="n-seg">${contagem(contagens.seguidores, 'seguidor', 'seguidores')}</span>
+      <span>${contagem(contagens.a_seguir, 'a seguir', 'a seguir')}</span>
+      <span>${contagem(contagens.avaliacoes, 'avaliação', 'avaliações')}</span>
+    </p>`;
   return `<div class="phead">
       ${avatarHtml}
       <div class="phead__info">

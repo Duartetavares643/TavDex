@@ -510,7 +510,7 @@ a.tg:hover { background: var(--surface-3); }
   .search:focus-within { width: 280px; }
   .pjrow { grid-template-columns: repeat(2, 1fr); }
   .sg { grid-template-columns: repeat(2, 1fr); }
-  .dcols { grid-template-columns: 1fr; }
+  .dcols { grid-template-columns: minmax(0, 1fr); }   /* minmax(0, …): a coluna não estica com os separadores */
 }
 @media (max-width: 900px) {
   body { overflow-x: hidden; }
@@ -874,11 +874,13 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
 }
 
 /* ---------- Cabeçalho: avatar sobreposto ao banner ---------- */
+/* Só o avatar sobe para cima do banner (56 px); o nome, as etiquetas e os botões
+   começam por baixo do banner (padding-top de 64 px), para nada ficar cortado. */
 .phead {
     position: relative;
     z-index: 2;
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 18px;
     padding: 0 24px;
     margin-top: -56px;
@@ -898,7 +900,7 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
     color: #fff;
     object-fit: cover;
 }
-.phead__info { min-width: 0; padding-bottom: 6px; }
+.phead__info { min-width: 0; padding-top: 66px; }
 .phead__nome {
     margin: 0;
     font-family: 'Bebas Neue', sans-serif;
@@ -916,41 +918,22 @@ dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3
     color: var(--text-2, #9b97a6);
 }
 .phead__meta span + span::before { content: "·"; margin-right: 10px; opacity: .6; }
-.phead__acoes { margin-left: auto; padding-bottom: 8px; display: flex; gap: 8px; }
+.phead__acoes { margin-left: auto; padding-top: 68px; display: flex; gap: 8px; }
 
 .pbio { margin: 0; padding: 14px 24px 0; font-size: 15px; line-height: 1.6; }
 
-/* Números do perfil em cartões com ícone (5 lado a lado) */
+/* Números do perfil numa linha simples: "9 seguidores · 14 a seguir · 22 avaliações" */
 .pnums {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
     margin: 0;
-    padding: 18px 24px 0;
-    list-style: none;
+    padding: 12px 24px 0;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--text-2, #9b97a6);
 }
-.pnums li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    column-gap: 10px;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-}
-.pnums .ic {
-    grid-row: span 2;
-    width: 34px; height: 34px;
-    padding: 8px;
-    border-radius: 10px;
-    background: hsl(var(--h) 70% 50% / .14);
-    color: hsl(var(--h) 75% 62%);
-}
-.pnums b { font: 400 24px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; color: var(--text, #f2f0f5); }
-.pnums small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pnums span + span::before { content: "·"; margin-right: 10px; opacity: .6; }
 
 /* Ícones de traço simples (perfil e separadores) */
 svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -968,7 +951,7 @@ svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor
         margin-top: -50px;
     }
     .phead__av { width: 96px; height: 96px; font-size: 46px; border-width: 4px; }
-    .phead__info { padding-bottom: 0; }
+    .phead__info { padding-top: 0; }
     .phead__nome { font-size: 30px; }
     .phead__meta { justify-content: center; gap: 2px 12px; font-size: 13px; }
     .phead__meta span + span::before { display: none; }
@@ -977,12 +960,8 @@ svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor
 
     .pbio { padding: 12px 20px 0; text-align: center; font-size: 14.5px; }
 
-    /* no telemóvel: 5 colunas compactas, com o ícone em cima */
-    .pnums { gap: 6px; padding: 16px 14px 0; }
-    .pnums li { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px; text-align: center; min-width: 0; }
-    .pnums .ic { width: 26px; height: 26px; padding: 5px; border-radius: 8px; }
-    .pnums b { font-size: 20px; }
-    .pnums small { font-size: 10.5px; max-width: 100%; }
+    /* no telemóvel: a linha dos números fica ao centro */
+    .pnums { justify-content: center; padding: 12px 16px 0; font-size: 13.5px; }
 }
 
 /* ---------- Cartão do perfil e escolha do cenário nas Definições ---------- */
@@ -1092,6 +1071,10 @@ input[readonly] { opacity: .7; cursor: not-allowed; }
 .genero-topo { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; color: var(--text); }
 .genero-topo .gname { width: auto; flex: 1; }
 .genero-pct { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+/* Na mesma caixa, por baixo: os géneros que a pessoa mais avalia */
+.generos-avaliados { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.generos-avaliados h4 { margin: 0 0 8px; font-size: 13px; color: var(--text-2); }
+.generos-avaliados .ptags { padding: 0; }
 
 /* Perfil: separador "Resumo" (média, barras de 1 a 5 estrelas, géneros e atividade) */
 .resumo { display: grid; gap: 20px; }
