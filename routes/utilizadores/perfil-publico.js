@@ -94,11 +94,12 @@ router.get('/:nome', async (req, res) => {
             FROM avaliacoes a JOIN titulos t ON t.id = a.titulo_id WHERE a.utilizador_id = ? ORDER BY a.criado_em DESC`, [id]),
     linhas(`${SQL_PROJETOS} WHERE p.dono_id = ? OR p.id IN (SELECT projeto_id FROM projeto_equipa WHERE utilizador_id = ?)
             ORDER BY p.criado_em DESC`, [id, id]),
-    // Géneros preferidos: géneros dos favoritos e das avaliações com 4 ou 5 estrelas
+    // Géneros preferidos: géneros dos favoritos e das avaliações com 4 ou 5 estrelas.
+    // Se as listas forem privadas, os favoritos não contam (senão revelavam os gostos escondidos).
     linhas(`SELECT g.nome, COUNT(*) AS n FROM generos g JOIN titulo_generos tg ON tg.genero_id = g.id
-            WHERE tg.titulo_id IN (SELECT titulo_id FROM listas WHERE utilizador_id = ? AND tipo = 'favorito')
+            WHERE (? AND tg.titulo_id IN (SELECT titulo_id FROM listas WHERE utilizador_id = ? AND tipo = 'favorito'))
                OR tg.titulo_id IN (SELECT titulo_id FROM avaliacoes WHERE utilizador_id = ? AND nota >= 4)
-            GROUP BY g.nome ORDER BY n DESC, g.nome LIMIT 5`, [id, id]),
+            GROUP BY g.nome ORDER BY n DESC, g.nome LIMIT 5`, [verListas ? 1 : 0, id, id]),
     // Resumo: quantas avaliações de cada nota (1 a 5 estrelas)
     linhas('SELECT nota, COUNT(*) AS n FROM avaliacoes WHERE utilizador_id = ? GROUP BY nota', [id]),
     // Resumo: os 3 géneros que mais avalia

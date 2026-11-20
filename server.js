@@ -7,6 +7,13 @@
 // 1. Ler os segredos do ficheiro .env (tem de ser a primeira coisa)
 require('dotenv').config();
 
+// Em produção (https) o segredo da sessão é obrigatório: sem ele, qualquer pessoa que
+// conhecesse o segredo "de desenvolvimento" podia falsificar cookies de sessão.
+if ((process.env.URL_SITE || '').startsWith('https') && !process.env.SEGREDO_SESSAO) {
+  console.error('Falta o SEGREDO_SESSAO no .env. O servidor não arranca sem ele.');
+  process.exit(1);
+}
+
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
@@ -29,7 +36,9 @@ const HTTPS = (process.env.URL_SITE || '').startsWith('https');
 // Atrás de um proxy (Render, Railway, Heroku, nginx...) o pedido chega por http
 // ao Node. "trust proxy" faz o Express confiar no cabeçalho X-Forwarded-*:
 // assim req.ip é o IP verdadeiro e os cookies "secure" funcionam.
-app.set('trust proxy', 1);
+// Só se liga em produção (https) ou com CONFIAR_PROXY=1 (os testes usam-no): em localhost não há
+// proxy, e confiar no cabeçalho deixava qualquer pessoa inventar o IP e fugir aos limites por IP.
+if ((process.env.URL_SITE || '').startsWith('https') || process.env.CONFIAR_PROXY === '1') app.set('trust proxy', 1);
 
 // Em produção: http -> https
 if (HTTPS) {

@@ -278,6 +278,13 @@ router.post('/denuncias', exigirLogin, async (req, res) => {
   const alvoId = a.inteiro(req.body.alvo_id, 'Conteúdo', 1, MAX_ID);
   const motivo = a.escolha(req.body.motivo, MOTIVOS, 'Motivo');
   if (!(await linha(`SELECT id FROM ${ALVOS[tipo]} WHERE id = ?`, [alvoId]))) a.falha(404, 'Esse conteúdo já não existe.');
+  // Mensagens: só se denunciam as que a pessoa pode ver (sala geral ou conversas onde participa).
+  // Sem isto, alguém podia denunciar mensagens privadas de outras pessoas e o admin ficava a lê-las.
+  if (tipo === 'mensagem') {
+    const visivel = await linha('SELECT id FROM mensagens WHERE id = ? AND (para_id IS NULL OR de_id = ? OR para_id = ?)',
+      [alvoId, req.u.id, req.u.id]);
+    if (!visivel) a.falha(404, 'Esse conteúdo já não existe.');
+  }
   const ja = await linha("SELECT id FROM denuncias WHERE utilizador_id = ? AND tipo = ? AND alvo_id = ? AND estado = 'pendente'", [req.u.id, tipo, alvoId]);
   if (ja) a.falha(400, 'Já denunciaste este conteúdo. Um administrador vai analisá-lo.');
   await a.verificarSpam(req.u, 'denuncias', 'utilizador_id', 10, 3600);

@@ -115,5 +115,8 @@
   });
 
   carregar();
-  setInterval(carregar, 4000);
+  // De 4 em 4 segundos, mas só com o separador à vista (num separador escondido não vale a pena
+  // gastar pedidos ao servidor). Ao voltar ao separador, atualiza logo.
+  setInterval(() => { if (!document.hidden) carregar(); }, 4000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) carregar(); });
 })();

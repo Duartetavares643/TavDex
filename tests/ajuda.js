@@ -14,6 +14,7 @@ process.env.GOOGLE_CLIENT_SECRET = '';
 process.env.VERIFICAR_FUGAS = '0';
 process.env.VERIFICAR_DNS = '0';
 process.env.TEMPO_MINIMO_REGISTO = '0';   // a armadilha de tempo do registo tem um teste próprio
+process.env.CONFIAR_PROXY = '1';          // os clientes de teste mandam IPs diferentes em X-Forwarded-For
 
 const fs = require('fs');
 const path = require('path');
