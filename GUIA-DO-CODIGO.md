@@ -121,3 +121,17 @@ O site faz exatamente o mesmo e tem o mesmo aspeto. Só mudou a organização do
 5. **Mais testes:** gestão do catálogo pelo admin e regras dos nomes partilhadas (73 testes).
 
 **Como se confirmou que nada mudou:** em cada passo correram os testes automáticos (`npm test`) e foi comparado o texto de 37 páginas do site (com e sem sessão iniciada, incluindo todas as secções do painel de administração) antes e depois. Os desenhos dos banners foram comparados letra a letra, e a base de dados criada pelo script novo foi comparada com a criada pelos 9 scripts antigos (tabelas, colunas, índices, chaves e dados).
+
+## 7. Design mais simples e última limpeza (para explicar ao júri)
+
+Nenhuma funcionalidade saiu e a base de dados e a API ficaram iguais.
+
+1. **Design** (só o aspeto):
+   - cartões dos filmes e séries: dentro do cartaz ficam só a cor, o título e a nota (★); o título e "ano · tipo" continuam por baixo (`cartaz()` em `js/comum/desenho.js`);
+   - página inicial: o destaque ocupa cerca de 60% da altura do ecrã;
+   - perfil: os 5 cartões de números passaram a uma linha ("9 seguidores · 14 a seguir · …", em `js/comum/cabecalho-perfil.js`); uma só caixa de géneros; o nome e a etiqueta "Admin" ficam por baixo do banner; no telemóvel a página já não fica mais larga do que o ecrã;
+   - Definições: a atividade recente mostra as últimas 5 e "Ver mais"; os acessos deste computador aparecem como "Este computador" (`js/paginas/definicoes/separador-seguranca.js`).
+2. **CSS:** saíram as regras que nenhuma página usava (`.spoiler` e a cor `--mag`) e as 12 secções do `style.css` têm títulos iguais (`/* ===== 5. Componentes ===== */`) e um índice no topo.
+3. **Código morto:** saíram uma variável que o cenário "Rolo de película" nunca lia e duas exportações que nenhum ficheiro usava (`demasiado` e `MOTIVOS`; as funções continuam no seu ficheiro).
+
+**Como se confirmou:** `npm test` em cada passo; fotografias das páginas (computador, telemóvel e modo claro) antes e depois, comparadas píxel a píxel no passo do CSS; e as 14 páginas principais (Início, Filmes, Séries, um filme, Projetos, um projeto, Comunidade, Chat, Notificações, Perfil, Definições, Login, Registar e Administração) abertas no Edge sem erros na consola.

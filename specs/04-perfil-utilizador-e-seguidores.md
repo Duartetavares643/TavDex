@@ -36,7 +36,7 @@ Regras de validação:
 - Alterar a palavra-passe (com a atual) ou definir uma, nas contas criadas com o Google;
 - Ligar ou desligar a conta Google;
 - Ver e terminar as sessões ativas noutros dispositivos;
-- Ver a atividade recente da conta;
+- Ver a atividade recente da conta (as últimas 5, com "Ver mais"; os acessos deste computador aparecem como "Este computador");
 - Apagar a conta (pede a palavra-passe e o @nome escrito).
 
 ## Seguidores
@@ -48,8 +48,9 @@ Regras de validação:
 ## Perfil público
 O perfil público (`/perfil/<@nome>`) mostra:
 - banner, avatar, nome, @nome, localização e biografia;
-- números: seguidores, a seguir, avaliações, vistos e projetos;
-- separadores: Resumo (média das estrelas, distribuição de 1 a 5 e géneros mais avaliados), Favoritos, Avaliações, Seguidores, A seguir, A ver, Vistos e Projetos;
+- uma linha com os números: "9 seguidores · 14 a seguir · 22 avaliações · 22 vistos · 1 projeto" (também aparecem nos separadores);
+- a caixa "Géneros preferidos", com a classificação dos géneros e os que a pessoa mais avalia;
+- separadores: Resumo (média das estrelas, distribuição de 1 a 5 e atividade recente), Favoritos, Avaliações, Seguidores, A seguir, A ver, Vistos e Projetos;
 - botões Seguir, Mensagem e Partilhar.
 
 A privacidade é respeitada pela própria API: quem não tem permissão não recebe as listas escondidas. As listas de seguidores mostram 20 de cada vez ("Ver mais").

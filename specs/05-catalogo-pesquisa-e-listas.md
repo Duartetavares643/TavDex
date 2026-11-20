@@ -5,7 +5,7 @@ O TavDex funciona como um centro de organização e descoberta de filmes e séri
 
 ## Página inicial
 A página inicial mostra:
-- um destaque grande com vários títulos a passar;
+- um destaque com vários títulos a passar (ocupa cerca de 60% da altura do ecrã);
 - filas de cartazes (novidades, mais populares e alguns géneros);
 - o top 10 dos mais bem avaliados;
 - os projetos mais recentes;
@@ -30,7 +30,7 @@ Segurança das consultas:
 
 ## Página de um título
 Para cada filme ou série, o sistema mostra:
-- cartaz (ou um cartaz desenhado com a cor do título, quando não há imagem);
+- cartaz (ou, quando não há imagem, um cartaz desenhado só com a cor e o nome do título; o ano e o tipo aparecem por baixo do cartão);
 - nome, ano, tipo, duração e géneros;
 - sinopse e realizador;
 - avaliação média e número de avaliações;
