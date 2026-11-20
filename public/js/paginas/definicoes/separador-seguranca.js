@@ -21,6 +21,11 @@ function htmlSeparadorSeguranca(d) {
   const pr = d.protecao;
   const outrasSessoes = d.sessoes.filter(s => !s.atual).length;
   const marca = (bom, texto) => `<li class="${bom ? 'ok' : 'aviso'}"><b aria-hidden="true">${bom ? '✓' : '!'}</b> ${texto}</li>`;
+  // Atividade recente: as 5 últimas à vista; as outras aparecem com "Ver mais"
+  const origem = ip => ['::1', '127.0.0.1'].includes(ip) ? 'Este computador' : `IP ${esc(ip)}`;
+  const evento = x => `<p>${esc(x.descricao || EVENTOS[x.tipo] || x.tipo)}<small>${dataHora(x.criado_em)} · ${origem(x.ip)}</small></p>`;
+  const primeiras = d.atividade.slice(0, 5);
+  const resto = d.atividade.slice(5);
   return `
       <!-- ======================= CONTA E SEGURANÇA ======================= -->
       <div data-pane="seguranca" hidden>
@@ -85,9 +90,11 @@ function htmlSeparadorSeguranca(d) {
           </div>
         </div>
 
-        <div class="box"><h3>Atividade recente</h3><div class="tl">
-          ${d.atividade.map(x => `<p>${esc(x.descricao || EVENTOS[x.tipo] || x.tipo)}<small>${dataHora(x.criado_em)} · IP ${esc(x.ip)}</small></p>`).join('') || '<p>Sem atividade.</p>'}
-        </div></div>
+        <div class="box"><h3>Atividade recente</h3>
+          <div class="tl" id="atividade">${primeiras.map(evento).join('') || '<p>Sem atividade.</p>'}</div>
+          ${resto.length ? `<div class="tl" id="atividade-resto" hidden>${resto.map(evento).join('')}</div>
+            <button type="button" class="btn ghost sm" id="atividade-mais">Ver mais (${resto.length})</button>` : ''}
+        </div>
 
         <form class="box form danger" id="f-apagar" novalidate><h3>Apagar conta</h3>
           <p>Apaga a conta e tudo o que lhe pertence (foto, avaliações, listas, projetos, mensagens). Não dá para desfazer.</p>
@@ -102,6 +109,13 @@ function htmlSeparadorSeguranca(d) {
 // Liga os formulários e botões do separador
 function ligarSeparadorSeguranca(d) {
   const outrasSessoes = d.sessoes.filter(s => !s.atual).length;
+  // Atividade recente: "Ver mais" junta o resto à lista (a linha do tempo fica contínua) e desaparece
+  document.getElementById('atividade-mais')?.addEventListener('click', e => {
+    const resto = document.getElementById('atividade-resto');
+    document.getElementById('atividade').append(...resto.children);
+    resto.remove();
+    e.currentTarget.remove();
+  });
   // Palavra-passe nova: requisitos ao vivo (não pode conter o nome, o @nome nem o email da conta)
   const fPass = document.getElementById('f-pass');
   const dadosPessoais = () => ({ nome: d.nome, nomeExibicao: d.nome_exibicao, email: d.email });
