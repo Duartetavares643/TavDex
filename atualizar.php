@@ -99,6 +99,13 @@ $passos = [
          'CREATE TABLE verificacao_email (id INT AUTO_INCREMENT PRIMARY KEY, utilizador_id INT NOT NULL, email VARCHAR(120) NOT NULL,
           token_hash CHAR(64) NOT NULL UNIQUE, expira_em DATETIME NOT NULL, usado BOOLEAN NOT NULL DEFAULT 0, criado_em DATETIME NOT NULL,
           FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE)']],
+    // Contas que já existiam antes da confirmação do email (ex.: vindas da versão Node.js, que as
+    // deixava "por confirmar"): ficam confirmadas para poderem entrar. As contas novas têm sempre
+    // um link em verificacao_email, por isso não são apanhadas.
+    ['Contas antigas com o email confirmado (para poderem entrar)',
+        fn() => !existe($pdo, 'verificacao_email', 'token_hash') || !existe($pdo, 'utilizadores', 'email_verificado')
+            || (int)$pdo->query('SELECT COUNT(*) FROM utilizadores u WHERE email_verificado = 0 AND NOT EXISTS (SELECT 1 FROM verificacao_email v WHERE v.utilizador_id = u.id)')->fetchColumn() === 0,
+        ['UPDATE utilizadores u SET email_verificado = 1 WHERE email_verificado = 0 AND id > 0 AND NOT EXISTS (SELECT 1 FROM verificacao_email v WHERE v.utilizador_id = u.id)']],
     ['Tabela de "Manter sessão iniciada"',
         fn() => existe($pdo, 'sessoes_lembradas'),
         ["CREATE TABLE sessoes_lembradas (id INT AUTO_INCREMENT PRIMARY KEY, utilizador_id INT NOT NULL, seletor CHAR(24) NOT NULL UNIQUE,
