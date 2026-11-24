@@ -1,11 +1,9 @@
-# TavDex – configuração do Apache (XAMPP)
-# Página de erro 404 (ajustar o caminho se a pasta tiver outro nome)
-ErrorDocument 404 /tavdex-php/404.php
-
-# Impede que se descarreguem os scripts SQL e a configuração pelo browser
-<FilesMatch "\.(sql|md|txt|dot)$|^(config|lib|cabecalho|rodape|projeto_form)\.php$">
-    Require all denied
-</FilesMatch>
-
-# Não mostrar a lista de ficheiros da pasta
-Options -Indexes
+<?php
+// Página de erro 404 (configurada no ficheiro .htaccess)
+require_once __DIR__ . '/lib.php';
+http_response_code(404);
+$titulo = 'Página não encontrada';
+require __DIR__ . '/cabecalho.php';
+?>
+<div class="content"><div class="left nf"><h1>404</h1><h2>Página não encontrada</h2><p>A página que procuras não existe ou foi movida.</p><a href="index.php" class="btn primary">Voltar à página inicial</a></div></div>
+<?php require __DIR__ . '/rodape.php'; ?>

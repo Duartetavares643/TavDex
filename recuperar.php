@@ -1,38 +1,48 @@
 <?php
-// Lista de projetos cinematográficos, com pesquisa e filtros
+// Passo 8 – Recuperação da palavra-passe por email (pedido do link por email)
 require 'lib.php';
-$ativo = 'Projetos';
 
-$q = trim($_GET['q'] ?? '');
-$estado = $_GET['estado'] ?? '';
-$tipo = $_GET['tipo'] ?? '';
-$so_vagas = !empty($_GET['vagas']);
+$enviado = false;
+$link_dev = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verificar_csrf();
+    $email = mb_strtolower(campo('email'));
+    $u = linha('SELECT id, nome, email FROM utilizadores WHERE email = ?', [$email]);
+    if ($u) {
+        // Token aleatório: só a versão em hash fica na base de dados
+        $token = bin2hex(random_bytes(32));
+        sql('UPDATE recuperacoes SET usado = 1 WHERE utilizador_id = ?', [$u['id']]);
+        sql('INSERT INTO recuperacoes (utilizador_id, token_hash, expira_em) VALUES (?, ?, ?)',
+            [$u['id'], hash('sha256', $token), date('Y-m-d H:i:s', time() + 3600)]);
+        $link = URL_SITE . '/repor.php?token=' . $token;
+        if (MODO_DEV) {
+            $link_dev = 'repor.php?token=' . $token;
+        } else {
+            enviar_email($u['email'], 'Recuperar palavra-passe – TavDex',
+                "Olá {$u['nome']},\n\nPara criares uma nova palavra-passe abre este link (válido 1 hora):\n$link\n\nSe não foste tu, ignora este email.");
+        }
+    }
+    // A mensagem é sempre igual para não revelar que emails existem
+    $enviado = true;
+}
 
-$where = [];
-$param = [];
-if ($q !== '') { $where[] = '(p.titulo LIKE ? OR p.sinopse LIKE ?)'; $param[] = "%$q%"; $param[] = "%$q%"; }
-if ($estado !== '') { $where[] = 'p.estado = ?'; $param[] = $estado; }
-if ($tipo !== '') { $where[] = 'p.tipo = ?'; $param[] = $tipo; }
-if ($so_vagas) $where[] = 'EXISTS (SELECT 1 FROM projeto_vagas v WHERE v.projeto_id = p.id AND v.aberta = 1)';
-$projetos = linhas(SQL_PROJETOS . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY p.criado_em DESC', $param);
-
-$estados = ['Ideia', 'Recrutamento', 'Pré-produção', 'Em produção', 'Concluído'];
-$tipos = ['Filme', 'Série', 'Curta-metragem', 'Documentário', 'Videoclipe'];
-$titulo = 'Projetos';
+$titulo = 'Recuperar palavra-passe';
 require 'cabecalho.php';
 ?>
-<div class="content"><div class="left">
-  <div class="ah"><div><h1 class="ph">Projetos audiovisuais</h1><small>Ideias de filmes e séries criadas pela comunidade</small></div>
-    <a class="btn primary sm" href="projeto_novo.php">+ Criar projeto</a></div>
-  <form class="cf" method="get">
-    <input name="q" value="<?= e($q) ?>" placeholder="Pesquisar projetos...">
-    <select name="estado"><option value="">Todos os estados</option><?php foreach ($estados as $s): ?><option <?= $s === $estado ? 'selected' : '' ?>><?= $s ?></option><?php endforeach; ?></select>
-    <select name="tipo"><option value="">Todos os tipos</option><?php foreach ($tipos as $s): ?><option <?= $s === $tipo ? 'selected' : '' ?>><?= $s ?></option><?php endforeach; ?></select>
-    <label class="chk"><input type="checkbox" name="vagas" value="1" <?= $so_vagas ? 'checked' : '' ?>> Com vagas abertas</label>
-    <button class="btn ghost sm">Filtrar</button>
+<div class="content"><div class="left"><div class="authx">
+  <div class="brand"><img src="logo.png" alt="TavDex"><h2>Recuperar palavra-passe</h2><p>Enviamos-te um link por email.</p></div>
+  <form method="post" class="fm">
+    <h1>Esqueceste-te da palavra-passe?</h1>
+    <?php if ($enviado): ?>
+      <p class="ok-msg">Se existir uma conta com este email, enviámos um link para repor a palavra-passe. O link é válido durante 1 hora.</p>
+      <?php if ($link_dev): ?><p class="dev">Modo de desenvolvimento (sem servidor de email): <a class="lk" href="<?= e($link_dev) ?>">abrir o link de recuperação</a></p><?php endif; ?>
+    <?php else: ?>
+      <p class="muted">Indica o email da tua conta e enviamos um link para criares uma nova palavra-passe.</p>
+    <?php endif; ?>
+    <?= campo_csrf() ?>
+    <input type="email" name="email" placeholder="Email" required>
+    <button class="btn primary">Enviar link</button>
+    <small><a href="login.php" class="lk">← Voltar a iniciar sessão</a></small>
   </form>
-  <p class="cr"><?= count($projetos) ?> projeto<?= count($projetos) === 1 ? '' : 's' ?></p>
-  <?php if (!$projetos): ?><p class="empty">Nenhum projeto encontrado.</p><?php endif; ?>
-  <div class="pjc"><?php foreach ($projetos as $p) echo cartao_projeto($p); ?></div>
-</div></div>
+</div></div></div>
 <?php require 'rodape.php'; ?>

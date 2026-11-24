@@ -1,52 +1,74 @@
 <?php
-// Passo 20 – Chat da comunidade
-// Sala "Geral" para todos e conversas privadas entre utilizadores.
-// As mensagens novas aparecem sozinhas (o JavaScript pergunta ao chat_api.php a cada 4 segundos).
+// Passo 20 – Chat: pedidos feitos pelo JavaScript (devolve JSON)
+//   GET  chat_api.php?com=ID&depois=ID   -> mensagens da conversa
+//   POST op=enviar | editar | apagar     -> altera e devolve {ok:true}
 require 'lib.php';
-$u = exigir_login();
+header('Content-Type: application/json; charset=utf-8');
 
-// Com quem é a conversa: 0 = sala geral
-$com = (int)($_GET['com'] ?? 0);
-$outro = $com ? linha('SELECT id, nome, cor FROM utilizadores WHERE id = ?', [$com]) : null;
-if ($com && (!$outro || $com === (int)$u['id'])) ir('chat.php');
+$u = eu();
+if (!$u) { http_response_code(401); exit(json_encode(['erro' => 'Sessão terminada.'])); }
+$uid = (int)$u['id'];
 
-// Começar uma conversa nova pelo nome
-if (isset($_GET['nome'])) {
-    $alvo = linha('SELECT id FROM utilizadores WHERE nome = ?', [trim($_GET['nome'])]);
-    if ($alvo && (int)$alvo['id'] !== (int)$u['id']) ir('chat.php?com=' . $alvo['id']);
-    aviso('Utilizador não encontrado.', 'erro');
-    ir('chat.php');
+/** Condição SQL para as mensagens de uma conversa (0 = sala geral). */
+function conversa(int $com, int $uid): array
+{
+    if ($com === 0) return ['m.para_id IS NULL', []];
+    return ['((m.de_id = ? AND m.para_id = ?) OR (m.de_id = ? AND m.para_id = ?))', [$uid, $com, $com, $uid]];
 }
 
-// Lista das conversas privadas (última mensagem de cada uma)
-$conversas = linhas('SELECT u.id, u.nome, u.cor, MAX(m.criado_em) AS ultima
-                     FROM mensagens m JOIN utilizadores u ON u.id = CASE WHEN m.de_id = ? THEN m.para_id ELSE m.de_id END
-                     WHERE m.para_id IS NOT NULL AND (m.de_id = ? OR m.para_id = ?)
-                     GROUP BY u.id, u.nome, u.cor ORDER BY ultima DESC', [$u['id'], $u['id'], $u['id']]);
-if ($outro && !in_array($outro['id'], array_column($conversas, 'id'))) array_unshift($conversas, $outro + ['ultima' => null]);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verificar_csrf();
+    $op = $_POST['op'] ?? '';
 
-// Ao abrir uma conversa privada, as notificações de mensagem dessa pessoa ficam lidas
-if ($outro) sql("UPDATE notificacoes SET lida = 1 WHERE utilizador_id = ? AND tipo = 'mensagem' AND link = ?", [$u['id'], 'chat.php?com=' . $outro['id']]);
+    if ($op === 'enviar') {
+        $texto = mb_substr(trim($_POST['texto'] ?? ''), 0, 1000);
+        $com = (int)($_POST['com'] ?? 0);
+        if ($texto === '') exit(json_encode(['erro' => 'Mensagem vazia.']));
+        if ($com && !valor('SELECT COUNT(*) FROM utilizadores WHERE id = ?', [$com])) exit(json_encode(['erro' => 'Utilizador não existe.']));
+        // Anti-spam: no máximo 8 mensagens em 20 segundos e nada de repetir a mesma mensagem
+        if (demasiado('mensagens', 'de_id', $uid, 8, 20)) exit(json_encode(['erro' => 'Estás a enviar mensagens depressa demais. Espera um pouco.']));
+        $ultima = linha('SELECT texto, criado_em FROM mensagens WHERE de_id = ? ORDER BY id DESC LIMIT 1', [$uid]);
+        if ($ultima && $ultima['texto'] === $texto && strtotime($ultima['criado_em']) > time() - 60) exit(json_encode(['erro' => 'Já enviaste esta mensagem.']));
+        if (!e_admin() && n_links($texto) > 2) exit(json_encode(['erro' => 'A mensagem tem links a mais.']));
+        sql('INSERT INTO mensagens (de_id, para_id, texto, criado_em) VALUES (?, ?, ?, ?)', [$uid, $com ?: null, $texto, agora()]);
+        if ($com) {
+            // Só cria nova notificação se a anterior desta conversa já tiver sido lida
+            $link = 'chat.php?com=' . $uid;
+            if (!valor('SELECT COUNT(*) FROM notificacoes WHERE utilizador_id = ? AND link = ? AND lida = 0', [$com, $link])) {
+                notificar($com, 'mensagem', $u['nome'] . ' enviou-te uma mensagem.', $link);
+            }
+        }
+        exit(json_encode(['ok' => true]));
+    }
 
-$titulo = 'Chat';
-$ativo = 'Comunidade';
-require 'cabecalho.php';
-?>
-<div class="content"><div class="left">
-  <h1 class="ph">Chat</h1>
-  <div class="msgx">
-    <div class="convs">
-      <a class="cv<?= $com ? '' : ' on' ?>" href="chat.php"><span class="av s" style="--h:350">#</span><div><b>Geral</b><small>Sala de toda a comunidade</small></div></a>
-      <?php foreach ($conversas as $c): ?>
-        <a class="cv<?= $com === (int)$c['id'] ? ' on' : '' ?>" href="chat.php?com=<?= $c['id'] ?>"><?= avatar($c) ?><div><b><?= e($c['nome']) ?></b><small><?= $c['ultima'] ? tempo($c['ultima']) : 'nova conversa' ?></small></div></a>
-      <?php endforeach; ?>
-      <form class="newc" method="get"><input name="nome" placeholder="Nova conversa: nome" required><button class="btn ghost sm">Abrir</button></form>
-    </div>
-    <div class="cpane" data-chat="<?= $com ?>" data-eu="<?= (int)$u['id'] ?>" data-admin="<?= e_admin() ? 1 : 0 ?>" data-csrf="<?= token_csrf() ?>">
-      <div class="chh"><b><?= $outro ? link_perfil($outro) : '# Geral' ?></b></div>
-      <div id="msgs"><p class="empty">A carregar…</p></div>
-      <form id="chat"><input name="texto" maxlength="1000" placeholder="Escreve uma mensagem..." autocomplete="off" required><button class="btn primary">Enviar</button></form>
-    </div>
-  </div>
-</div></div>
-<?php require 'rodape.php'; ?>
+    // Editar e apagar: só o autor (o administrador também pode apagar)
+    $m = linha('SELECT * FROM mensagens WHERE id = ?', [(int)($_POST['id'] ?? 0)]);
+    if (!$m) exit(json_encode(['erro' => 'Mensagem não encontrada.']));
+    $autor = (int)$m['de_id'] === $uid;
+
+    if ($op === 'editar' && $autor) {
+        $texto = mb_substr(trim($_POST['texto'] ?? ''), 0, 1000);
+        if ($texto === '') exit(json_encode(['erro' => 'Mensagem vazia.']));
+        sql('UPDATE mensagens SET texto = ?, editada = 1 WHERE id = ?', [$texto, $m['id']]);
+        exit(json_encode(['ok' => true]));
+    }
+    if ($op === 'apagar' && ($autor || e_admin())) {
+        sql('DELETE FROM mensagens WHERE id = ?', [$m['id']]);
+        exit(json_encode(['ok' => true]));
+    }
+    http_response_code(403);
+    exit(json_encode(['erro' => 'Sem permissão.']));
+}
+
+// GET: últimas 100 mensagens da conversa
+$com = (int)($_GET['com'] ?? 0);
+[$cond, $param] = conversa($com, $uid);
+$lista = linhas("SELECT m.id, m.de_id, m.texto, m.editada, m.criado_em, u.nome, u.cor FROM mensagens m JOIN utilizadores u ON u.id = m.de_id
+                 WHERE $cond ORDER BY m.id DESC LIMIT 100", $param);
+$lista = array_reverse($lista);
+foreach ($lista as &$m) {
+    $m['hora'] = date('d/m H:i', strtotime($m['criado_em']));
+    $m['meu'] = (int)$m['de_id'] === $uid;
+    unset($m['criado_em']);
+}
+echo json_encode(['mensagens' => $lista]);

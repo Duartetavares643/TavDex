@@ -1,795 +1,264 @@
-/* =====================================================================
-   TavDex – folha de estilos
-   Estilo "cinema premium": fundo escuro elegante, imagens em destaque,
-   vermelho e magenta do logótipo só nos pormenores. Tem modo escuro
-   (por omissão) e modo claro, trocados pelo botão ☀/☾ no topo.
-   Organização: 1 variáveis · 2 base · 3 estrutura · 4 topo e rodapé ·
-   5 componentes · 6 páginas · 7 telemóvel
-   ===================================================================== */
+<?php
+// =====================================================================
+//  TavDex – Página de teste (diagnóstico da instalação)
+//  Abre http://localhost/tavdex-php/teste.php para confirmar que o PHP,
+//  a base de dados e as pastas estão prontos. Não altera nenhum dado.
+//  Só abre em modo de desenvolvimento (MODO_DEV = true) ou para administradores.
+// =====================================================================
+require 'lib.php';
 
-/* ---------------------------------------------------------------------
-   1. VARIÁVEIS (cores e medidas usadas em todo o site)
-   --------------------------------------------------------------------- */
-:root {
-  --bg: #08070b;            /* fundo da página */
-  --bg-2: #0e0c13;          /* faixas alternadas */
-  --surface: #141119;       /* cartões e caixas */
-  --surface-2: #1c1823;     /* caixas dentro de caixas, campos */
-  --surface-3: #26212f;     /* hover */
-  --line: rgba(255, 255, 255, .08);
-  --line-2: rgba(255, 255, 255, .14);
-  --text: #f4f0f7;
-  --text-2: #c6bfd0;
-  --muted: #8f879b;
-  --red: #ff2d55;
-  --red-2: #ff6b85;         /* vermelho para texto sobre escuro */
-  --mag: #c42bd8;
-  --grad: linear-gradient(100deg, #ff2d55 0%, #c42bd8 100%);
-  --ok: #3dd68c;
-  --gold: #f5b50a;
-  --shadow: 0 18px 40px rgba(0, 0, 0, .45);
-  --shadow-s: 0 6px 18px rgba(0, 0, 0, .35);
-  --nav-bg: rgba(8, 7, 11, .78);
-  --raio: 14px;
-  --raio-s: 10px;
-  --larg: 1440px;
-  --t: .22s cubic-bezier(.2, .7, .2, 1);
-  color-scheme: dark;
-}
-/* Modo claro: só mudam as variáveis */
-:root[data-tema="claro"] {
-  --bg: #f6f4f9;
-  --bg-2: #efecf3;
-  --surface: #ffffff;
-  --surface-2: #f3f0f7;
-  --surface-3: #e9e4ef;
-  --line: rgba(25, 12, 40, .09);
-  --line-2: rgba(25, 12, 40, .16);
-  --text: #16121c;
-  --text-2: #4a4356;
-  --muted: #736b80;
-  --red: #e0103f;
-  --red-2: #c80e38;
-  --mag: #9f1cb5;
-  --grad: linear-gradient(100deg, #e0103f 0%, #9f1cb5 100%);
-  --ok: #15904f;
-  --gold: #b07a00;
-  --shadow: 0 18px 40px rgba(40, 20, 60, .12);
-  --shadow-s: 0 6px 18px rgba(40, 20, 60, .08);
-  --nav-bg: rgba(255, 255, 255, .82);
-  color-scheme: light;
+if (!MODO_DEV && !e_admin()) {
+    http_response_code(403);
+    exit('Página de teste desativada. Entra como administrador ou ativa MODO_DEV em config.php.');
 }
 
-/* ---------------------------------------------------------------------
-   2. BASE
-   --------------------------------------------------------------------- */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
-body {
-  background: var(--bg); color: var(--text);
-  font: 15px/1.55 "Inter", "Segoe UI", system-ui, sans-serif;
-  min-height: 100vh; display: flex; flex-direction: column;
-  transition: background-color var(--t), color var(--t);
-}
-main { flex: 1; }
-a { color: inherit; text-decoration: none; }
-img { max-width: 100%; display: block; }
-button, input, select, textarea { font: inherit; color: inherit; }
-svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-h1, h2, h3 { line-height: 1.15; letter-spacing: -.01em; }
-::selection { background: var(--red); color: #fff; }
-:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 6px; }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 10px; border: 2px solid var(--bg); }
-::-webkit-scrollbar-track { background: transparent; }
-[hidden] { display: none !important; }
-
-.muted { color: var(--muted); }
-.empty { color: var(--muted); padding: 28px 0; grid-column: 1 / -1; }
-.lk { color: var(--red-2); font-weight: 500; }
-.lk:hover { text-decoration: underline; }
-.lk-u { font-weight: 600; color: var(--text); transition: color var(--t); }
-.lk-u:hover { color: var(--red-2); }
-.inline { display: inline-block; }
-
-/* Títulos de página e de secção */
-.ph { font: 400 52px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; margin-bottom: 22px; }
-.sh { font-size: 19px; font-weight: 700; margin: 34px 0 14px; display: flex; align-items: center; gap: 10px; }
-.sh::before, .row-head h2::before { content: ""; width: 4px; height: 18px; border-radius: 2px; background: var(--grad); }
-
-/* ---------------------------------------------------------------------
-   3. ESTRUTURA
-   --------------------------------------------------------------------- */
-.content, .wrap { width: 100%; max-width: var(--larg); margin: 0 auto; padding: 0 48px 48px; }
-.content { display: flex; gap: 24px; animation: entrar .45s ease both; }
-.left { flex: 1; min-width: 0; padding-top: 32px; }
-.narrow { max-width: 780px; margin: 0 auto; }
-.dcols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
-.grid { display: grid; gap: 20px; }
-.g5 { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
-.g4 { grid-template-columns: repeat(4, 1fr); }
-.g3 { grid-template-columns: repeat(3, 1fr); }
-.g2 { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-@keyframes entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
-/* ---------------------------------------------------------------------
-   4. TOPO (barra de navegação) E RODAPÉ
-   --------------------------------------------------------------------- */
-.nav {
-  position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 28px;
-  height: 64px; padding: 0 48px; background: var(--nav-bg);
-  backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px);
-  border-bottom: 1px solid var(--line);
-}
-.bl { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; flex: none; }
-.bl img { width: 34px; height: 34px; border-radius: 50%; }
-.bl em, .ft em { font-style: normal; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.nav nav { display: flex; gap: 6px; }
-.nav nav a { position: relative; padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text-2); transition: color var(--t), background var(--t); }
-.nav nav a:hover { color: var(--text); background: var(--surface-2); }
-.nav nav a.active { color: var(--text); }
-.nav nav a.active::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -13px; height: 2px; border-radius: 2px; background: var(--grad); }
-.search { margin-left: auto; display: flex; align-items: center; gap: 10px; width: 340px; height: 40px; padding: 0 14px; border-radius: 20px; background: var(--surface-2); border: 1px solid var(--line); transition: border-color var(--t), box-shadow var(--t), width var(--t); }
-.search:focus-within { border-color: var(--red); box-shadow: 0 0 0 4px rgba(255, 45, 85, .14); width: 400px; }
-.search svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
-.search input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; font-size: 14px; }
-.search input::placeholder { color: var(--muted); }
-.icone-btn, .bell { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: none; border: 0; color: var(--text-2); cursor: pointer; transition: background var(--t), color var(--t); flex: none; }
-.icone-btn:hover, .bell:hover { background: var(--surface-2); color: var(--text); }
-.icone-btn svg, .bell svg { width: 20px; height: 20px; }
-.bell i { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; font: 700 10px/18px "Inter", sans-serif; font-style: normal; text-align: center; border: 2px solid var(--bg); box-sizing: content-box; }
-/* Ícone do tema: mostra a lua no escuro e o sol no claro */
-.tema .sol { display: none; }
-:root[data-tema="claro"] .tema .sol { display: block; }
-:root[data-tema="claro"] .tema .lua { display: none; }
-.um { position: relative; flex: none; }
-.ub { display: flex; align-items: center; gap: 10px; background: none; border: 0; cursor: pointer; padding: 4px 8px 4px 4px; border-radius: 22px; font-size: 14px; font-weight: 600; transition: background var(--t); }
-.ub:hover, .um.open .ub { background: var(--surface-2); }
-.dd { display: none; position: absolute; right: 0; top: calc(100% + 8px); min-width: 220px; padding: 6px; z-index: 120; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--raio); box-shadow: var(--shadow); animation: entrar .18s ease; }
-.um.open .dd { display: block; }
-.dd a, .rtog { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: var(--text-2); background: none; border: 0; cursor: pointer; }
-.dd a:hover, .rtog:hover { background: var(--surface-2); color: var(--text); }
-.dd form { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
-.nav-btn { flex: none; }
-
-.ft { margin-top: 56px; border-top: 1px solid var(--line); background: var(--bg-2); }
-.ft-in { max-width: var(--larg); margin: 0 auto; padding: 36px 48px; display: flex; flex-wrap: wrap; gap: 24px 48px; align-items: center; }
-.ft img { width: 36px; height: 36px; border-radius: 50%; }
-.ft b { font-size: 20px; }
-.ft .marca { display: flex; align-items: center; gap: 10px; }
-.ft .lema { color: var(--muted); font-size: 14px; }
-.ft nav { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-left: auto; font-size: 14px; color: var(--text-2); }
-.ft nav a:hover { color: var(--red-2); }
-.ft small { width: 100%; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); padding-top: 18px; }
-
-/* ---------------------------------------------------------------------
-   5. COMPONENTES
-   --------------------------------------------------------------------- */
-/* Botões */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 14px; font-weight: 600; border: 1px solid transparent; cursor: pointer; white-space: nowrap; transition: transform var(--t), box-shadow var(--t), background var(--t), border-color var(--t), filter var(--t); }
-.btn.sm { height: 36px; padding: 0 16px; font-size: 13px; }
-.btn.primary { background: var(--grad); color: #fff; box-shadow: 0 8px 22px rgba(255, 45, 85, .25); }
-.btn.primary:hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 12px 28px rgba(255, 45, 85, .35); }
-.btn.ghost { background: var(--surface-2); border-color: var(--line-2); color: var(--text); }
-.btn.ghost:hover { background: var(--surface-3); border-color: var(--muted); }
-.btn:active { transform: translateY(0) scale(.98); }
-.btn:disabled { opacity: .5; cursor: default; }
-.btns { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.del-btn { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; padding: 6px 8px; border-radius: 8px; transition: color var(--t), background var(--t); }
-.del-btn:hover { color: var(--red-2); background: var(--surface-2); }
-
-/* Caixas */
-.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); padding: 20px; margin-bottom: 14px; transition: border-color var(--t); }
-.box h3 { font-size: 16px; margin-bottom: 12px; }
-.box p { color: var(--text-2); }
-.danger { border-color: rgba(255, 45, 85, .35); }
-.cta { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 24px; background: linear-gradient(120deg, rgba(255, 45, 85, .12), rgba(196, 43, 216, .10)), var(--surface); }
-.cta b { font-size: 17px; }
-
-/* Avisos */
-.flash { max-width: var(--larg); margin: 16px auto 0; width: calc(100% - 96px); padding: 12px 16px; border-radius: var(--raio-s); border: 1px solid rgba(61, 214, 140, .4); background: rgba(61, 214, 140, .10); color: var(--text); animation: entrar .3s ease; }
-.flash.erro { border-color: rgba(255, 45, 85, .45); background: rgba(255, 45, 85, .10); }
-.content .flash { width: 100%; }
-.msg { color: var(--red-2); font-size: 14px; }
-.ok-msg { color: var(--ok); }
-.dev { background: var(--surface-2); border: 1px dashed var(--mag); padding: 10px 12px; border-radius: var(--raio-s); font-size: 13px; }
-
-/* Formulários */
-.form { display: flex; flex-direction: column; gap: 14px; }
-.form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: var(--text-2); }
-.form input:not([type=checkbox]):not([type=radio]):not([type=file]), .form select, .form textarea,
-.inline-form input, .cf input, .cf select, .newc input, .fm input, #chat input, .medit input, .rep-d select {
-  width: 100%; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--raio-s);
-  padding: 11px 13px; font-size: 14px; color: var(--text); outline: 0; transition: border-color var(--t), box-shadow var(--t);
-}
-.form input:focus, .form select:focus, .form textarea:focus, .inline-form input:focus, .cf input:focus, .cf select:focus, .newc input:focus, .fm input:focus, #chat input:focus {
-  border-color: var(--red); box-shadow: 0 0 0 4px rgba(255, 45, 85, .12);
-}
-.form textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
-.form .btn { align-self: flex-start; }
-.form input[type=file] { font-size: 13px; color: var(--text-2); }
-::placeholder { color: var(--muted); }
-.chk { flex-direction: row !important; align-items: center; gap: 10px !important; font-size: 14px !important; color: var(--text) !important; cursor: pointer; }
-input[type=checkbox], input[type=radio] { accent-color: var(--red); width: 18px; height: 18px; }
-.row2 { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-.row2 > * { flex: 1 1 150px; }
-.row2 > .btn { flex: 0 0 auto; }
-.inline-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.inline-form input { flex: 1 1 150px; width: auto; }
-.cc { float: right; font-weight: 400; color: var(--muted); }
-
-/* Separadores (tabs) */
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 24px 0 18px; overflow-x: auto; scrollbar-width: none; }
-.tabs::-webkit-scrollbar { display: none; }
-.tabs button, .tabs.links a { position: relative; background: none; border: 0; padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; transition: color var(--t); }
-.tabs button:hover, .tabs.links a:hover { color: var(--text); }
-.tabs .on { color: var(--text); }
-.tabs .on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; border-radius: 2px; background: var(--grad); }
-[data-pane] { animation: entrar .3s ease; }
-
-/* Etiquetas */
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap;
-  color: hsl(var(--c) 85% 70%); background: hsl(var(--c) 70% 50% / .14); border: 1px solid hsl(var(--c) 70% 55% / .32); }
-:root[data-tema="claro"] .badge { color: hsl(var(--c) 75% 32%); background: hsl(var(--c) 70% 50% / .10); }
-.tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--red-2); }
-.tg { display: inline-block; margin: 4px 6px 0 0; padding: 5px 12px; border-radius: 999px; background: var(--surface-2); font-size: 12px; color: var(--text-2); }
-.age { border: 1px solid var(--line-2); border-radius: 4px; padding: 0 6px; font-size: 12px; }
-
-/* Avatares */
-.av { display: inline-grid; place-items: center; flex: none; border-radius: 50%; color: #fff; font-weight: 700;
-  background: linear-gradient(135deg, hsl(var(--h, 330) 75% 52%), hsl(calc(var(--h, 330) + 50) 70% 36%)); box-shadow: 0 0 0 2px var(--bg); }
-.av.s { width: 36px; height: 36px; font-size: 14px; }
-.av.l { width: 76px; height: 76px; font-size: 28px; }
-
-/* Estrelas */
-.st { color: var(--gold); font-style: normal; }
-.sst { color: var(--gold); letter-spacing: 1px; font-size: 13px; }
-.stars-in { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; }
-.stars-in input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.stars-in label { font-size: 30px; line-height: 1; color: var(--surface-3); cursor: pointer; transition: color .15s, transform .15s; }
-.stars-in label:hover, .stars-in label:hover ~ label, .stars-in input:checked ~ label { color: var(--gold); }
-.stars-in label:hover { transform: scale(1.15); }
-.stars-in input:focus-visible + label { outline: 2px solid var(--red); border-radius: 4px; }
-
-/* Barras (gráficos simples) */
-.rb { display: flex; align-items: center; gap: 10px; font-size: 13px; margin: 8px 0; color: var(--text-2); }
-.bar { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-3); position: relative; overflow: hidden; }
-.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--grad); }
-.gname { width: 110px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Linha com avatar (comentários, pessoas, listas) */
-.rv { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; }
-.rv > div { min-width: 0; }
-.rv p { overflow-wrap: anywhere; margin-top: 4px; }
-.rv small, .cm small { color: var(--muted); font-size: 12px; }
-.cmb { flex: 1; min-width: 0; }
-.acts { margin-left: auto; display: flex; align-items: flex-start; gap: 2px; flex: none; }
-.mine { border-color: rgba(255, 45, 85, .35); }
-.li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; margin: 0; border-bottom: 1px solid var(--line); }
-.li:last-of-type { border-bottom: 0; }
-.li small { display: block; color: var(--muted); }
-.cact { display: flex; flex-wrap: wrap; gap: 8px; }
-.ulist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.ulist .rv { align-items: center; margin: 0; }
-.tl p { position: relative; padding: 0 0 14px 20px; font-size: 13px; color: var(--text-2); }
-.tl p::before { content: ""; position: absolute; left: 0; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
-.tl p::after { content: ""; position: absolute; left: 3.5px; top: 16px; bottom: 0; width: 1px; background: var(--line-2); }
-.tl p:last-child::after { display: none; }
-.tl small { display: block; color: var(--muted); }
-
-/* Denunciar e spoilers (abrem ao clicar) */
-.rep-d { position: relative; }
-.rep-d summary { list-style: none; cursor: pointer; color: var(--muted); padding: 6px 8px; font-size: 13px; border-radius: 8px; }
-.rep-d summary::-webkit-details-marker { display: none; }
-.rep-d summary:hover { color: var(--gold); background: var(--surface-2); }
-.rep-d form { position: absolute; right: 0; top: 100%; z-index: 20; display: flex; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--raio-s); box-shadow: var(--shadow); }
-.rep-d select { width: auto; padding: 6px 8px; }
-.spoiler-d summary { cursor: pointer; color: var(--gold); font-size: 13px; margin-top: 6px; }
-.spoiler-d p { margin-top: 6px; }
-.spoiler { filter: blur(5px); transition: filter var(--t); cursor: pointer; }
-.spoiler:hover { filter: none; }
-
-/* Tabelas */
-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
-th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: var(--surface); position: sticky; top: 0; z-index: 1; }
-tbody tr { transition: background var(--t); }
-tbody tr:hover { background: var(--surface-2); }
-.tscroll { max-height: 560px; overflow: auto; border: 1px solid var(--line); border-radius: var(--raio); background: var(--surface); }
-.ac { text-align: right; white-space: nowrap; }
-.ac form { margin: 2px; }
-.uc { display: flex; align-items: center; gap: 10px; }
-.txt { max-width: 300px; font-size: 13px; color: var(--text-2); }
-
-/* Paginação */
-.pg { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 32px; }
-.pg a { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); font-size: 14px; transition: background var(--t); }
-.pg a:hover { background: var(--surface-2); }
-.pg a.on { background: var(--grad); border-color: transparent; color: #fff; }
-
-/* ---------- Cartazes e cartões de títulos ---------- */
-.poster { position: relative; aspect-ratio: 2 / 3; border-radius: var(--raio-s); overflow: hidden; display: flex; align-items: flex-end; justify-content: center;
-  background: radial-gradient(circle at 50% 32%, var(--a, #ff2d55), transparent 62%), linear-gradient(180deg, var(--b, #2a0612), #050407); }
-.poster::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 34% 40% at 50% 70%, rgba(0, 0, 0, .5), transparent 72%), linear-gradient(180deg, rgba(255, 255, 255, .10), transparent 30%, rgba(0, 0, 0, .65)); }
-.poster b { position: relative; z-index: 1; padding: 0 10px 20px; text-align: center; color: #fff; font: 400 22px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .06em; text-shadow: 0 2px 10px rgba(0, 0, 0, .7); }
-.poster.has-img { background: var(--img) center / cover no-repeat, var(--surface-2); }
-.poster.has-img::before { background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, .35)); }
-.card { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.card .cw { position: relative; }
-.card .poster { box-shadow: var(--shadow-s); transition: transform var(--t), box-shadow var(--t); }
-.card:hover .poster { transform: translateY(-4px); box-shadow: var(--shadow); }
-.card:hover .nota { transform: translateY(-4px); }
-.card h3 { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--t); }
-.card:hover h3 { color: var(--red-2); }
-.card small { color: var(--muted); font-size: 12px; margin-top: -6px; }
-.nota { position: absolute; top: 8px; right: 8px; z-index: 2; padding: 3px 8px; border-radius: 999px; background: rgba(8, 7, 11, .72); backdrop-filter: blur(6px); color: #fff; font-size: 12px; font-weight: 700; transition: transform var(--t); }
-.nota .st { margin-right: 2px; }
-
-/* Filas horizontais da página inicial */
-.row { margin-top: 40px; }
-.row-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.row-head h2 { font-size: 21px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-.row-head a { color: var(--muted); font-size: 13px; font-weight: 600; transition: color var(--t); }
-.row-head a:hover { color: var(--red-2); }
-.hrow { display: grid; grid-auto-flow: column; grid-auto-columns: 220px; gap: 16px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; scrollbar-width: none; }
-.hrow::-webkit-scrollbar { display: none; }
-.rc { scroll-snap-align: start; border-radius: var(--raio); overflow: hidden; background: var(--surface); border: 1px solid var(--line); transition: transform var(--t), box-shadow var(--t), border-color var(--t); }
-.rc:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--line-2); }
-.rc .poster { aspect-ratio: 16 / 10; border-radius: 0; }
-.rc .poster b { font-size: 20px; padding-bottom: 14px; }
-.rt { padding: 12px 14px; }
-.rt h3 { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rt small { display: flex; gap: 12px; margin-top: 4px; color: var(--muted); font-size: 12px; }
-
-/* ---------- Projetos ---------- */
-.pjrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.pjc { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.pjh { display: flex; gap: 14px; padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); transition: transform var(--t), box-shadow var(--t), border-color var(--t); min-width: 0; }
-a.pjh:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--line-2); }
-.pjh > div:last-child { min-width: 0; }
-.pt { width: 104px; flex: none; min-height: 120px; border-radius: var(--raio-s); background: radial-gradient(circle at 50% 30%, hsl(var(--h) 85% 52%), transparent 66%), linear-gradient(180deg, hsl(var(--h) 60% 18%), #07060b); }
-.pk { color: var(--red-2); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.pjh h3 { font-size: 15px; margin: 2px 0 4px; }
-.pjh p { font-size: 13px; color: var(--muted); line-height: 1.45; margin-bottom: 8px; }
-.mb { font-size: 12px; color: var(--muted); margin-right: 6px; }
-.pf { color: var(--text-2) !important; }
-.vaga b { font-size: 15px; }
-.vaga .form { margin-top: 12px; }
-.cd { align-items: flex-start; }
-.cd > .badge { flex: none; margin-top: 4px; }
-
-/* ---------- Comunidade ---------- */
-.post .rv { margin: 0; }
-.cms { margin: 14px 0 0 48px; padding-left: 16px; border-left: 2px solid var(--line); }
-.cm { display: flex; gap: 10px; margin: 12px 0; }
-.cm p { font-size: 14px; color: var(--text-2); margin-top: 2px; overflow-wrap: anywhere; }
-.reply summary { list-style: none; cursor: pointer; color: var(--muted); font-size: 12px; font-weight: 600; margin-top: 4px; }
-.reply summary:hover { color: var(--red-2); }
-a.tg:hover { background: var(--surface-3); }
-
-/* ---------- Chat ---------- */
-.msgx { display: grid; grid-template-columns: 290px 1fr; height: 620px; border: 1px solid var(--line); border-radius: var(--raio); overflow: hidden; background: var(--surface); }
-.convs { display: flex; flex-direction: column; border-right: 1px solid var(--line); overflow: auto; background: var(--bg-2); }
-.cv { display: flex; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); transition: background var(--t); }
-.cv:hover { background: var(--surface-2); }
-.cv.on { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--red); }
-.cv small { display: block; color: var(--muted); font-size: 12px; }
-.newc { display: flex; gap: 6px; padding: 12px; margin-top: auto; border-top: 1px solid var(--line); }
-.cpane { display: flex; flex-direction: column; min-height: 0; }
-.chh { padding: 16px 20px; border-bottom: 1px solid var(--line); }
-#msgs { flex: 1; overflow: auto; padding: 16px 20px; }
-#msgs .m { max-width: 72%; margin: 8px 0; display: flex; flex-direction: column; }
-#msgs .m.out { margin-left: auto; align-items: flex-end; }
-#msgs .bb { padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: var(--surface-2); overflow-wrap: anywhere; }
-#msgs .m.out .bb { background: var(--grad); color: #fff; border-radius: 16px 16px 4px 16px; }
-#msgs small { color: var(--muted); font-size: 11px; margin: 3px 6px; }
-#msgs .who { font-weight: 700; color: var(--text-2); }
-#msgs .ma button { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 11px; padding: 0 4px; }
-#msgs .ma button:hover { color: var(--red-2); }
-#msgs .medit { display: flex; gap: 6px; }
-#chat { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--line); }
-
-/* ---------- Notificações ---------- */
-.notif { align-items: center; margin-bottom: 8px; padding: 14px 16px; }
-.notif a { flex: 1; color: var(--text); }
-.notif small { margin-left: 6px; }
-.notif.unread { border-color: rgba(255, 45, 85, .4); background: linear-gradient(90deg, rgba(255, 45, 85, .08), transparent 60%), var(--surface); }
-.ni { font-size: 18px; }
-.nset { display: flex; flex-direction: column; gap: 2px; }
-.nset label { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 14px; cursor: pointer; }
-.nset small { color: var(--muted); display: block; margin-top: 6px; }
-.nset .btn { align-self: flex-start; margin-top: 12px; }
-
-/* ---------------------------------------------------------------------
-   6. PÁGINAS
-   --------------------------------------------------------------------- */
-/* Início: destaque com vários slides (sempre escuro, como num cinema) */
-.hero2 { position: relative; height: 480px; overflow: hidden; background: #08070b; color: #f4f0f7; }
-.hero2 .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .8s ease, visibility .8s;
-  background: radial-gradient(circle at 74% 26%, hsl(var(--h) 100% 58% / .85), transparent 44%),
-              radial-gradient(ellipse 120px 210px at 66% 92%, #000 60%, transparent 62%),
-              radial-gradient(ellipse 92px 172px at 78% 96%, #000 60%, transparent 62%),
-              linear-gradient(180deg, hsl(var(--h) 75% 20%), hsl(var(--h) 70% 8%) 78%, #08070b); }
-.hero2 .slide::before { content: ""; position: absolute; inset: 0; background: var(--img, none) 70% 25% / cover no-repeat; transform: scale(1.04); transition: transform 8s ease; -webkit-mask-image: linear-gradient(90deg, transparent 12%, #000 58%); mask-image: linear-gradient(90deg, transparent 12%, #000 58%); }
-.hero2 .slide.on { opacity: 1; visibility: visible; }
-.hero2 .slide.on::before { transform: scale(1); }
-.hero2::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, #08070b 10%, rgba(8, 7, 11, .55) 42%, transparent 70%), linear-gradient(0deg, var(--bg) 0%, transparent 28%); }
-.ht { position: relative; z-index: 2; max-width: var(--larg); margin: 0 auto; padding: 84px 48px 0; }
-.ht > * { max-width: 620px; }
-.ht h1 { font: 400 76px/.95 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; margin: 10px 0 14px; text-shadow: 0 4px 24px rgba(0, 0, 0, .5); }
-.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 14px; color: inherit; opacity: .92; }
-.meta > span + span:not(.badge):not(.age)::before { content: "·"; margin-right: 14px; opacity: .5; }
-.star { font-weight: 700; }
-.ht .desc { margin: 16px 0 24px; font-size: 16px; line-height: 1.6; color: #dcd4e4; }
-.ht .btn.ghost { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .25); color: #fff; backdrop-filter: blur(8px); }
-.ht .btn.ghost:hover { background: rgba(255, 255, 255, .2); }
-.hctl { position: absolute; z-index: 3; right: 48px; bottom: 36px; display: flex; align-items: center; gap: 8px; }
-.hdots { display: flex; gap: 6px; margin-right: 10px; }
-.hdots i { width: 8px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .35); cursor: pointer; transition: width var(--t), background var(--t); }
-.hdots i.on { width: 26px; background: #fff; }
-.hctl button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .08); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; backdrop-filter: blur(8px); transition: background var(--t); }
-.hctl button:hover { background: rgba(255, 255, 255, .2); }
-
-/* Páginas de detalhe (título e projeto): cabeçalho escuro */
-.dh { position: relative; display: flex; gap: 32px; padding: 32px; border-radius: 20px; overflow: hidden; color: #f4f0f7;
-  background: radial-gradient(circle at 85% 15%, rgba(255, 45, 85, .30), transparent 50%), linear-gradient(135deg, #1a0d18, #0b0910); box-shadow: var(--shadow); }
-.dh .poster { width: 200px; flex: none; box-shadow: 0 20px 40px rgba(0, 0, 0, .55); }
-.dh h1 { font: 400 56px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; margin: 6px 0 12px; }
-.dh .desc { margin: 16px 0 20px; max-width: 760px; line-height: 1.65; color: #dcd4e4; }
-.dh .muted { color: #a79fb2; }
-.dh .lk-u { color: #fff; }
-.dh .btn.ghost { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); color: #fff; }
-.dh .btn.ghost:hover { background: rgba(255, 255, 255, .18); }
-.dh .lk { color: #ff8aa0; }
-.pdh { background: radial-gradient(circle at 85% 15%, hsl(var(--h) 85% 50% / .38), transparent 52%), linear-gradient(135deg, #160d1a, #0b0910); }
-.pdh .meta { margin: 8px 0; }
-.ig { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 24px; }
-.ig > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio-s); padding: 14px 16px; }
-.ig small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
-.seasons { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.seasons .box { margin: 0; padding: 16px; }
-.seasons small { display: block; color: var(--muted); margin-top: 4px; }
-.score { display: flex; align-items: center; gap: 12px; margin: 6px 0; }
-.score b { font: 400 56px/1 "Bebas Neue", "Inter", sans-serif; }
-.cast { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 16px; }
-.pp { text-align: center; }
-.pp .av { margin: 0 auto 10px; }
-.pp b { display: block; font-size: 14px; }
-.pp small { color: var(--muted); font-size: 12px; }
-.rate { gap: 12px; }
-
-/* Perfil */
-.pbn { display: flex; align-items: center; gap: 24px; padding: 28px; position: relative; overflow: hidden;
-  background: radial-gradient(circle at 90% 0%, rgba(196, 43, 216, .22), transparent 55%), radial-gradient(circle at 0% 100%, rgba(255, 45, 85, .14), transparent 50%), var(--surface); }
-.pbn .av.l { width: 96px; height: 96px; font-size: 38px; box-shadow: 0 0 0 4px var(--surface), 0 10px 30px rgba(196, 43, 216, .35); }
-.pinfo { flex: 1; min-width: 0; }
-.pinfo h2 { font-size: 26px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.hd { color: var(--muted); font-size: 13px; }
-.bio { margin-top: 8px; color: var(--text-2); font-size: 14px; }
-.pstats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 14px 0; }
-.ps { text-align: center; padding: 16px 8px; margin: 0; }
-.ps b { display: block; font: 400 34px/1 "Bebas Neue", "Inter", sans-serif; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.ps span { font-size: 12px; color: var(--muted); }
-.epv { display: flex; align-items: center; gap: 16px; }
-.epv b { display: block; color: var(--text); margin-bottom: 8px; }
-.sw label { display: inline-block; cursor: pointer; }
-.sw input { position: absolute; opacity: 0; }
-.sw i { display: inline-block; width: 28px; height: 28px; margin-right: 4px; border-radius: 50%; border: 2px solid transparent; transition: transform var(--t); }
-.sw i:hover { transform: scale(1.1); }
-.sw input:checked + i { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); }
-.sw input:focus-visible + i { outline: 2px solid var(--red); outline-offset: 2px; }
-.gp2 { border: 1px solid var(--line); border-radius: var(--raio-s); padding: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
-.gp2 legend { color: var(--muted); font-size: 13px; padding: 0 6px; }
-.chip input { position: absolute; opacity: 0; }
-.chip span { display: inline-block; padding: 6px 14px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; font-size: 13px; color: var(--text-2); transition: all var(--t); }
-.chip input:checked + span { border-color: var(--red); background: rgba(255, 45, 85, .14); color: var(--text); }
-.chip input:focus-visible + span { outline: 2px solid var(--red); }
-.gp2 input[name=novo_genero] { flex: 1 1 180px; width: auto; }
-.cprev { width: 120px; }
-
-/* Catálogo e listas */
-.cf { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
-.cf input, .cf select { flex: 1 1 160px; width: auto; }
-.cf .chk { flex: 0 0 auto; }
-.cr { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
-.lcard { display: flex; flex-direction: column; gap: 8px; }
-.lbtns { display: flex; flex-wrap: wrap; gap: 6px; }
-
-/* Administração */
-.ah { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; }
-.ah .ph { margin: 0; }
-.ah small { color: var(--muted); }
-.sg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 8px; }
-.sc { display: flex; align-items: center; gap: 14px; padding: 20px; border-radius: var(--raio); background: var(--surface); border: 1px solid var(--line); box-shadow: inset 0 3px 0 hsl(var(--c) 80% 55%); }
-.si { width: 46px; height: 46px; flex: none; display: grid; place-items: center; border-radius: 12px; font-size: 20px; background: hsl(var(--c) 70% 50% / .14); }
-.sc b { display: block; font: 400 34px/1 "Bebas Neue", "Inter", sans-serif; }
-.sc span { color: var(--text-2); font-size: 13px; }
-.sc small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
-.sc a { color: var(--red-2); }
-.bars { display: flex; align-items: flex-end; gap: 10px; height: 150px; }
-.bars div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; text-align: center; font-size: 11px; color: var(--muted); }
-.bars i { display: block; margin-bottom: 6px; border-radius: 6px 6px 2px 2px; background: var(--grad); min-height: 3px; }
-
-/* Entrar e registar */
-.authx { display: grid; grid-template-columns: 1fr 1fr; min-height: 560px; margin-top: 8px; border: 1px solid var(--line); border-radius: 22px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
-.brand { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 40px; text-align: center; color: #f4f0f7;
-  background: radial-gradient(circle at 50% 38%, rgba(196, 43, 216, .38), transparent 60%), linear-gradient(160deg, #1a0d20, #08070b); }
-.brand img { width: 150px; height: 150px; border-radius: 50%; margin-bottom: 18px; box-shadow: 0 0 60px rgba(196, 43, 216, .45); }
-.brand h2 { font: 400 40px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .03em; }
-.brand p { color: #b9b0c4; }
-.fm { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 48px; }
-.fm h1 { font-size: 26px; margin-bottom: 6px; }
-.fm .btn { width: 100%; }
-.fl { align-self: flex-end; font-size: 13px; }
-
-/* 404 */
-.nf { text-align: center; padding: 90px 0; }
-.nf h1 { font: 400 180px/1 "Bebas Neue", "Inter", sans-serif; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.nf h2 { margin-bottom: 8px; }
-.nf p { color: var(--muted); margin-bottom: 28px; }
-
-/* Quem prefere menos movimento não vê animações */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+$res = [];   // resultados: [grupo, estado, título, detalhe]
+function r(string $grupo, string $estado, string $titulo, string $detalhe = ''): void
+{
+    global $res;
+    $res[] = [$grupo, $estado, $titulo, $detalhe];
 }
 
-/* ---------------------------------------------------------------------
-   7. TABLET E TELEMÓVEL
-   --------------------------------------------------------------------- */
-@media (max-width: 1100px) {
-  .search { width: 240px; }
-  .search:focus-within { width: 280px; }
-  .pjrow { grid-template-columns: repeat(2, 1fr); }
-  .sg { grid-template-columns: repeat(2, 1fr); }
-  .dcols { grid-template-columns: 1fr; }
+// ---------------------------------------------------------------------
+// 1. PHP
+// ---------------------------------------------------------------------
+$g = 'PHP';
+version_compare(PHP_VERSION, '8.0.0', '>=')
+    ? r($g, 'ok', 'Versão do PHP: ' . PHP_VERSION, 'O TavDex precisa do PHP 8.0 ou superior.')
+    : r($g, 'erro', 'Versão do PHP: ' . PHP_VERSION, 'É preciso o PHP 8.0 ou superior. Atualiza o XAMPP ou instala um PHP mais recente.');
+foreach (['pdo' => 'ligação à base de dados', 'pdo_mysql' => 'ligação ao MySQL', 'mbstring' => 'texto com acentos', 'json' => 'chat'] as $ext => $para) {
+    if ($ext === 'pdo_mysql' && str_starts_with(getenv('TAVDEX_DSN') ?: '', 'sqlite')) continue;   // só nos testes automáticos
+    extension_loaded($ext)
+        ? r($g, 'ok', "Extensão $ext", "Usada para: $para.")
+        : r($g, 'erro', "Extensão $ext em falta", "Ativa a linha extension=$ext no php.ini e reinicia o servidor (Apache no XAMPP, ou o php -S).");
 }
-@media (max-width: 900px) {
-  body { overflow-x: hidden; }
-  .nav { height: auto; flex-wrap: wrap; gap: 8px 6px; padding: 10px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
-  .bl { margin-right: auto; }
-  .search { order: 5; width: 100%; margin: 4px 0 0; }
-  .search:focus-within { width: 100%; }
-  .nav nav { order: 6; width: calc(100% + 32px); margin: 0 -16px; padding: 4px 10px; overflow-x: auto; scrollbar-width: none; }
-  .nav nav::-webkit-scrollbar { display: none; }
-  .nav nav a { white-space: nowrap; padding: 10px 12px; }
-  .nav nav a.active::after { bottom: 2px; }
-  .ub { padding: 2px; }
-  .ub .nome { display: none; }
-  .dd { position: fixed; right: 12px; left: auto; top: auto; max-height: 70vh; overflow: auto; }
-  .content, .wrap { padding: 0 max(16px, env(safe-area-inset-right)) 32px max(16px, env(safe-area-inset-left)); }
-  .flash { width: calc(100% - 32px); }
-  /* 16px nos campos para o iPhone não fazer zoom */
-  input, select, textarea, .form input:not([type=checkbox]):not([type=radio]), .cf input, .cf select, .inline-form input, #chat input { font-size: 16px !important; }
-  .ph { font-size: 40px; }
-  .hero2 { height: 520px; }
-  .ht { padding: 56px 20px 0; }
-  .ht h1 { font-size: 54px; }
-  .ht .desc { font-size: 15px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-  .hctl { right: 16px; bottom: 20px; }
-  .hrow { grid-auto-columns: 46%; }
-  .g4, .g3 { grid-template-columns: repeat(2, 1fr); }
-  .g5 { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
-  .pjc { grid-template-columns: 1fr; }
-  .dh { flex-direction: column; padding: 22px; gap: 20px; }
-  .dh .poster { width: 150px; }
-  .dh h1 { font-size: 42px; }
-  .pbn { flex-direction: column; text-align: center; padding: 24px 18px; }
-  .pinfo h2 { justify-content: center; }
-  .pstats { grid-template-columns: repeat(3, 1fr); }
-  .msgx { grid-template-columns: 1fr; height: auto; }
-  .convs { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
-  .cv { flex: 0 0 200px; border-bottom: 0; border-right: 1px solid var(--line); }
-  .cv.on { box-shadow: inset 0 -3px 0 var(--red); }
-  .newc { flex: 0 0 250px; margin: 0; border-top: 0; }
-  .cpane { height: 64vh; }
-  .authx { grid-template-columns: 1fr; min-height: 0; }
-  .brand { padding: 28px; }
-  .brand img { width: 96px; height: 96px; margin-bottom: 8px; }
-  .fm { padding: 28px 22px; }
-  .tscroll table { min-width: 640px; }
-  .li { flex-wrap: wrap; }
-  .del-btn, .rep-d summary { padding: 9px 11px; font-size: 16px; }
-  .btn.sm { height: 40px; }
-  .stars-in label { font-size: 36px; padding: 0 2px; }
-  .ft-in { padding: 28px 20px max(20px, env(safe-area-inset-bottom)); }
-  .ft nav { margin-left: 0; }
+/** Converte "2M", "512K", "1G" do php.ini em bytes. */
+function bytes_ini(string $v): int
+{
+    $n = (int)$v;
+    return match (strtoupper(substr(trim($v), -1))) { 'G' => $n * 1024 ** 3, 'M' => $n * 1024 ** 2, 'K' => $n * 1024, default => $n };
 }
-@media (max-width: 600px) {
-  .hrow { grid-auto-columns: 64%; }
-  .pjrow { grid-template-columns: 1fr; }
-  .pjh { flex-direction: column; }
-  .pt { width: 100%; min-height: 110px; }
-  .sg { gap: 10px; }
-  .sc { padding: 14px; gap: 10px; }
-  .si { width: 38px; height: 38px; font-size: 17px; }
-  .sc b { font-size: 28px; }
-  .pstats { gap: 8px; }
-  .ps b { font-size: 28px; }
-  .cms { margin-left: 6px; padding-left: 12px; }
-  .cd { flex-wrap: wrap; }
-  .cd > .badge, .cd .cact { margin-left: 48px; }
-  .cd .cact { width: 100%; }
-  .rep-d form { flex-wrap: wrap; width: min(250px, 80vw); }
-  .cf .btn { flex: 1 1 auto; }
-  #msgs .m { max-width: 88%; }
-  .nf h1 { font-size: 110px; }
+$limite = min(bytes_ini(ini_get('upload_max_filesize')), bytes_ini(ini_get('post_max_size')));
+if (!ini_get('file_uploads')) {
+    r($g, 'aviso', 'Envio de ficheiros desativado', 'Não vai ser possível carregar cartazes. Ativa file_uploads no php.ini.');
+} elseif ($limite < 3 * 1024 * 1024) {
+    r($g, 'aviso', 'Limite de envio do PHP: ' . ini_get('upload_max_filesize'), 'Os cartazes podem ter até 3 MB, mas o PHP só aceita ' . ini_get('upload_max_filesize') . '. No php.ini muda upload_max_filesize e post_max_size para 8M e reinicia o servidor.');
+} else {
+    r($g, 'ok', 'Envio de ficheiros ativo', 'Limite por ficheiro: ' . ini_get('upload_max_filesize') . ' (os cartazes podem ter até 3 MB).');
 }
-@media (max-width: 380px) {
-  .bl span { display: none; }
-  .pstats { grid-template-columns: repeat(2, 1fr); }
-  .g5 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+r($g, 'info', 'Fuso horário: ' . date_default_timezone_get(), 'Hora do servidor: ' . date('d/m/Y H:i'));
+r($g, 'info', 'Servidor web: ' . ($_SERVER['SERVER_SOFTWARE'] ?? 'desconhecido'),
+  str_contains($_SERVER['SERVER_SOFTWARE'] ?? '', 'Apache') ? 'O ficheiro .htaccess protege os ficheiros internos.' : 'O .htaccess só funciona no Apache (XAMPP). Com outro servidor os ficheiros .sql ficam acessíveis: não os deixes no servidor.');
+
+// ---------------------------------------------------------------------
+// 2. Sessões (necessárias para o login)
+// ---------------------------------------------------------------------
+$g = 'Sessão e login';
+$_SESSION['teste_tavdex'] = ($_SESSION['teste_tavdex'] ?? 0) + 1;
+session_status() === PHP_SESSION_ACTIVE
+    ? r($g, 'ok', 'Sessões a funcionar', 'Esta página foi aberta ' . $_SESSION['teste_tavdex'] . ' vez(es) nesta sessão: atualiza a página e o número deve subir.')
+    : r($g, 'erro', 'As sessões não funcionam', 'Sem sessões não é possível iniciar sessão. Confirma a pasta session.save_path no php.ini.');
+r($g, 'ok', 'Proteção CSRF ativa', 'Os formulários levam um token secreto da sessão.');
+MODO_DEV
+    ? r($g, 'aviso', 'MODO_DEV ligado', 'O link de recuperação da palavra-passe aparece no ecrã. Está certo no computador, mas muda para false antes de pôr o site online.')
+    : r($g, 'ok', 'MODO_DEV desligado', 'A recuperação da palavra-passe é enviada por email.');
+
+// ---------------------------------------------------------------------
+// 3. Base de dados
+// ---------------------------------------------------------------------
+$g = 'Base de dados';
+$pdo = null;
+$dsn = getenv('TAVDEX_DSN') ?: 'mysql:host=' . BD_HOST . ';dbname=' . BD_NOME . ';charset=utf8mb4';
+try {
+    $pdo = new PDO($dsn, BD_UTILIZADOR, BD_PASSWORD, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    r($g, 'ok', 'Ligação à base de dados', 'Servidor ' . $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) . ' ' . $pdo->getAttribute(PDO::ATTR_SERVER_VERSION) . ' · base de dados ' . BD_NOME . ' em ' . BD_HOST . '.');
+} catch (PDOException $e) {
+    $msg = $e->getMessage();
+    $ajuda = 'Confirma os dados em config.php.';
+    if (stripos($msg, 'Unknown database') !== false) $ajuda = 'A base de dados ' . BD_NOME . ' não existe: importa base_dados.sql no MySQL Workbench ou no phpMyAdmin.';
+    elseif (stripos($msg, 'Access denied') !== false) $ajuda = 'Utilizador ou palavra-passe do MySQL errados: corrige BD_UTILIZADOR e BD_PASSWORD em config.php.';
+    elseif (stripos($msg, 'refused') !== false || stripos($msg, 'No such file') !== false || stripos($msg, "Can't connect") !== false) $ajuda = 'O MySQL não está ligado: no painel do XAMPP carrega em Start ao lado de MySQL (sem XAMPP: abre os Serviços do Windows e inicia o MySQL84).';
+    r($g, 'erro', 'Não foi possível ligar à base de dados', $ajuda . ' (Erro: ' . $msg . ')');
 }
 
-/* =====================================================================
-   8. ESTILO STREAMING (organização ao estilo Netflix)
-   ===================================================================== */
-.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.btn.light { background: #fff; color: #111; }
-.btn.light:hover { background: #e8e6eb; transform: translateY(-1px); }
+if ($pdo) {
+    $tabelas = ['utilizadores', 'recuperacoes', 'seguidores', 'generos', 'titulos', 'titulo_generos', 'temporadas', 'avaliacoes', 'listas', 'projetos',
+                'projeto_equipa', 'projeto_vagas', 'candidaturas', 'projeto_avaliacoes', 'publicacoes', 'comentarios', 'mensagens', 'notificacoes', 'notif_silenciadas', 'denuncias',
+                'plataformas', 'titulo_plataformas'];
+    $contagem = [];
+    $faltam = [];
+    foreach ($tabelas as $t) {
+        try {
+            $contagem[$t] = (int)$pdo->query("SELECT COUNT(*) FROM $t")->fetchColumn();
+        } catch (PDOException $e) {
+            $faltam[] = $t;
+        }
+    }
+    $faltam
+        ? r($g, 'erro', count($faltam) . ' tabela(s) em falta', 'Faltam: ' . implode(', ', $faltam) . '. ' . (count($faltam) <= 2 && in_array('plataformas', $faltam, true) ? 'A base de dados é de uma versão anterior: executa atualizar_bd.sql.' : 'Importa de novo base_dados.sql e depois dados.sql.'))
+        : r($g, 'ok', 'As ' . count($tabelas) . ' tabelas existem', 'Utilizadores: ' . $contagem['utilizadores'] . ' · títulos: ' . $contagem['titulos'] . ' · avaliações: ' . $contagem['avaliacoes'] . ' · projetos: ' . $contagem['projetos'] . ' · mensagens: ' . $contagem['mensagens'] . '.');
+    if (!$faltam && $contagem['titulos'] === 0) r($g, 'aviso', 'A base de dados está vazia', 'Importa dados.sql para teres os dados de exemplo.');
 
-/* Cartaz desenhado (quando não há imagem): cor do título, ano, nome e género */
-.poster.art { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 14px 13px 12px; color: #fff;
-  background: radial-gradient(120% 70% at 85% 0%, hsl(var(--h) 90% 56% / .9), transparent 60%),
-              radial-gradient(90% 60% at 0% 100%, hsl(calc(var(--h) + 40) 80% 42% / .55), transparent 62%),
-              linear-gradient(160deg, hsl(var(--h) 60% 22%), hsl(var(--h) 50% 6%)); }
-.poster.art::before { inset: 7px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 6px; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 10px); }
-.poster.art::after { content: ""; position: absolute; left: -30%; top: 26%; width: 160%; height: 34%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .09), transparent); transform: rotate(-24deg); pointer-events: none; }
-.poster.art .p-ano { position: relative; z-index: 1; font-size: 11px; font-weight: 600; letter-spacing: .22em; color: rgba(255, 255, 255, .78); }
-.poster.art b { margin-top: auto; padding: 0; text-align: left; font-size: 27px; line-height: .95; letter-spacing: .03em; overflow-wrap: anywhere; }
-.poster.art .p-gen { position: relative; z-index: 1; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(255, 255, 255, .28); font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: rgba(255, 255, 255, .78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rc .poster.art { padding: 12px 14px; }
-.rc .poster.art b { font-size: 26px; }
+    try {
+        $pdo->query('SELECT fundo, tmdb_id FROM titulos LIMIT 1');
+        r($g, 'ok', 'Colunas das imagens (fundo e TMDB)', 'A base de dados está atualizada.');
+    } catch (PDOException $e) {
+        if (!in_array('titulos', $faltam, true)) r($g, 'erro', 'Faltam as colunas das imagens', 'A base de dados é de uma versão anterior: executa atualizar_bd.sql.');
+    }
 
-/* Destaque do início, maior e com as filas por cima do fundo */
-.hero2 { height: min(80vh, 640px); }
-.ht { padding-top: 110px; }
-.rank { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #fff; }
-.rank b { background: var(--red); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; letter-spacing: .08em; }
-.hctl { bottom: 130px; }
-.filas { position: relative; z-index: 3; margin-top: -96px; }
-.filas > .row:first-child, .filas > .cta:first-child { margin-top: 0; }
+    // Teste de escrita: insere uma publicação e anula logo (nada fica guardado)
+    if (!$faltam) try {
+        $uid = $pdo->query('SELECT MIN(id) FROM utilizadores')->fetchColumn();
+        if ($uid) {
+            $pdo->beginTransaction();
+            $st = $pdo->prepare('INSERT INTO publicacoes (utilizador_id, texto, criado_em) VALUES (?, ?, ?)');
+            $st->execute([$uid, 'teste', agora()]);
+            $pdo->rollBack();
+            r($g, 'ok', 'Gravar dados', 'Foi possível escrever na base de dados (o teste foi anulado, nada ficou guardado).');
+        }
+    } catch (PDOException $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        r($g, 'erro', 'Não é possível gravar dados', 'O utilizador do MySQL não tem permissão de escrita. (Erro: ' . $e->getMessage() . ')');
+    }
 
-/* Filas de cartazes verticais */
-.hrow.cartazes { grid-auto-columns: 172px; }
-.hrow.cartazes .card h3 { font-size: 13px; }
-
-/* Top 10 com números grandes */
-.top10 { grid-auto-columns: max-content; gap: 8px; }
-.t10 { display: flex; align-items: flex-end; }
-.t10-n { font: 400 172px/.74 "Bebas Neue", "Inter", sans-serif; color: var(--bg); -webkit-text-stroke: 3px #6c6479; letter-spacing: -.04em; margin-right: -16px; user-select: none; }
-:root[data-tema="claro"] .t10-n { -webkit-text-stroke-color: #bdb5c8; }
-.t10 .poster { width: 146px; flex: none; z-index: 1; box-shadow: var(--shadow-s); transition: transform var(--t), box-shadow var(--t); }
-.t10:hover .poster { transform: translateY(-4px); box-shadow: var(--shadow); }
-.t10 .poster.art b { font-size: 22px; }
-
-/* Géneros em botões (catálogo) */
-.gchips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 0 14px; }
-.gchips::-webkit-scrollbar { display: none; }
-.gchips a { flex: none; padding: 8px 16px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--text-2); transition: all var(--t); }
-.gchips a:hover { color: var(--text); border-color: var(--line-2); }
-.gchips a.on { background: var(--grad); color: #fff; border-color: transparent; }
-
-/* Página do filme ou série: destaque a toda a largura */
-.det { position: relative; overflow: hidden; color: #f4f0f7; background: #08070b; }
-.det::before { content: ""; position: absolute; inset: 0; background: var(--img, none) center 25% / cover no-repeat; opacity: .6; }
-.det::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 82% 8%, hsl(var(--h) 90% 52% / .5), transparent 55%),
-              linear-gradient(90deg, #08070b 0%, rgba(8, 7, 11, .88) 38%, rgba(8, 7, 11, .35) 100%),
-              linear-gradient(0deg, var(--bg) 0%, transparent 38%); }
-.det-in { position: relative; z-index: 1; max-width: var(--larg); margin: 0 auto; padding: 64px 48px 40px; display: flex; gap: 40px; align-items: flex-end; animation: entrar .5s ease both; }
-.det .poster { width: 236px; flex: none; border-radius: 12px; box-shadow: 0 30px 60px rgba(0, 0, 0, .6); }
-.det-txt { min-width: 0; }
-.det h1 { font: 400 76px/.95 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; margin: 8px 0 12px; text-shadow: 0 4px 24px rgba(0, 0, 0, .5); }
-.det .meta small { opacity: .7; font-weight: 400; }
-.det .desc { max-width: 720px; margin: 16px 0 10px; line-height: 1.65; color: #ddd5e5; }
-.gen-chips span { display: inline-block; margin: 10px 6px 0 0; padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .22); background: rgba(255, 255, 255, .06); font-size: 12px; color: #eae3f0; }
-.cred { margin-bottom: 18px; font-size: 14px; color: #c9c0d2; }
-.cred span { color: #9a91a6; }
-.det .muted { color: #a79fb2; }
-.det .btn.ghost { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); color: #fff; backdrop-filter: blur(8px); }
-.det .btn.ghost:hover { background: rgba(255, 255, 255, .18); }
-.det .btn.primary { box-shadow: none; }
-.det + .content .left { padding-top: 8px; }
-.det + .content .tabs { margin-top: 0; }
-.season { display: flex; align-items: center; gap: 14px; }
-.s-n { font: 400 44px/1 "Bebas Neue", "Inter", sans-serif; color: var(--red-2); min-width: 30px; text-align: center; }
-
-/* Projetos em cartões com capa */
-.pjrow { grid-template-columns: repeat(4, 1fr); }
-.pjc { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
-.pjv { display: flex; flex-direction: column; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); overflow: hidden; transition: transform var(--t), box-shadow var(--t), border-color var(--t); }
-.pjv:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--line-2); }
-.pjv-capa { position: relative; aspect-ratio: 16 / 9; padding: 14px 16px; display: flex; flex-direction: column; justify-content: flex-end; color: #fff;
-  background: radial-gradient(circle at 78% 18%, hsl(var(--h) 90% 56% / .9), transparent 56%), linear-gradient(160deg, hsl(var(--h) 55% 22%), #08070b 88%); }
-.pjv-capa::before { content: ""; position: absolute; left: 0; right: 0; top: 10px; height: 10px; opacity: .25; background: repeating-linear-gradient(90deg, #fff 0 8px, transparent 8px 18px); }
-.pjv-capa .pk { color: rgba(255, 255, 255, .82); }
-.pjv-capa h3 { font: 400 30px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .03em; margin-top: 4px; }
-.pjv-txt { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px; }
-.pjv-txt p { font-size: 13px; line-height: 1.5; color: var(--text-2); }
-.pjv-pe { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-
-/* Perfil com faixa colorida no topo */
-.pbn { flex-wrap: wrap; align-items: flex-end; padding: 0 28px 24px; background: var(--surface); }
-.pbn::before { content: ""; flex: 0 0 calc(100% + 56px); height: 130px; margin: 0 -28px;
-  background: radial-gradient(circle at 82% 0%, hsl(var(--h, 330) 85% 58% / .85), transparent 60%), linear-gradient(120deg, hsl(var(--h, 330) 60% 24%), hsl(calc(var(--h, 330) + 60) 55% 12%)); }
-.pbn .av.l { margin-top: -52px; }
-
-/* Imagens no formulário de títulos */
-.imgs-ver { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; }
-.fprev { flex: 1; aspect-ratio: 16 / 9; border-radius: var(--raio-s); background: var(--surface-2) center / cover no-repeat; }
-.ft .tmdb { border: 0; padding-top: 0; }
-
-@media (max-width: 1100px) {
-  .pjrow { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 900px) {
-  .hero2 { height: 560px; }
-  .ht { padding-top: 64px; }
-  .hctl { bottom: 70px; }
-  .filas { margin-top: -50px; }
-  .hrow.cartazes { grid-auto-columns: 40%; }
-  .t10-n { font-size: 128px; -webkit-text-stroke-width: 2px; margin-right: -12px; }
-  .t10 .poster { width: 112px; }
-  .det-in { flex-direction: column; align-items: flex-start; gap: 22px; padding: 28px 20px 28px; }
-  .det .poster { width: 150px; }
-  .det h1 { font-size: 50px; }
-  .det .desc { font-size: 15px; }
-  .pbn { flex-direction: column; align-items: center; padding: 0 18px 22px; }
-  .pbn::before { flex: 0 0 110px; width: calc(100% + 36px); margin: 0 -18px; }
-}
-@media (max-width: 600px) {
-  .hrow.cartazes { grid-auto-columns: 44%; }
-  .pjrow { grid-template-columns: 1fr; }
-  .poster.art b { font-size: 22px; }
-  .imgs-ver { flex-direction: column; align-items: stretch; }
+    // Contas de teste
+    if (!$faltam) try {
+        $admin = $pdo->query("SELECT nome, email, password_hash FROM utilizadores WHERE papel = 'admin' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        if (!$admin) {
+            r($g, 'aviso', 'Não há nenhum administrador', 'Importa dados.sql ou muda o papel de uma conta para admin no MySQL Workbench.');
+        } elseif (password_verify('Admin#2026', $admin['password_hash'])) {
+            r($g, 'aviso', 'Administrador com a palavra-passe de exemplo', e($admin['email']) . ' / Admin#2026 funciona. Está bem para testar; muda-a antes de pôr o site online.');
+        } else {
+            r($g, 'ok', 'Administrador: ' . e($admin['nome']), 'A palavra-passe de exemplo já foi mudada.');
+        }
+        $rafa = $pdo->query("SELECT password_hash FROM utilizadores WHERE email = 'rafa@mail.pt'")->fetchColumn();
+        if ($rafa) {
+            password_verify('tavdex123', $rafa)
+                ? r($g, 'ok', 'Conta de teste rafa@mail.pt', 'Palavra-passe tavdex123: o login vai funcionar.')
+                : r($g, 'info', 'Conta de teste rafa@mail.pt', 'A palavra-passe já não é tavdex123 (foi mudada).');
+        }
+    } catch (PDOException $e) {
+    }
 }
 
-/* =====================================================================
-   9. PÁGINA DE TESTE (teste.php)
-   ===================================================================== */
-.teste .bl { display: inline-flex; margin-top: 8px; }
-.t-resumo { border-left: 4px solid var(--ok); }
-.t-resumo.meio { border-left-color: var(--gold); }
-.t-resumo.mau { border-left-color: var(--red); }
-.t-resumo b { font-size: 18px; }
-.t-lista { padding: 6px 20px; }
-.t-item { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--line); }
-.t-item:last-child { border-bottom: 0; }
-.t-item p { font-size: 13px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
-.t-ic { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; }
-.t-ic.ok { background: var(--ok); }
-.t-ic.aviso { background: var(--gold); }
-.t-ic.erro { background: var(--red); }
-.t-ic.info { background: var(--surface-3); color: var(--text-2); }
-.t-manual .t-item { cursor: pointer; }
-.t-manual input { margin-top: 3px; flex: none; }
-.t-manual input:checked + div a { text-decoration: line-through; opacity: .6; }
+// ---------------------------------------------------------------------
+// 4. Ficheiros e pastas
+// ---------------------------------------------------------------------
+$g = 'Ficheiros';
+$precisos = ['index.php', 'lib.php', 'config.php', 'cabecalho.php', 'rodape.php', 'registar.php', 'login.php', 'logout.php', 'recuperar.php', 'repor.php',
+             'perfil.php', 'editar_perfil.php', 'catalogo.php', 'titulo.php', 'pesquisa.php', 'listas.php', 'projetos.php', 'projeto.php', 'projeto_novo.php',
+             'projeto_editar.php', 'projeto_form.php', 'candidaturas.php', 'comunidade.php', 'chat.php', 'chat_api.php', 'notificacoes.php', 'admin.php',
+             'admin_titulo.php', 'acoes.php', '404.php', 'style.css', 'main.js', 'logo.png'];
+$falta = array_values(array_filter($precisos, fn($f) => !is_file(__DIR__ . '/' . $f)));
+$falta
+    ? r($g, 'erro', count($falta) . ' ficheiro(s) em falta', 'Faltam: ' . implode(', ', $falta) . '. Copia de novo a pasta completa.')
+    : r($g, 'ok', 'Todos os ficheiros do site estão na pasta', count($precisos) . ' ficheiros encontrados em ' . e(__DIR__) . '.');
+$tmp = @tempnam(__DIR__, 'tst');
+if ($tmp && is_file($tmp) && dirname($tmp) === __DIR__) {
+    unlink($tmp);
+    r($g, 'ok', 'Pasta com permissão de escrita', 'Os cartazes carregados no painel podem ser guardados.');
+} else {
+    if ($tmp && is_file($tmp)) unlink($tmp);
+    r($g, 'aviso', 'Sem permissão para gravar na pasta', 'Não vai ser possível carregar cartazes. Dá permissão de escrita à pasta do site.');
+}
+is_file(__DIR__ . '/.htaccess')
+    ? r($g, 'ok', 'Ficheiro .htaccess presente', 'Protege os scripts SQL e os ficheiros internos.')
+    : r($g, 'aviso', 'Ficheiro .htaccess em falta', 'No Windows, ficheiros que começam por ponto às vezes não são copiados. Copia-o de novo.');
 
-/* =====================================================================
-   10. ONDE VER, COMPATIBILIDADE E ANTI-SPAM
-   ===================================================================== */
-.plat { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; font-size: 13px; font-weight: 600;
-  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .18); color: #fff; transition: background var(--t); }
-a.plat:hover { background: rgba(255, 255, 255, .16); }
-.plat i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; }
-.onde { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 14px; }
-.onde > span { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #a79fb2; margin-right: 4px; }
-.onde-box .plat { background: var(--surface-2); border-color: var(--line-2); color: var(--text); }
-.onde-box a.plat:hover { background: var(--surface-3); }
-.plats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+// ---------------------------------------------------------------------
+// 5. Imagens (TMDB) e email
+// ---------------------------------------------------------------------
+$g = 'Extras';
+if (TMDB_CHAVE === '') {
+    r($g, 'info', 'TMDB não configurado', 'Sem chave, o site usa cartazes desenhados. Para imagens reais, põe a tua chave em config.php (TMDB_CHAVE).');
+} elseif (!function_exists('curl_init') && !ini_get('allow_url_fopen')) {
+    r($g, 'erro', 'O PHP não consegue aceder à internet', 'Ativa a extensão curl (ou allow_url_fopen) no php.ini para usar o TMDB.');
+} else {
+    $cfg = tmdb_pedido('/configuration');
+    $cfg
+        ? r($g, 'ok', 'Ligação ao TMDB', 'A chave é válida. No Painel → Filmes e séries, carrega em "Imagens do TMDB para todos".')
+        : r($g, 'erro', 'O TMDB recusou o pedido', 'Confirma a chave em config.php (é a "API Key" v3) e a ligação à internet.');
+}
+MODO_DEV
+    ? r($g, 'info', 'Email', 'Em modo de desenvolvimento os emails não são enviados (os links aparecem no ecrã).')
+    : (ini_get('SMTP') || ini_get('sendmail_path')
+        ? r($g, 'info', 'Email', 'O PHP tem um servidor de email configurado. Testa a recuperação da palavra-passe com um email teu.')
+        : r($g, 'aviso', 'Email não configurado', 'A recuperação da palavra-passe e as notificações por email não vão chegar.'));
 
-/* Compatibilidade de gostos (perfil de outro utilizador) */
-.compat { text-align: center; }
-.anel { --p: 0; width: 132px; height: 132px; margin: 6px auto 10px; border-radius: 50%; display: grid; place-items: center;
-  background: conic-gradient(var(--red) calc(var(--p) * 1%), var(--surface-3) 0); }
-.anel::before { content: ""; grid-area: 1 / 1; width: 106px; height: 106px; border-radius: 50%; background: var(--surface); }
-.anel b { grid-area: 1 / 1; z-index: 1; font: 400 44px/1 "Bebas Neue", "Inter", sans-serif; }
-.compat .frase { font-weight: 600; margin-bottom: 4px; }
-.compat-l { text-align: left; margin-top: 14px; }
-.compat-l h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 12px 0 6px; }
-.compat-l li { list-style: none; display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--line); }
-.compat-l li:last-child { border-bottom: 0; }
-.compat-l li span:last-child { color: var(--muted); white-space: nowrap; }
+// ---------------------------------------------------------------------
+// Resumo
+// ---------------------------------------------------------------------
+$n = ['ok' => 0, 'aviso' => 0, 'erro' => 0, 'info' => 0];
+foreach ($res as $x) $n[$x[1]]++;
+$icone = ['ok' => '✓', 'aviso' => '!', 'erro' => '✕', 'info' => 'i'];
+$grupos = [];
+foreach ($res as $x) $grupos[$x[0]][] = $x;
 
-/* Campo-armadilha contra robôs (fica invisível para as pessoas) */
-.hp { position: absolute !important; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+// Testes à mão: páginas para abrir e o que fazer em cada uma
+$manuais = [
+    ['index.php', 'Página inicial', 'O destaque muda sozinho e as filas de cartazes deslizam.'],
+    ['registar.php', 'Criar conta', 'Cria uma conta nova com uma palavra-passe de 8 caracteres com letras e números.'],
+    ['login.php', 'Entrar', 'Entra com rafa@mail.pt / tavdex123 e depois termina a sessão no menu.'],
+    ['recuperar.php', 'Recuperar palavra-passe', 'Pede o link para rafa@mail.pt e define uma palavra-passe nova.'],
+    ['catalogo.php?tipo=filme', 'Catálogo', 'Experimenta os géneros, os filtros e a ordenação.'],
+    ['titulo.php?id=1', 'Página de um filme', 'Adiciona aos favoritos e escreve uma review com spoiler.'],
+    ['listas.php', 'As minhas listas', 'Confirma que o filme aparece e remove-o.'],
+    ['projetos.php', 'Projetos', 'Cria um projeto com uma vaga.'],
+    ['projeto.php?id=1', 'Candidatura', 'Com outra conta, candidata-te a uma vaga; com o dono, aceita em Candidaturas.'],
+    ['comunidade.php', 'Comunidade', 'Publica, comenta e responde a um comentário.'],
+    ['chat.php', 'Chat', 'Abre em dois browsers com contas diferentes e troca mensagens.'],
+    ['notificacoes.php', 'Notificações', 'Silencia um tipo e confirma que deixa de chegar.'],
+    ['admin.php', 'Administração', 'Entra como duarte@tavdex.pt e percorre os separadores.'],
+    ['titulo.php?id=1', 'Onde ver', 'Confirma as plataformas na página do título e filtra o catálogo por plataforma.'],
+    ['perfil.php?u=daniela_o', 'Compatibilidade', 'Com a conta do Rafa, abre este perfil e vê a percentagem de gostos em comum.'],
+];
+?><!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste da instalação – TavDex</title>
+<link rel="icon" href="logo.png">
+<script>try { var t = localStorage.getItem('tema'); if (t) document.documentElement.dataset.tema = t; } catch (e) {}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="content"><div class="left narrow teste">
+  <a href="index.php" class="bl"><img src="logo.png" alt=""><span>Tav<em>Dex</em></span></a>
+  <h1 class="ph" style="margin-top:20px">Teste da instalação</h1>
+
+  <div class="box t-resumo <?= $n['erro'] ? 'mau' : ($n['aviso'] ? 'meio' : 'bom') ?>">
+    <b><?= $n['erro'] ? 'Há ' . $n['erro'] . ' problema' . ($n['erro'] > 1 ? 's' : '') . ' a resolver' : 'Está tudo pronto para usar o TavDex' ?></b>
+    <p><?= $n['ok'] ?> testes OK · <?= $n['aviso'] ?> aviso<?= $n['aviso'] === 1 ? '' : 's' ?> · <?= $n['erro'] ?> erro<?= $n['erro'] === 1 ? '' : 's' ?></p>
+    <?php if (!$n['erro']): ?><div class="btns" style="margin-top:12px"><a class="btn primary sm" href="index.php">Abrir o site</a><a class="btn ghost sm" href="teste.php">Repetir o teste</a></div><?php endif; ?>
+  </div>
+
+  <?php foreach ($grupos as $nome => $lista): ?>
+    <h2 class="sh"><?= e($nome) ?></h2>
+    <div class="box t-lista">
+      <?php foreach ($lista as [$gg, $estado, $tit, $det]): ?>
+        <div class="t-item"><span class="t-ic <?= $estado ?>"><?= $icone[$estado] ?></span><div><b><?= $tit ?></b><?php if ($det): ?><p><?= $det ?></p><?php endif; ?></div></div>
+      <?php endforeach; ?>
+    </div>
+  <?php endforeach; ?>
+
+  <h2 class="sh">Testar à mão</h2>
+  <p class="muted" style="margin-bottom:12px">Abre cada página, faz o que está indicado e marca. As marcas ficam guardadas neste browser.</p>
+  <div class="box t-lista t-manual">
+    <?php foreach ($manuais as $i => [$url, $nome, $faz]): ?>
+      <label class="t-item"><input type="checkbox" data-t="<?= $i ?>"><div><a class="lk" href="<?= e($url) ?>" target="_blank"><?= e($nome) ?> ↗</a><p><?= e($faz) ?></p></div></label>
+    <?php endforeach; ?>
+  </div>
+  <p class="muted" style="margin-top:16px">Contas de teste: administrador <b>duarte@tavdex.pt</b> / <b>Admin#2026</b> · utilizadores <b>rafa@mail.pt</b>, <b>lara@mail.pt</b>… / <b>tavdex123</b>.<br>
+  Antes de pôr o site online, muda MODO_DEV para false em config.php: esta página deixa de abrir para quem não é administrador.</p>
+</div></main>
+<script>
+  // Guarda as marcas dos testes à mão neste browser
+  document.querySelectorAll('[data-t]').forEach(c => {
+    try { c.checked = localStorage.getItem('teste_' + c.dataset.t) === '1'; } catch (e) {}
+    c.addEventListener('change', () => { try { localStorage.setItem('teste_' + c.dataset.t, c.checked ? '1' : ''); } catch (e) {} });
+  });
+</script>
+</body>
+</html>

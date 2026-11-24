@@ -1,97 +1,82 @@
 <?php
-// Passo 10 – Página de edição do perfil
+// Passo 4 – Página inicial, com recomendações personalizadas (organizada como uma plataforma de streaming:
+// destaque grande no topo e, por baixo, filas de cartazes por tema)
 require 'lib.php';
-$u = exigir_login();
-$erros = [];
+$titulo = '';
+$ativo = 'Início';
+$u = eu();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verificar_csrf();
-    $parte = $_POST['parte'] ?? '';
+// Destaque do topo: os 5 títulos com melhor média (com pelo menos 3 avaliações)
+$destaques = linhas(SQL_TITULOS . ' WHERE (SELECT COUNT(*) FROM avaliacoes a WHERE a.titulo_id = t.id) >= 3 ORDER BY media DESC LIMIT 5');
+$top10 = linhas(SQL_TITULOS . ' WHERE (SELECT COUNT(*) FROM avaliacoes a WHERE a.titulo_id = t.id) >= 3 ORDER BY media DESC, n_aval DESC LIMIT 10');
+$populares = linhas(SQL_TITULOS . ' ORDER BY n_aval DESC, t.nome LIMIT 12');
+$novidades = linhas(SQL_TITULOS . ' ORDER BY t.ano DESC, t.id DESC LIMIT 12');
+$projetos = linhas(SQL_PROJETOS . ' ORDER BY p.criado_em DESC LIMIT 4');
 
-    if ($parte === 'perfil') {
-        $nome = campo('nome');
-        $email = mb_strtolower(campo('email'));
-        $bio = mb_substr(campo('bio'), 0, 160);
-        $loc = mb_substr(campo('localizacao'), 0, 40);
-        $cor = max(0, min(359, (int)($_POST['cor'] ?? 330)));
-        $notif_email = isset($_POST['notif_email']) ? 1 : 0;
-        if (!preg_match('/^[A-Za-z0-9_.]{3,20}$/', $nome)) $erros[] = 'O nome de utilizador deve ter 3 a 20 caracteres (letras, números, _ ou .).';
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $erros[] = 'O email não é válido.';
-        if (!$erros && valor('SELECT COUNT(*) FROM utilizadores WHERE nome = ? AND id <> ?', [$nome, $u['id']])) $erros[] = 'Esse nome de utilizador já existe.';
-        if (!$erros && valor('SELECT COUNT(*) FROM utilizadores WHERE email = ? AND id <> ?', [$email, $u['id']])) $erros[] = 'Esse email já está a ser usado.';
-        if (!$erros) {
-            sql('UPDATE utilizadores SET nome = ?, email = ?, bio = ?, localizacao = ?, cor = ?, notif_email = ? WHERE id = ?',
-                [$nome, $email, $bio, $loc, $cor, $notif_email, $u['id']]);
-            aviso('Perfil atualizado.');
-            ir('perfil.php?u=' . urlencode($nome));
-        }
-    }
+// Para quem tem sessão: a sua lista (para ver + favoritos) e recomendações
+$minha_lista = $u ? linhas(SQL_TITULOS . " WHERE t.id IN (SELECT titulo_id FROM listas WHERE utilizador_id = ? AND tipo IN ('ver','favorito'))
+                                          AND t.id NOT IN (SELECT titulo_id FROM listas WHERE utilizador_id = ? AND tipo = 'visto') ORDER BY t.nome LIMIT 12", [$u['id'], $u['id']]) : [];
+$recomendados = $u ? recomendacoes($u['id'], 12) : [];
 
-    if ($parte === 'password') {
-        $atual = $_POST['atual'] ?? '';
-        $nova = $_POST['nova'] ?? '';
-        if (!password_verify($atual, $u['password_hash'])) $erros[] = 'A palavra-passe atual está errada.';
-        elseif (strlen($nova) < 8 || !preg_match('/[A-Za-z]/', $nova) || !preg_match('/\d/', $nova)) $erros[] = 'A nova palavra-passe deve ter pelo menos 8 caracteres, com letras e números.';
-        elseif ($nova !== ($_POST['nova2'] ?? '')) $erros[] = 'As palavras-passe não coincidem.';
-        else {
-            sql('UPDATE utilizadores SET password_hash = ? WHERE id = ?', [password_hash($nova, PASSWORD_DEFAULT), $u['id']]);
-            aviso('Palavra-passe alterada.');
-            ir('editar_perfil.php');
-        }
-    }
+// Filas por género: os 3 géneros com mais títulos
+$generos = linhas('SELECT g.id, g.nome, COUNT(*) AS n FROM generos g JOIN titulo_generos tg ON tg.genero_id = g.id GROUP BY g.id, g.nome ORDER BY n DESC, g.nome LIMIT 3');
 
-    if ($parte === 'apagar') {
-        if (!password_verify($_POST['confirmar'] ?? '', $u['password_hash'])) {
-            $erros[] = 'Para apagar a conta escreve a tua palavra-passe.';
-        } elseif ($u['papel'] === 'admin' && (int)valor("SELECT COUNT(*) FROM utilizadores WHERE papel = 'admin'") === 1) {
-            $erros[] = 'És o único administrador: nomeia outro administrador antes de apagar a conta.';
-        } else {
-            sql('DELETE FROM utilizadores WHERE id = ?', [$u['id']]);
-            $_SESSION = [];
-            session_destroy();
-            session_start();
-            aviso('A tua conta foi apagada.');
-            ir('index.php');
-        }
-    }
+/** Desenha uma fila horizontal de cartazes. */
+function fila(string $nome, array $titulos, string $link, bool $largos = false): void
+{
+    if (!$titulos) return;
+    echo '<section class="row"><div class="row-head"><h2>' . e($nome) . '</h2><a href="' . e($link) . '">Ver tudo →</a></div>';
+    echo '<div class="hrow' . ($largos ? '' : ' cartazes') . '">';
+    foreach ($titulos as $t) echo $largos ? cartao_fila($t) : cartao_titulo($t);
+    echo '</div></section>';
 }
 
-$cores = [330, 0, 25, 45, 150, 190, 215, 270];
-$titulo = 'Editar perfil';
+/** Duração para mostrar: "2h 46m" nos filmes, "3 temporadas" nas séries. */
+function duracao(array $t): string
+{
+    if ($t['duracao_min']) return intdiv((int)$t['duracao_min'], 60) . 'h ' . str_pad((int)$t['duracao_min'] % 60, 2, '0', STR_PAD_LEFT) . 'm';
+    $n = (int)valor('SELECT COUNT(*) FROM temporadas WHERE titulo_id = ?', [$t['id']]);
+    return $n ? $n . ' temporada' . ($n > 1 ? 's' : '') : '';
+}
+
 require 'cabecalho.php';
 ?>
-<div class="content"><div class="left narrow">
-  <h1 class="ph">Editar perfil</h1>
-  <?php foreach ($erros as $er): ?><div class="flash erro"><?= e($er) ?></div><?php endforeach; ?>
+<section class="hero2" data-hero aria-label="Em destaque">
+  <?php foreach ($destaques as $i => $t): $img = fundo($t); ?>
+    <div class="slide<?= $i ? '' : ' on' ?>" style="--h:<?= cor_de($t['nome']) ?><?= $img ? ";--img:url('" . e($img) . "')" : '' ?>">
+      <div class="ht">
+        <span class="rank"><b>TOP</b> N.º <?= $i + 1 ?> no TavDex · <?= $t['tipo'] === 'filme' ? 'Filme' : 'Série' ?></span>
+        <h1><?= e($t['nome']) ?></h1>
+        <p class="meta"><span class="star"><i class="st">★</i> <?= number_format((float)$t['media'], 1) ?></span><span><?= (int)$t['ano'] ?></span>
+          <?php if ($d = duracao($t)): ?><span><?= $d ?></span><?php endif; ?>
+          <span><?= e(generos_titulo($t['id'])) ?></span><span class="age"><?= e($t['idade']) ?></span></p>
+        <p class="desc"><?= e($t['sinopse']) ?></p>
+        <div class="btns"><a href="titulo.php?id=<?= $t['id'] ?>" class="btn light">▶ Ver detalhes</a>
+          <?php if ($u): ?>
+            <form method="post" action="acoes.php" class="inline"><?= campo_csrf() ?><input type="hidden" name="acao" value="lista"><input type="hidden" name="titulo" value="<?= $t['id'] ?>"><input type="hidden" name="tipo" value="ver"><input type="hidden" name="modo" value="adicionar"><button class="btn ghost">+ A minha lista</button></form>
+          <?php endif; ?></div>
+      </div>
+    </div>
+  <?php endforeach; ?>
+  <div class="hctl"><div class="hdots"><?php foreach ($destaques as $i => $t): ?><i class="<?= $i ? '' : 'on' ?>" data-i="<?= $i ?>"></i><?php endforeach; ?></div>
+    <button type="button" data-hs="-1" aria-label="Anterior">‹</button><button type="button" data-hs="1" aria-label="Seguinte">›</button></div>
+</section>
 
-  <form method="post" class="box form">
-    <?= campo_csrf() ?><input type="hidden" name="parte" value="perfil">
-    <div class="epv"><?= avatar($u, 'l') ?><div><b>Cor do avatar</b><div class="sw">
-      <?php foreach ($cores as $c): ?><label><input type="radio" name="cor" value="<?= $c ?>" <?= (int)$u['cor'] === $c ? 'checked' : '' ?>><i style="background:hsl(<?= $c ?> 75% 50%)"></i></label><?php endforeach; ?>
-    </div></div></div>
-    <label>Nome de utilizador<input name="nome" value="<?= e($_POST['nome'] ?? $u['nome']) ?>" required maxlength="20"></label>
-    <label>Email<input type="email" name="email" value="<?= e($_POST['email'] ?? $u['email']) ?>" required></label>
-    <label>Localização<input name="localizacao" value="<?= e($_POST['localizacao'] ?? $u['localizacao']) ?>" maxlength="40" placeholder="Cidade"></label>
-    <label>Biografia <small class="cc" data-count="bio"></small><textarea name="bio" id="bio" maxlength="160"><?= e($_POST['bio'] ?? $u['bio']) ?></textarea></label>
-    <label class="chk"><input type="checkbox" name="notif_email" <?= $u['notif_email'] ? 'checked' : '' ?>> Receber as notificações também por email</label>
-    <button class="btn primary">Guardar alterações</button>
-  </form>
-
-  <form method="post" class="box form">
-    <h3>Alterar palavra-passe</h3>
-    <?= campo_csrf() ?><input type="hidden" name="parte" value="password">
-    <label>Palavra-passe atual<input type="password" name="atual" required autocomplete="current-password"></label>
-    <label>Nova palavra-passe<input type="password" name="nova" required minlength="8" autocomplete="new-password"></label>
-    <label>Repetir nova palavra-passe<input type="password" name="nova2" required autocomplete="new-password"></label>
-    <button class="btn ghost">Alterar palavra-passe</button>
-  </form>
-
-  <form method="post" class="box form danger" data-confirm="Tens a certeza? Todos os teus dados serão apagados e não é possível recuperar.">
-    <h3>Apagar conta</h3>
-    <p class="muted">Apaga a conta e todos os teus dados (avaliações, listas, projetos e mensagens).</p>
-    <?= campo_csrf() ?><input type="hidden" name="parte" value="apagar">
-    <label>Palavra-passe<input type="password" name="confirmar" required autocomplete="current-password"></label>
-    <button class="btn ghost">Apagar a minha conta</button>
-  </form>
-</div></div>
+<div class="wrap filas">
+  <?php if (!$u): ?>
+    <div class="box cta"><div><b>Junta-te ao TavDex</b><p>Avalia filmes e séries, cria listas, recebe recomendações e apresenta os teus projetos.</p></div><a class="btn primary sm" href="registar.php">Criar conta grátis</a></div>
+  <?php endif; ?>
+  <?php fila('A minha lista', $minha_lista, 'listas.php?l=ver'); ?>
+  <?php fila('Recomendado para ti', $recomendados, 'perfil.php?u=' . urlencode($u['nome'] ?? '') . '#recomendados'); ?>
+  <?php if ($top10): ?>
+    <section class="row"><div class="row-head"><h2>Top 10 no TavDex</h2><a href="catalogo.php?ordem=nota">Ver tudo →</a></div><?= top10($top10) ?></section>
+  <?php endif; ?>
+  <?php fila('Mais populares', $populares, 'catalogo.php?ordem=populares', true); ?>
+  <?php foreach ($generos as $g): ?>
+    <?php fila($g['nome'], linhas(SQL_TITULOS . ' WHERE t.id IN (SELECT titulo_id FROM titulo_generos WHERE genero_id = ?) ORDER BY media DESC LIMIT 12', [$g['id']]), 'catalogo.php?genero=' . $g['id']); ?>
+  <?php endforeach; ?>
+  <?php fila('Novidades', $novidades, 'catalogo.php?ordem=recentes'); ?>
+  <section class="row"><div class="row-head"><h2>Projetos da comunidade</h2><a href="projetos.php">Ver tudo →</a></div>
+    <div class="pjrow"><?php foreach ($projetos as $p) echo cartao_projeto($p); ?></div></section>
+</div>
 <?php require 'rodape.php'; ?>

@@ -1,159 +1,135 @@
 <?php
-// Passo 14 – Página individual de cada projeto
-// Passo 15 – Candidatura a um projeto
-// Passo 16 – Retirar a candidatura
-// Passo 19 – Avaliar e fazer reviews de um projeto
+// Passo 12 – Página de edição de um projeto (dados, equipa e vagas)
+// Passo 13 – Apagar um projeto
+// Só o dono do projeto ou um administrador podem usar esta página.
 require 'lib.php';
+require 'projeto_form.php';
+$u = exigir_login();
 
-$id = (int)($_GET['id'] ?? 0);
-$p = linha('SELECT p.*, u.nome AS dono_nome, u.cor AS dono_cor FROM projetos p JOIN utilizadores u ON u.id = p.dono_id WHERE p.id = ?', [$id]);
-if (!$p) {
-    http_response_code(404);
-    $titulo = 'Projeto não encontrado';
-    require 'cabecalho.php';
-    echo '<div class="content"><div class="left"><h1 class="ph">Projeto não encontrado</h1><p><a class="lk" href="projetos.php">Ver todos os projetos</a></p></div></div>';
-    require 'rodape.php';
-    exit;
+$id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+$p = linha('SELECT * FROM projetos WHERE id = ?', [$id]);
+if (!$p || ((int)$p['dono_id'] !== (int)$u['id'] && !e_admin())) {
+    aviso('Só o dono do projeto pode editá-lo.', 'erro');
+    ir('projetos.php');
 }
-$u = eu();
-$dono = $u && (int)$u['id'] === (int)$p['dono_id'];
-$pode_gerir = $dono || e_admin();
+$erros = [];
+$dados = $p;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verificar_csrf();
-    $u = exigir_login();
     switch ($_POST['op'] ?? '') {
-
-        // Passo 15 – candidatar-se a uma vaga aberta
-        case 'candidatar':
-            $vaga = linha('SELECT * FROM projeto_vagas WHERE id = ? AND projeto_id = ? AND aberta = 1', [(int)$_POST['vaga'], $id]);
-            if (!$vaga || $dono) { aviso('Esta vaga não está disponível.', 'erro'); break; }
-            if (demasiado('candidaturas', 'utilizador_id', (int)$u['id'], 10, 3600)) { aviso('Já enviaste muitas candidaturas na última hora. Tenta mais tarde.', 'erro'); break; }
-            if (valor('SELECT COUNT(*) FROM candidaturas WHERE vaga_id = ? AND utilizador_id = ?', [$vaga['id'], $u['id']])) {
-                aviso('Já te candidataste a esta vaga.', 'erro');
-                break;
+        case 'dados':
+            $dados = validar_projeto($erros);
+            if (!$erros) {
+                sql('UPDATE projetos SET titulo = ?, sinopse = ?, tipo = ?, genero = ?, estado = ? WHERE id = ?',
+                    [$dados['titulo'], $dados['sinopse'], $dados['tipo'], $dados['genero'], $dados['estado'], $id]);
+                aviso('Projeto atualizado.');
+                ir('projeto_editar.php?id=' . $id);
             }
-            sql('INSERT INTO candidaturas (vaga_id, utilizador_id, mensagem, criado_em) VALUES (?, ?, ?, ?)', [$vaga['id'], $u['id'], mb_substr(campo('mensagem'), 0, 500), agora()]);
-            notificar((int)$p['dono_id'], 'candidatura', $u['nome'] . ' candidatou-se a ' . $vaga['funcao'] . ' em ' . $p['titulo'] . '.', 'candidaturas.php?id=' . $id);
-            aviso('Candidatura enviada! Vais receber uma notificação com a resposta.');
             break;
 
-        // Passo 16 – retirar uma candidatura que ainda está pendente
-        case 'retirar':
-            sql("DELETE FROM candidaturas WHERE id = ? AND utilizador_id = ? AND estado = 'pendente'", [(int)$_POST['candidatura'], $u['id']]);
-            aviso('Candidatura retirada.');
-            break;
-
-        // Passo 19 – avaliar (1 a 5) e escrever uma review; volta a enviar para editar
-        case 'avaliar':
-            $nota = (int)($_POST['nota'] ?? 0);
-            if ($nota < 1 || $nota > 5) { aviso('Escolhe de 1 a 5 estrelas.', 'erro'); break; }
-            if ($dono) { aviso('Não podes avaliar o teu próprio projeto.', 'erro'); break; }
-            $review = mb_substr(campo('review'), 0, 1000);
-            if (valor('SELECT COUNT(*) FROM projeto_avaliacoes WHERE projeto_id = ? AND utilizador_id = ?', [$id, $u['id']])) {
-                sql('UPDATE projeto_avaliacoes SET nota = ?, review = ? WHERE projeto_id = ? AND utilizador_id = ?', [$nota, $review, $id, $u['id']]);
-                aviso('Avaliação atualizada.');
+        case 'add_membro':
+            // Pode ser um utilizador do TavDex (pelo nome) ou só um nome escrito
+            $funcao = mb_substr(campo('funcao'), 0, 60);
+            $nome = mb_substr(campo('nome'), 0, 60);
+            $membro = $nome !== '' ? linha('SELECT id, nome FROM utilizadores WHERE nome = ?', [$nome]) : null;
+            if ($funcao === '' || $nome === '') {
+                $erros[] = 'Indica a função e o nome do membro.';
             } else {
-                sql('INSERT INTO projeto_avaliacoes (projeto_id, utilizador_id, nota, review, criado_em) VALUES (?, ?, ?, ?, ?)', [$id, $u['id'], $nota, $review, agora()]);
-                notificar((int)$p['dono_id'], 'projeto', $u['nome'] . ' avaliou o teu projeto ' . $p['titulo'] . ' com ' . $nota . '★.', 'projeto.php?id=' . $id . '#avaliacoes');
-                aviso('Obrigado pela avaliação!');
+                sql('INSERT INTO projeto_equipa (projeto_id, funcao, utilizador_id, nome) VALUES (?, ?, ?, ?)',
+                    [$id, $funcao, $membro['id'] ?? null, $membro ? '' : $nome]);
+                if ($membro) notificar((int)$membro['id'], 'projeto', 'Foste adicionado à equipa de ' . $p['titulo'] . ' como ' . $funcao . '.', 'projeto.php?id=' . $id);
+                aviso('Membro adicionado à equipa.');
+                ir('projeto_editar.php?id=' . $id . '#equipa');
             }
             break;
 
-        case 'apagar_avaliacao':
-            // O autor apaga a sua; um administrador pode apagar qualquer uma
-            $a = linha('SELECT * FROM projeto_avaliacoes WHERE id = ? AND projeto_id = ?', [(int)$_POST['avaliacao'], $id]);
-            if ($a && ((int)$a['utilizador_id'] === (int)$u['id'] || e_admin())) {
-                sql('DELETE FROM projeto_avaliacoes WHERE id = ?', [$a['id']]);
-                aviso('Avaliação apagada.');
+        case 'rem_membro':
+            sql('DELETE FROM projeto_equipa WHERE id = ? AND projeto_id = ?', [(int)$_POST['membro'], $id]);
+            aviso('Membro removido.');
+            ir('projeto_editar.php?id=' . $id . '#equipa');
+
+        case 'add_vaga':
+            $funcao = mb_substr(campo('funcao'), 0, 60);
+            if ($funcao === '') {
+                $erros[] = 'Indica a função da vaga.';
+            } else {
+                sql('INSERT INTO projeto_vagas (projeto_id, funcao, descricao) VALUES (?, ?, ?)', [$id, $funcao, mb_substr(campo('descricao'), 0, 200)]);
+                aviso('Vaga criada.');
+                ir('projeto_editar.php?id=' . $id . '#vagas');
             }
             break;
+
+        case 'vaga_estado':
+            sql('UPDATE projeto_vagas SET aberta = 1 - aberta WHERE id = ? AND projeto_id = ?', [(int)$_POST['vaga'], $id]);
+            ir('projeto_editar.php?id=' . $id . '#vagas');
+
+        case 'rem_vaga':
+            sql('DELETE FROM projeto_vagas WHERE id = ? AND projeto_id = ?', [(int)$_POST['vaga'], $id]);
+            aviso('Vaga removida.');
+            ir('projeto_editar.php?id=' . $id . '#vagas');
+
+        // Passo 13 – apagar o projeto (a base de dados apaga em cascata a equipa, vagas, candidaturas e avaliações)
+        case 'apagar':
+            if ((int)$p['dono_id'] !== (int)$u['id']) {
+                notificar((int)$p['dono_id'], 'projeto', 'O teu projeto ' . $p['titulo'] . ' foi removido por um administrador.', 'projetos.php');
+            }
+            sql('DELETE FROM projetos WHERE id = ?', [$id]);
+            aviso('Projeto apagado.');
+            ir('projetos.php');
     }
-    ir('projeto.php?id=' . $id . '#' . ($_POST['op'] === 'avaliar' || $_POST['op'] === 'apagar_avaliacao' ? 'avaliacoes' : 'vagas'));
 }
 
-$equipa = linhas('SELECT e.*, u.nome AS unome, u.cor FROM projeto_equipa e LEFT JOIN utilizadores u ON u.id = e.utilizador_id WHERE e.projeto_id = ? ORDER BY e.id', [$id]);
-$vagas = linhas('SELECT * FROM projeto_vagas WHERE projeto_id = ? AND aberta = 1 ORDER BY id', [$id]);
-$minhas = $u ? linhas('SELECT c.*, v.funcao FROM candidaturas c JOIN projeto_vagas v ON v.id = c.vaga_id WHERE v.projeto_id = ? AND c.utilizador_id = ? ORDER BY c.criado_em DESC', [$id, $u['id']]) : [];
-$ja_candidatei = array_column($minhas, 'vaga_id');
-$avaliacoes = linhas('SELECT a.*, u.nome, u.cor FROM projeto_avaliacoes a JOIN utilizadores u ON u.id = a.utilizador_id WHERE a.projeto_id = ? ORDER BY a.criado_em DESC', [$id]);
-$media = $avaliacoes ? array_sum(array_column($avaliacoes, 'nota')) / count($avaliacoes) : null;
-$minha_av = null;
-foreach ($avaliacoes as $a) if ($u && (int)$a['utilizador_id'] === (int)$u['id']) $minha_av = $a;
-$pendentes = $pode_gerir ? (int)valor("SELECT COUNT(*) FROM candidaturas c JOIN projeto_vagas v ON v.id = c.vaga_id WHERE v.projeto_id = ? AND c.estado = 'pendente'", [$id]) : 0;
+$equipa = linhas('SELECT e.*, u.nome AS unome FROM projeto_equipa e LEFT JOIN utilizadores u ON u.id = e.utilizador_id WHERE e.projeto_id = ? ORDER BY e.id', [$id]);
+$vagas = linhas('SELECT v.*, (SELECT COUNT(*) FROM candidaturas c WHERE c.vaga_id = v.id AND c.estado = ?) AS pendentes FROM projeto_vagas v WHERE v.projeto_id = ? ORDER BY v.id', ['pendente', $id]);
 
-$titulo = $p['titulo'];
+$titulo = 'Editar ' . $p['titulo'];
 $ativo = 'Projetos';
 require 'cabecalho.php';
 ?>
-<div class="content"><div class="left">
-  <div class="dh pdh" style="--h:<?= cor_de($p['titulo']) ?>"><div>
-    <span class="tag">PROJETO · <?= e(mb_strtoupper($p['tipo'])) ?></span>
-    <h1><?= e($p['titulo']) ?></h1>
-    <p class="meta"><?= badge_estado($p['estado']) ?><?php if ($p['genero']): ?><span><?= e($p['genero']) ?></span><?php endif; ?>
-      <?php if ($media): ?><span class="star"><i class="st">★</i> <?= number_format($media, 1) ?> (<?= count($avaliacoes) ?>)</span><?php endif; ?></p>
-    <p class="desc"><?= nl2br(e($p['sinopse'])) ?></p>
-    <p class="muted">Criado por <?= link_perfil(['nome' => $p['dono_nome']]) ?> · <?= tempo($p['criado_em']) ?></p>
-    <div class="btns">
-      <?php if ($pode_gerir): ?>
-        <a class="btn primary sm" href="projeto_editar.php?id=<?= $id ?>">✎ Editar projeto</a>
-        <a class="btn ghost sm" href="candidaturas.php?id=<?= $id ?>">Candidaturas<?= $pendentes ? ' (' . $pendentes . ' novas)' : '' ?></a>
-      <?php elseif ($vagas): ?>
-        <a class="btn primary sm" href="#vagas">Candidatar-me</a>
-      <?php endif; ?>
-    </div>
-  </div></div>
+<div class="content"><div class="left narrow">
+  <p><a class="lk" href="projeto.php?id=<?= $id ?>">← Voltar ao projeto</a></p>
+  <h1 class="ph">Editar projeto</h1>
+  <?php foreach ($erros as $er): ?><div class="flash erro"><?= e($er) ?></div><?php endforeach; ?>
 
-  <div class="dcols"><div>
-    <h2 class="sh">Equipa</h2>
-    <div class="cast">
-      <?php foreach ($equipa as $m): ?>
-        <div class="pp"><?= avatar(['nome' => $m['unome'] ?? $m['nome'], 'cor' => $m['cor'] ?? 215], 'l') ?>
-          <b><?= $m['unome'] ? link_perfil(['nome' => $m['unome']]) : e($m['nome']) ?></b><small><?= e($m['funcao']) ?></small></div>
-      <?php endforeach; ?>
-    </div>
+  <form method="post" class="box form">
+    <?= campo_csrf() ?><input type="hidden" name="op" value="dados"><input type="hidden" name="id" value="<?= $id ?>">
+    <?php campos_projeto($dados); ?>
+    <button class="btn primary">Guardar alterações</button>
+  </form>
 
-    <h2 class="sh" id="vagas">Vagas abertas</h2>
-    <?php if (!$vagas): ?><p class="empty">Este projeto não tem vagas abertas neste momento.</p><?php endif; ?>
+  <div class="box" id="equipa"><h3>Equipa</h3>
+    <?php foreach ($equipa as $m): ?>
+      <form method="post" class="rv li"><?= campo_csrf() ?><input type="hidden" name="op" value="rem_membro"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="membro" value="<?= $m['id'] ?>">
+        <div><b><?= e($m['unome'] ?? $m['nome']) ?></b> <small><?= e($m['funcao']) ?><?= $m['unome'] ? '' : ' · convidado' ?></small></div>
+        <?php if ((int)$m['utilizador_id'] !== (int)$p['dono_id']): ?><button class="btn ghost sm">Remover</button><?php endif; ?></form>
+    <?php endforeach; ?>
+    <form method="post" class="inline-form"><?= campo_csrf() ?><input type="hidden" name="op" value="add_membro"><input type="hidden" name="id" value="<?= $id ?>">
+      <input name="funcao" placeholder="Função (ex.: Ator)" required maxlength="60"><input name="nome" placeholder="Nome de utilizador ou nome" required maxlength="60">
+      <button class="btn ghost sm">Adicionar</button></form>
+    <small class="muted">Se o nome for de um utilizador do TavDex, o perfil fica ligado ao projeto.</small>
+  </div>
+
+  <div class="box" id="vagas"><h3>Vagas (funções que procuras)</h3>
+    <?php if (!$vagas): ?><p class="empty">Sem vagas.</p><?php endif; ?>
     <?php foreach ($vagas as $v): ?>
-      <div class="box vaga"><b><?= e($v['funcao']) ?></b><?php if ($v['descricao']): ?><p><?= e($v['descricao']) ?></p><?php endif; ?>
-        <?php if (!$u): ?><p><a class="lk" href="login.php?voltar=<?= urlencode('projeto.php?id=' . $id) ?>">Inicia sessão para te candidatares</a></p>
-        <?php elseif ($dono): ?>
-        <?php elseif (in_array($v['id'], $ja_candidatei)): ?><p class="muted">Já te candidataste a esta vaga.</p>
-        <?php else: ?>
-          <form method="post" class="form"><?= campo_csrf() ?><input type="hidden" name="op" value="candidatar"><input type="hidden" name="vaga" value="<?= $v['id'] ?>">
-            <textarea name="mensagem" maxlength="500" rows="2" placeholder="Fala um pouco da tua experiência (opcional)"></textarea>
-            <button class="btn primary sm">Candidatar-me a <?= e($v['funcao']) ?></button></form>
-        <?php endif; ?></div>
+      <div class="rv li"><div><b><?= e($v['funcao']) ?></b> <?= $v['aberta'] ? badge_estado('Recrutamento') : '<span class="badge" style="--c:215">Fechada</span>' ?>
+        <?php if ($v['descricao']): ?><small><?= e($v['descricao']) ?></small><?php endif; ?></div>
+        <span class="cact">
+          <form method="post" class="inline"><?= campo_csrf() ?><input type="hidden" name="op" value="vaga_estado"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="vaga" value="<?= $v['id'] ?>"><button class="btn ghost sm"><?= $v['aberta'] ? 'Fechar' : 'Reabrir' ?></button></form>
+          <form method="post" class="inline" data-confirm="Remover esta vaga e as candidaturas a ela?"><?= campo_csrf() ?><input type="hidden" name="op" value="rem_vaga"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="vaga" value="<?= $v['id'] ?>"><button class="btn ghost sm">Remover</button></form>
+        </span></div>
     <?php endforeach; ?>
+    <form method="post" class="inline-form"><?= campo_csrf() ?><input type="hidden" name="op" value="add_vaga"><input type="hidden" name="id" value="<?= $id ?>">
+      <input name="funcao" placeholder="Função (ex.: Diretor de fotografia)" required maxlength="60"><input name="descricao" placeholder="Descrição (opcional)" maxlength="200">
+      <button class="btn ghost sm">Criar vaga</button></form>
+    <p><a class="lk" href="candidaturas.php?id=<?= $id ?>">Ver candidaturas →</a></p>
+  </div>
 
-    <?php if ($minhas): ?>
-      <h2 class="sh">As minhas candidaturas</h2>
-      <?php foreach ($minhas as $c): ?>
-        <div class="box rv li"><div><b><?= e($c['funcao']) ?></b> <?= badge_estado($c['estado']) ?> <small><?= tempo($c['criado_em']) ?></small></div>
-          <?php if ($c['estado'] === 'pendente'): ?>
-            <form method="post" class="inline" data-confirm="Retirar a candidatura?"><?= campo_csrf() ?><input type="hidden" name="op" value="retirar"><input type="hidden" name="candidatura" value="<?= $c['id'] ?>"><button class="btn ghost sm">Retirar candidatura</button></form>
-          <?php endif; ?></div>
-      <?php endforeach; ?>
-    <?php endif; ?>
-  </div><div id="avaliacoes">
-    <div class="box"><h3>Avaliações</h3>
-      <div class="score"><b><?= $media ? number_format($media, 1) : '–' ?></b><?= $media ? estrelas($media) : '' ?></div>
-      <small class="muted"><?= count($avaliacoes) ?> avaliação<?= count($avaliacoes) === 1 ? '' : 'ões' ?></small>
-      <?php if ($u && !$dono): ?>
-        <form method="post" class="form rate"><?= campo_csrf() ?><input type="hidden" name="op" value="avaliar">
-          <?= campo_estrelas((int)($minha_av['nota'] ?? 0)) ?>
-          <textarea name="review" maxlength="1000" rows="3" placeholder="Escreve a tua opinião (opcional)"><?= e($minha_av['review'] ?? '') ?></textarea>
-          <button class="btn primary sm"><?= $minha_av ? 'Atualizar avaliação' : 'Avaliar projeto' ?></button></form>
-      <?php endif; ?>
-    </div>
-    <?php foreach ($avaliacoes as $a): ?>
-      <div class="box rv"><?= avatar($a) ?><div><b><?= link_perfil($a) ?></b> <?= estrelas($a['nota']) ?> <small><?= tempo($a['criado_em']) ?></small>
-        <?php if ($a['review']): ?><p><?= nl2br(e($a['review'])) ?></p><?php endif; ?></div>
-        <?php if ($u && ((int)$a['utilizador_id'] === (int)$u['id'] || e_admin())): ?>
-          <form method="post" class="inline" data-confirm="Apagar esta avaliação?"><?= campo_csrf() ?><input type="hidden" name="op" value="apagar_avaliacao"><input type="hidden" name="avaliacao" value="<?= $a['id'] ?>"><button class="del-btn" title="Apagar">🗑</button></form>
-        <?php endif; ?></div>
-    <?php endforeach; ?>
-  </div></div>
+  <form method="post" class="box form danger" data-confirm="Apagar o projeto <?= e($p['titulo']) ?>? A equipa, as vagas, as candidaturas e as avaliações também são apagadas.">
+    <h3>Apagar projeto</h3><p class="muted">Esta ação não pode ser desfeita.</p>
+    <?= campo_csrf() ?><input type="hidden" name="op" value="apagar"><input type="hidden" name="id" value="<?= $id ?>">
+    <button class="btn ghost">🗑 Apagar projeto</button>
+  </form>
 </div></div>
 <?php require 'rodape.php'; ?>

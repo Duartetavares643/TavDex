@@ -1,48 +1,53 @@
 <?php
-// Passo 8 – Recuperação de login (pedido do link por email)
+// Passo 5 – Página de registo
 require 'lib.php';
+if (eu()) ir('index.php');
 
-$enviado = false;
-$link_dev = '';
+$erros = [];
+$nome = $email = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verificar_csrf();
+    $nome = campo('nome');
     $email = mb_strtolower(campo('email'));
-    $u = linha('SELECT id, nome, email FROM utilizadores WHERE email = ?', [$email]);
-    if ($u) {
-        // Token aleatório: só a versão em hash fica na base de dados
-        $token = bin2hex(random_bytes(32));
-        sql('UPDATE recuperacoes SET usado = 1 WHERE utilizador_id = ?', [$u['id']]);
-        sql('INSERT INTO recuperacoes (utilizador_id, token_hash, expira_em) VALUES (?, ?, ?)',
-            [$u['id'], hash('sha256', $token), date('Y-m-d H:i:s', time() + 3600)]);
-        $link = URL_SITE . '/repor.php?token=' . $token;
-        if (MODO_DEV) {
-            $link_dev = 'repor.php?token=' . $token;
-        } else {
-            enviar_email($u['email'], 'Recuperar palavra-passe – TavDex',
-                "Olá {$u['nome']},\n\nPara criares uma nova palavra-passe abre este link (válido 1 hora):\n$link\n\nSe não foste tu, ignora este email.");
-        }
+    $pass = $_POST['password'] ?? '';
+    $pass2 = $_POST['password2'] ?? '';
+
+    // Validações
+    if (!preg_match('/^[A-Za-z0-9_.]{3,20}$/', $nome)) $erros[] = 'O nome de utilizador deve ter 3 a 20 caracteres (letras, números, _ ou .).';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $erros[] = 'O email não é válido.';
+    if (strlen($pass) < 8 || !preg_match('/[A-Za-z]/', $pass) || !preg_match('/\d/', $pass)) $erros[] = 'A palavra-passe deve ter pelo menos 8 caracteres, com letras e números.';
+    if ($pass !== $pass2) $erros[] = 'As palavras-passe não coincidem.';
+    if (!$erros && valor('SELECT COUNT(*) FROM utilizadores WHERE nome = ?', [$nome])) $erros[] = 'Esse nome de utilizador já existe.';
+    if (!$erros && valor('SELECT COUNT(*) FROM utilizadores WHERE email = ?', [$email])) $erros[] = 'Já existe uma conta com esse email.';
+    // Anti-spam: armadilha para robôs e, no site inteiro, no máximo 20 contas novas em 10 minutos
+    if (caiu_na_armadilha()) $erros[] = 'Não foi possível criar a conta.';
+    elseif (!$erros && (int)valor('SELECT COUNT(*) FROM utilizadores WHERE criado_em >= ?', [date('Y-m-d H:i:s', time() - 600)]) >= 20) $erros[] = 'Há muitos registos neste momento. Tenta outra vez daqui a alguns minutos.';
+
+    if (!$erros) {
+        sql('INSERT INTO utilizadores (nome, email, password_hash, cor, criado_em) VALUES (?, ?, ?, ?, ?)',
+            [$nome, $email, password_hash($pass, PASSWORD_DEFAULT), random_int(0, 359), agora()]);
+        session_regenerate_id(true);
+        $_SESSION['uid'] = (int)bd()->lastInsertId();
+        aviso('Conta criada. Bem-vindo ao TavDex, ' . $nome . '!');
+        ir('index.php');
     }
-    // A mensagem é sempre igual para não revelar que emails existem
-    $enviado = true;
 }
 
-$titulo = 'Recuperar palavra-passe';
+$titulo = 'Criar conta';
 require 'cabecalho.php';
 ?>
 <div class="content"><div class="left"><div class="authx">
-  <div class="brand"><img src="logo.png" alt="TavDex"><h2>Recuperar palavra-passe</h2><p>Enviamos-te um link por email.</p></div>
-  <form method="post" class="fm">
-    <h1>Esqueceste-te da palavra-passe?</h1>
-    <?php if ($enviado): ?>
-      <p class="ok-msg">Se existir uma conta com este email, enviámos um link para repor a palavra-passe. O link é válido durante 1 hora.</p>
-      <?php if ($link_dev): ?><p class="dev">Modo de desenvolvimento (sem servidor de email): <a class="lk" href="<?= e($link_dev) ?>">abrir o link de recuperação</a></p><?php endif; ?>
-    <?php else: ?>
-      <p class="muted">Indica o email da tua conta e enviamos um link para criares uma nova palavra-passe.</p>
-    <?php endif; ?>
-    <?= campo_csrf() ?>
-    <input type="email" name="email" placeholder="Email" required>
-    <button class="btn primary">Enviar link</button>
-    <small><a href="login.php" class="lk">← Voltar a iniciar sessão</a></small>
+  <div class="brand"><img src="logo.png" alt="TavDex"><h2>Descobre. Organiza. Avalia.</h2><p>Junta-te à comunidade.</p></div>
+  <form method="post" class="fm" novalidate>
+    <h1>Criar conta</h1>
+    <?php foreach ($erros as $er): ?><p class="msg"><?= e($er) ?></p><?php endforeach; ?>
+    <?= campo_csrf() ?><?= campo_armadilha() ?>
+    <input name="nome" value="<?= e($nome) ?>" placeholder="Nome de utilizador" required maxlength="20" autocomplete="username">
+    <input type="email" name="email" value="<?= e($email) ?>" placeholder="Email" required autocomplete="email">
+    <input type="password" name="password" placeholder="Palavra-passe (mín. 8, letras e números)" required minlength="8" autocomplete="new-password">
+    <input type="password" name="password2" placeholder="Repetir palavra-passe" required autocomplete="new-password">
+    <button class="btn primary">Registar</button>
+    <small>Já tens conta? <a href="login.php" class="lk">Entrar</a></small>
   </form>
 </div></div></div>
 <?php require 'rodape.php'; ?>

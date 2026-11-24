@@ -1,224 +1,215 @@
 <?php
-// Passo 23 – Página de administração
-// Passo 29 – Gestão de séries (separador Séries)
-// Passo 31 – Listagem de filmes e séries (separador Títulos)
-// Passo 33 – Remoção de filmes e séries
+// Passo 30 – Inserção de novos filmes e séries
+// Passo 32 – Alteração de filmes e séries
+// Passo 29 – Gestão de séries (temporadas e episódios)
 require 'lib.php';
 exigir_admin();
-$eu = eu();
-$sec = $_GET['s'] ?? 'resumo';
+
+$id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+$t = $id ? linha('SELECT * FROM titulos WHERE id = ?', [$id]) : null;
+if ($id && !$t) ir('admin.php?s=titulos');
+$erros = [];
+$dados = $t ?? ['nome' => '', 'tipo' => 'filme', 'ano' => date('Y'), 'duracao_min' => '', 'idade' => 'M/12', 'sinopse' => '', 'realizador' => '', 'em_curso' => 0];
+$generos = linhas('SELECT * FROM generos ORDER BY nome');
+$todas_plataformas = linhas('SELECT * FROM plataformas ORDER BY nome');
+$plats_escolhidas = $id ? array_column(linhas('SELECT plataforma_id FROM titulo_plataformas WHERE titulo_id = ?', [$id]), 'plataforma_id') : [];
+$escolhidos = $id ? array_column(linhas('SELECT genero_id FROM titulo_generos WHERE titulo_id = ?', [$id]), 'genero_id') : [];
+
+/** Verifica uma imagem enviada (JPG, PNG ou WEBP até 3 MB) e devolve a extensão, ou null se não houver ficheiro. */
+function validar_imagem(string $campo, string $nome, array &$erros): ?string
+{
+    $f = $_FILES[$campo] ?? null;
+    if (!$f || $f['error'] === UPLOAD_ERR_NO_FILE) return null;
+    if ($f['error'] !== UPLOAD_ERR_OK || $f['size'] > 3 * 1024 * 1024) { $erros[] = "O $nome tem de ter no máximo 3 MB."; return null; }
+    $info = @getimagesize($f['tmp_name']);      // confirma que é mesmo uma imagem
+    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$info['mime'] ?? ''] ?? null;
+    if (!$ext) $erros[] = "O $nome tem de ser uma imagem JPG, PNG ou WEBP.";
+    return $ext;
+}
+
+/** Guarda a imagem já verificada com um nome gerado pelo site (nunca o nome original). */
+function guardar_imagem(string $campo, int $id, string $ext): ?string
+{
+    $nome = $campo . '-' . $id . '-' . time() . '.' . $ext;
+    return move_uploaded_file($_FILES[$campo]['tmp_name'], __DIR__ . '/' . $nome) ? $nome : null;
+}
+
+/** Apaga um ficheiro de imagem carregado no site (as imagens do TMDB não são ficheiros). */
+function apagar_ficheiro(?string $nome): void
+{
+    if ($nome && preg_match('/^(cartaz|fundo)-[\w.-]+$/', $nome) && is_file(__DIR__ . '/' . $nome)) unlink(__DIR__ . '/' . $nome);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verificar_csrf();
-    $id = (int)($_POST['id'] ?? 0);
-    switch ($_POST['op'] ?? '') {
-        case 'bloquear':
-            if ($id !== (int)$eu['id']) {
-                sql('UPDATE utilizadores SET bloqueado = 1 - bloqueado WHERE id = ?', [$id]);
-                aviso(valor('SELECT bloqueado FROM utilizadores WHERE id = ?', [$id]) ? 'Utilizador bloqueado.' : 'Utilizador desbloqueado.');
+    $op = $_POST['op'] ?? 'dados';
+
+    if ($op === 'dados') {
+        $dados = [
+            'nome' => mb_substr(campo('nome'), 0, 150),
+            'tipo' => campo('tipo') === 'serie' ? 'serie' : 'filme',
+            'ano' => (int)campo('ano'),
+            'duracao_min' => campo('duracao_min') !== '' ? (int)campo('duracao_min') : null,
+            'idade' => in_array(campo('idade'), ['M/6', 'M/12', 'M/14', 'M/16', 'M/18'], true) ? campo('idade') : 'M/12',
+            'sinopse' => mb_substr(campo('sinopse'), 0, 3000),
+            'realizador' => mb_substr(campo('realizador'), 0, 100),
+            'em_curso' => isset($_POST['em_curso']) ? 1 : 0,
+            'tmdb_id' => (int)campo('tmdb_id') ?: null,
+        ];
+        $escolhidos = array_map('intval', $_POST['generos'] ?? []);
+        if (mb_strlen($dados['nome']) < 1) $erros[] = 'Indica o nome.';
+        if ($dados['ano'] < 1888 || $dados['ano'] > (int)date('Y') + 5) $erros[] = 'O ano não é válido.';
+        if (mb_strlen($dados['sinopse']) < 10) $erros[] = 'Escreve uma sinopse com pelo menos 10 caracteres.';
+        if ($dados['tipo'] === 'serie') $dados['duracao_min'] = null; else $dados['em_curso'] = 0;
+        // Novo género escrito à mão
+        $novo = mb_substr(campo('novo_genero'), 0, 40);
+        if ($novo !== '') {
+            $gid = valor('SELECT id FROM generos WHERE nome = ?', [$novo]);
+            if (!$gid) { sql('INSERT INTO generos (nome) VALUES (?)', [$novo]); $gid = bd()->lastInsertId(); }
+            $escolhidos[] = (int)$gid;
+        }
+        if (!$escolhidos) $erros[] = 'Escolhe pelo menos um género.';
+        $repetido = valor('SELECT COUNT(*) FROM titulos WHERE nome = ? AND ano = ? AND id <> ?', [$dados['nome'], $dados['ano'], $id]);
+        if ($repetido) $erros[] = 'Já existe um título com esse nome e ano.';
+        $ext = validar_imagem('cartaz', 'cartaz', $erros);
+        $ext_fundo = validar_imagem('fundo', 'fundo', $erros);
+
+        if (!$erros) {
+            $v = [$dados['nome'], $dados['tipo'], $dados['ano'], $dados['duracao_min'], $dados['idade'], $dados['sinopse'], $dados['realizador'], $dados['em_curso'], $dados['tmdb_id']];
+            if ($id) {
+                sql('UPDATE titulos SET nome = ?, tipo = ?, ano = ?, duracao_min = ?, idade = ?, sinopse = ?, realizador = ?, em_curso = ?, tmdb_id = ? WHERE id = ?', [...$v, $id]);
+            } else {
+                sql('INSERT INTO titulos (nome, tipo, ano, duracao_min, idade, sinopse, realizador, em_curso, tmdb_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [...$v, agora()]);
+                $id = (int)bd()->lastInsertId();
             }
-            break;
-        case 'papel':
-            if ($id !== (int)$eu['id']) {
-                sql("UPDATE utilizadores SET papel = CASE WHEN papel = 'admin' THEN 'utilizador' ELSE 'admin' END WHERE id = ?", [$id]);
-                aviso('Papel alterado.');
+            sql('DELETE FROM titulo_generos WHERE titulo_id = ?', [$id]);
+            foreach (array_unique($escolhidos) as $g) sql('INSERT INTO titulo_generos (titulo_id, genero_id) VALUES (?, ?)', [$id, $g]);
+            // Onde ver: plataformas escolhidas (só as que existem)
+            $ids_validos = array_column($todas_plataformas, 'id');
+            sql('DELETE FROM titulo_plataformas WHERE titulo_id = ?', [$id]);
+            foreach (array_unique(array_map('intval', $_POST['plataformas'] ?? [])) as $pl) {
+                if (in_array($pl, array_map('intval', $ids_validos), true)) sql('INSERT INTO titulo_plataformas (titulo_id, plataforma_id) VALUES (?, ?)', [$id, $pl]);
             }
-            break;
-        case 'apagar_utilizador':
-            if ($id !== (int)$eu['id']) {
-                sql('DELETE FROM utilizadores WHERE id = ?', [$id]);
-                aviso('Utilizador apagado.');
+
+            $cartaz = $ext ? guardar_imagem('cartaz', $id, $ext) : null;
+            if ($cartaz) {
+                apagar_ficheiro($t['cartaz'] ?? null);
+                sql('UPDATE titulos SET cartaz = ? WHERE id = ?', [$cartaz, $id]);
             }
-            break;
-        case 'apagar_titulo':
-            $cartaz = valor('SELECT cartaz FROM titulos WHERE id = ?', [$id]);
-            if ($cartaz && is_file(__DIR__ . '/' . $cartaz)) unlink(__DIR__ . '/' . $cartaz);
-            sql('DELETE FROM titulos WHERE id = ?', [$id]);
-            aviso('Título removido.');
-            break;
-        // Procura no TMDB as imagens de todos os títulos que ainda não as têm
-        case 'tmdb_todos':
-            if (TMDB_CHAVE === '') { aviso('Para usar o TMDB, põe a tua chave em config.php (TMDB_CHAVE).', 'erro'); break; }
-            set_time_limit(300);
-            $ok = $falha = 0;
-            foreach (linhas('SELECT * FROM titulos WHERE cartaz IS NULL OR fundo IS NULL') as $t) {
-                tmdb_atualizar($t) ? $ok++ : $falha++;
+            $fundo = $ext_fundo ? guardar_imagem('fundo', $id, $ext_fundo) : null;
+            if ($fundo) {
+                apagar_ficheiro($t['fundo'] ?? null);
+                sql('UPDATE titulos SET fundo = ? WHERE id = ?', [$fundo, $id]);
             }
-            aviso("Imagens do TMDB: $ok títulos atualizados" . ($falha ? ", $falha não encontrados (indica o N.º no TMDB na página de cada um)" : '') . '.');
-            break;
-        case 'apagar_projeto':
-            $p = linha('SELECT dono_id, titulo FROM projetos WHERE id = ?', [$id]);
-            if ($p) {
-                notificar((int)$p['dono_id'], 'projeto', 'O teu projeto ' . $p['titulo'] . ' foi removido por um administrador.', 'projetos.php');
-                sql('DELETE FROM projetos WHERE id = ?', [$id]);
-                aviso('Projeto removido.');
-            }
-            break;
-        // Denúncias: ignorar, apagar o conteúdo denunciado ou bloquear o autor
-        case 'denuncia':
-            $d = linha('SELECT * FROM denuncias WHERE id = ?', [$id]);
-            if (!$d) break;
-            $alvo = conteudo_denunciado($d);
-            $acao = $_POST['acao'] ?? '';
-            if ($acao === 'ignorar') {
-                sql("UPDATE denuncias SET estado = 'ignorada' WHERE id = ?", [$id]);
-            } elseif ($acao === 'apagar' && $alvo) {
-                $tabela = ['publicacao' => 'publicacoes', 'comentario' => 'comentarios', 'review' => 'avaliacoes', 'mensagem' => 'mensagens'][$d['tipo']];
-                if ($d['tipo'] === 'review') sql('UPDATE avaliacoes SET review = NULL, spoiler = 0 WHERE id = ?', [$d['alvo_id']]);
-                else sql("DELETE FROM $tabela WHERE id = ?", [$d['alvo_id']]);
-                notificar((int)$alvo['autor_id'], 'sistema', 'Um conteúdo teu foi removido por violar as regras (' . $d['motivo'] . ').', '');
-                sql("UPDATE denuncias SET estado = 'resolvida' WHERE tipo = ? AND alvo_id = ?", [$d['tipo'], $d['alvo_id']]);
-            } elseif ($acao === 'bloquear' && $alvo && (int)$alvo['autor_id'] !== (int)$eu['id']) {
-                sql('UPDATE utilizadores SET bloqueado = 1 WHERE id = ?', [$alvo['autor_id']]);
-                sql("UPDATE denuncias SET estado = 'resolvida' WHERE id = ?", [$id]);
-            }
-            aviso('Denúncia tratada.');
-            break;
+            $falhou = ($ext && !$cartaz) || ($ext_fundo && !$fundo);
+            aviso(($t ? 'Título atualizado.' : 'Título adicionado ao catálogo.') . ($falhou ? ' Não foi possível guardar uma das imagens.' : ''), $falhou ? 'erro' : 'ok');
+            ir('admin_titulo.php?id=' . $id);
+        }
     }
-    ir('admin.php?' . http_build_query(array_intersect_key($_GET, ['s' => 1, 'q' => 1])));
+
+    if ($op === 'tirar_imagens' && $t) {
+        apagar_ficheiro($t['cartaz']);
+        apagar_ficheiro($t['fundo']);
+        sql('UPDATE titulos SET cartaz = NULL, fundo = NULL WHERE id = ?', [$id]);
+        aviso('Imagens removidas. O título volta a usar o cartaz desenhado.');
+        ir('admin_titulo.php?id=' . $id);
+    }
+
+    // Imagens reais pelo TMDB (precisa da chave em config.php)
+    if ($op === 'tmdb' && $t) {
+        if (TMDB_CHAVE === '') aviso('Para usar o TMDB, põe a tua chave em config.php (TMDB_CHAVE).', 'erro');
+        elseif (tmdb_atualizar($t)) aviso('Imagens encontradas no TMDB.');
+        else aviso('Não encontrei este título no TMDB. Indica o "N.º no TMDB" e tenta outra vez.', 'erro');
+        ir('admin_titulo.php?id=' . $id);
+    }
+
+    // Passo 29 – temporadas das séries
+    if ($op === 'temporada' && $t && $t['tipo'] === 'serie') {
+        $num = (int)$_POST['numero'];
+        $ano = (int)$_POST['ano'];
+        $ep = (int)$_POST['episodios'];
+        if ($num < 1 || $ep < 1 || $ano < 1900) {
+            $erros[] = 'Preenche o número da temporada, o ano e os episódios.';
+        } else {
+            if (valor('SELECT COUNT(*) FROM temporadas WHERE titulo_id = ? AND numero = ?', [$id, $num])) {
+                sql('UPDATE temporadas SET ano = ?, episodios = ? WHERE titulo_id = ? AND numero = ?', [$ano, $ep, $id, $num]);
+                aviso('Temporada ' . $num . ' atualizada.');
+            } else {
+                sql('INSERT INTO temporadas (titulo_id, numero, ano, episodios) VALUES (?, ?, ?, ?)', [$id, $num, $ano, $ep]);
+                aviso('Temporada ' . $num . ' adicionada.');
+            }
+            ir('admin_titulo.php?id=' . $id . '#temporadas');
+        }
+    }
+    if ($op === 'rem_temporada' && $t) {
+        sql('DELETE FROM temporadas WHERE id = ? AND titulo_id = ?', [(int)$_POST['temporada'], $id]);
+        aviso('Temporada removida.');
+        ir('admin_titulo.php?id=' . $id . '#temporadas');
+    }
 }
 
-/** Devolve o texto e o autor do conteúdo de uma denúncia (ou null se já não existir). */
-function conteudo_denunciado(array $d): ?array
-{
-    return match ($d['tipo']) {
-        'publicacao' => linha('SELECT texto, utilizador_id AS autor_id FROM publicacoes WHERE id = ?', [$d['alvo_id']]),
-        'comentario' => linha('SELECT texto, utilizador_id AS autor_id FROM comentarios WHERE id = ?', [$d['alvo_id']]),
-        'review' => linha('SELECT review AS texto, utilizador_id AS autor_id FROM avaliacoes WHERE id = ? AND review IS NOT NULL', [$d['alvo_id']]),
-        'mensagem' => linha('SELECT texto, de_id AS autor_id FROM mensagens WHERE id = ?', [$d['alvo_id']]),
-        default => null,
-    };
-}
-
-$q = trim($_GET['q'] ?? '');
-$n_util = (int)valor('SELECT COUNT(*) FROM utilizadores');
-$n_filmes = (int)valor("SELECT COUNT(*) FROM titulos WHERE tipo = 'filme'");
-$n_series = (int)valor("SELECT COUNT(*) FROM titulos WHERE tipo = 'serie'");
-$n_proj = (int)valor('SELECT COUNT(*) FROM projetos');
-$n_den = (int)valor("SELECT COUNT(*) FROM denuncias WHERE estado = 'pendente'");
-$n_aval = (int)valor('SELECT COUNT(*) FROM avaliacoes');
-$novos_semana = (int)valor('SELECT COUNT(*) FROM utilizadores WHERE criado_em >= ?', [date('Y-m-d H:i:s', strtotime('-7 days'))]);
-
-$titulo = 'Administração';
+$temporadas = $t && $t['tipo'] === 'serie' ? linhas('SELECT * FROM temporadas WHERE titulo_id = ? ORDER BY numero', [$id]) : [];
+$titulo = $t ? 'Editar ' . $t['nome'] : 'Novo título';
 require 'cabecalho.php';
-$abas = ['resumo' => 'Resumo', 'utilizadores' => 'Utilizadores', 'titulos' => 'Filmes e séries', 'series' => 'Séries e temporadas', 'projetos' => 'Projetos', 'denuncias' => 'Denúncias' . ($n_den ? " ($n_den)" : '')];
 ?>
-<div class="content admc"><div class="left">
-  <div class="ah"><div><h1 class="ph">Painel de administração</h1><small>Visão geral do TavDex</small></div>
-    <a class="btn primary sm" href="admin_titulo.php">+ Adicionar filme ou série</a></div>
-  <div class="sg">
-    <div class="sc" style="--c:330"><span class="si">👥</span><div><b><?= $n_util ?></b><span>Utilizadores</span><small><?= $novos_semana ?> novos esta semana</small></div></div>
-    <div class="sc" style="--c:215"><span class="si">🎬</span><div><b><?= $n_filmes + $n_series ?></b><span>Filmes e séries</span><small><?= $n_filmes ?> filmes · <?= $n_series ?> séries</small></div></div>
-    <div class="sc" style="--c:150"><span class="si">🎞</span><div><b><?= $n_proj ?></b><span>Projetos</span><small><?= $n_aval ?> avaliações no site</small></div></div>
-    <div class="sc" style="--c:35"><span class="si">⚑</span><div><b><?= $n_den ?></b><span>Denúncias pendentes</span><small><a class="lk" href="?s=denuncias">rever</a></small></div></div>
-  </div>
-  <div class="tabs links"><?php foreach ($abas as $k => $n): ?><a class="<?= $sec === $k ? 'on' : '' ?>" href="?s=<?= $k ?>"><?= $n ?></a><?php endforeach; ?></div>
+<div class="content"><div class="left narrow">
+  <p><a class="lk" href="admin.php?s=titulos">← Filmes e séries</a><?php if ($t): ?> · <a class="lk" href="titulo.php?id=<?= $id ?>">Ver página</a><?php endif; ?></p>
+  <h1 class="ph"><?= $t ? 'Editar ' . e($t['nome']) : 'Adicionar filme ou série' ?></h1>
+  <?php foreach ($erros as $er): ?><div class="flash erro"><?= e($er) ?></div><?php endforeach; ?>
 
-<?php if ($sec === 'resumo'):
-    // Registos por mês (últimos 6 meses)
-    $meses = [];
-    for ($i = 5; $i >= 0; $i--) $meses[date('Y-m', strtotime("first day of -$i month"))] = 0;
-    foreach (linhas('SELECT criado_em FROM utilizadores') as $r) {
-        $m = substr($r['criado_em'], 0, 7);
-        if (isset($meses[$m])) $meses[$m]++;
-    }
-    $max = max(1, max($meses));
-    $nomes_mes = ['01' => 'Jan', '02' => 'Fev', '03' => 'Mar', '04' => 'Abr', '05' => 'Mai', '06' => 'Jun', '07' => 'Jul', '08' => 'Ago', '09' => 'Set', '10' => 'Out', '11' => 'Nov', '12' => 'Dez'];
-    $ultimos = linhas('SELECT * FROM utilizadores ORDER BY criado_em DESC LIMIT 5');
-    $top = linhas(SQL_TITULOS . ' ORDER BY n_aval DESC LIMIT 5');
-?>
-  <div class="dcols"><div>
-    <div class="box"><h3>Novos registos por mês</h3><div class="bars">
-      <?php foreach ($meses as $m => $n): ?><div><i style="height:<?= round($n * 100 / $max) ?>%"></i><?= $n ?><br><?= $nomes_mes[substr($m, 5)] ?></div><?php endforeach; ?>
-    </div></div>
-    <div class="box"><h3>Títulos mais avaliados</h3>
-      <?php foreach ($top as $t): ?><div class="rb"><span class="gname"><?= e($t['nome']) ?></span><div class="bar"><i style="width:<?= round($t['n_aval'] * 100 / max(1, $top[0]['n_aval'])) ?>%"></i></div><span><?= $t['n_aval'] ?></span></div><?php endforeach; ?>
+  <form method="post" enctype="multipart/form-data" class="box form">
+    <?= campo_csrf() ?><input type="hidden" name="op" value="dados"><input type="hidden" name="id" value="<?= $id ?>">
+    <label>Nome<input name="nome" value="<?= e($dados['nome']) ?>" required maxlength="150"></label>
+    <div class="row2">
+      <label>Tipo<select name="tipo" data-tipo><option value="filme" <?= $dados['tipo'] === 'filme' ? 'selected' : '' ?>>Filme</option><option value="serie" <?= $dados['tipo'] === 'serie' ? 'selected' : '' ?>>Série</option></select></label>
+      <label>Ano<input type="number" name="ano" value="<?= e($dados['ano']) ?>" min="1888" max="<?= date('Y') + 5 ?>" required></label>
+      <label data-so="filme">Duração (min)<input type="number" name="duracao_min" value="<?= e($dados['duracao_min']) ?>" min="1" max="999"></label>
+      <label>Classificação<select name="idade"><?php foreach (['M/6', 'M/12', 'M/14', 'M/16', 'M/18'] as $i): ?><option <?= $dados['idade'] === $i ? 'selected' : '' ?>><?= $i ?></option><?php endforeach; ?></select></label>
     </div>
-  </div><div>
-    <div class="box"><h3>Últimos registos</h3>
-      <?php foreach ($ultimos as $r): ?><div class="rv"><?= avatar($r) ?><div><b><?= link_perfil($r) ?></b><br><small><?= tempo($r['criado_em']) ?></small></div></div><?php endforeach; ?>
+    <label>Realização / criação<input name="realizador" value="<?= e($dados['realizador']) ?>" maxlength="100"></label>
+    <label>Sinopse<textarea name="sinopse" rows="4" required maxlength="3000"><?= e($dados['sinopse']) ?></textarea></label>
+    <fieldset class="gp2"><legend>Géneros</legend>
+      <?php foreach ($generos as $g): ?><label class="chip"><input type="checkbox" name="generos[]" value="<?= $g['id'] ?>" <?= in_array($g['id'], $escolhidos) ? 'checked' : '' ?>><span><?= e($g['nome']) ?></span></label><?php endforeach; ?>
+      <input name="novo_genero" placeholder="Outro género (opcional)" maxlength="40">
+    </fieldset>
+    <fieldset class="gp2"><legend>Onde ver (subscrição em Portugal)</legend>
+      <?php foreach ($todas_plataformas as $p): ?><label class="chip"><input type="checkbox" name="plataformas[]" value="<?= $p['id'] ?>" <?= in_array($p['id'], $plats_escolhidas) ? 'checked' : '' ?>><span><?= e($p['nome']) ?></span></label><?php endforeach; ?>
+    </fieldset>
+    <label class="chk" data-so="serie"><input type="checkbox" name="em_curso" <?= $dados['em_curso'] ? 'checked' : '' ?>> Série ainda em curso</label>
+    <div class="row2">
+      <label>Cartaz – vertical (JPG, PNG ou WEBP, até 3 MB)<input type="file" name="cartaz" accept="image/jpeg,image/png,image/webp"></label>
+      <label>Fundo – horizontal, para o destaque (opcional)<input type="file" name="fundo" accept="image/jpeg,image/png,image/webp"></label>
     </div>
-  </div></div>
+    <label>N.º no TMDB (opcional)<input type="number" name="tmdb_id" value="<?= e($dados['tmdb_id'] ?? '') ?>" min="1" placeholder="Ex.: 157336 (está no endereço da página do filme no themoviedb.org)"></label>
+    <button class="btn primary"><?= $t ? 'Guardar alterações' : 'Adicionar ao catálogo' ?></button>
+  </form>
 
-<?php elseif ($sec === 'utilizadores'):
-    [$lista, $total, $pag] = paginado('SELECT u.*, (SELECT COUNT(*) FROM avaliacoes a WHERE a.utilizador_id = u.id) AS n_aval FROM utilizadores u' .
-                    ($q !== '' ? ' WHERE u.nome LIKE ? OR u.email LIKE ?' : ''), $q !== '' ? ["%$q%", "%$q%"] : [], 'ORDER BY criado_em DESC, id DESC', 25);
-?>
-  <form class="cf" method="get"><input type="hidden" name="s" value="utilizadores"><input name="q" value="<?= e($q) ?>" placeholder="Pesquisar por nome ou email..."><button class="btn ghost sm">Pesquisar</button></form>
-  <div class="tscroll"><table><thead><tr><th>Utilizador</th><th>Email</th><th>Papel</th><th>Registo</th><th>Avaliações</th><th>Estado</th><th></th></tr></thead><tbody>
-  <?php foreach ($lista as $r): $sou = (int)$r['id'] === (int)$eu['id']; ?>
-    <tr><td><div class="uc"><?= avatar($r) ?><?= link_perfil($r) ?></div></td><td><?= e($r['email']) ?></td>
-      <td><?= $r['papel'] === 'admin' ? '<span class="badge" style="--c:330">Admin</span>' : 'Utilizador' ?></td>
-      <td><?= date('d/m/Y', strtotime($r['criado_em'])) ?></td><td><?= (int)$r['n_aval'] ?></td>
-      <td><?= $r['bloqueado'] ? '<span class="badge" style="--c:0">Bloqueado</span>' : '<span class="badge" style="--c:150">Ativo</span>' ?></td>
-      <td class="ac"><?php if (!$sou): ?>
-        <form method="post" class="inline"><?= campo_csrf() ?><input type="hidden" name="op" value="bloquear"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn ghost sm"><?= $r['bloqueado'] ? 'Desbloquear' : 'Bloquear' ?></button></form>
-        <form method="post" class="inline" data-confirm="Mudar o papel de <?= e($r['nome']) ?>?"><?= campo_csrf() ?><input type="hidden" name="op" value="papel"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn ghost sm"><?= $r['papel'] === 'admin' ? 'Tirar admin' : 'Tornar admin' ?></button></form>
-        <form method="post" class="inline" data-confirm="Apagar a conta de <?= e($r['nome']) ?> e todos os seus dados?"><?= campo_csrf() ?><input type="hidden" name="op" value="apagar_utilizador"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn ghost sm">Apagar</button></form>
-      <?php else: ?><small class="muted">(tu)</small><?php endif; ?></td></tr>
-  <?php endforeach; ?>
-  </tbody></table></div>
-  <p class="cr" style="margin-top:12px"><?= $total ?> utilizador<?= $total === 1 ? '' : 'es' ?></p>
-  <?= paginacao($total, $pag, 25, array_filter(['s' => 'utilizadores', 'q' => $q])) ?>
+  <?php if ($t): ?>
+    <div class="box imgs" id="imagens"><h3>Imagens</h3>
+      <div class="imgs-ver"><div class="cprev"><?= cartaz($t) ?></div>
+        <?php if (fundo($t)): ?><div class="fprev" style="background-image:url('<?= e(fundo($t)) ?>')"></div><?php else: ?><p class="muted">Sem imagem de fundo: o destaque usa as cores do título.</p><?php endif; ?></div>
+      <div class="btns">
+        <form method="post" class="inline"><?= campo_csrf() ?><input type="hidden" name="op" value="tmdb"><input type="hidden" name="id" value="<?= $id ?>"><button class="btn primary sm">🎬 Procurar imagens no TMDB</button></form>
+        <?php if ($t['cartaz'] || $t['fundo']): ?><form method="post" class="inline"><?= campo_csrf() ?><input type="hidden" name="op" value="tirar_imagens"><input type="hidden" name="id" value="<?= $id ?>"><button class="btn ghost sm">Tirar imagens</button></form><?php endif; ?>
+      </div>
+      <?php if (TMDB_CHAVE === ''): ?><small class="muted">Para procurar no TMDB, cria uma chave gratuita em themoviedb.org e cola-a em config.php.</small><?php endif; ?>
+    </div>
+  <?php endif; ?>
 
-<?php elseif ($sec === 'titulos'):
-    [$lista, $total, $pag] = paginado(SQL_TITULOS . ($q !== '' ? ' WHERE t.nome LIKE ?' : ''), $q !== '' ? ["%$q%"] : [], 'ORDER BY nome', 25);
-?>
-  <div class="cf"><form class="cf" method="get" style="flex:1;margin:0"><input type="hidden" name="s" value="titulos"><input name="q" value="<?= e($q) ?>" placeholder="Pesquisar título..."><button class="btn ghost sm">Pesquisar</button></form>
-    <form method="post" class="inline"><?= campo_csrf() ?><input type="hidden" name="op" value="tmdb_todos"><button class="btn ghost sm" title="<?= TMDB_CHAVE === '' ? 'Precisa da chave do TMDB em config.php' : 'Procura cartazes e fundos para os títulos sem imagem' ?>">🎬 Imagens do TMDB para todos</button></form></div>
-  <div class="tscroll"><table><thead><tr><th>Título</th><th>Tipo</th><th>Ano</th><th>Géneros</th><th>Nota</th><th>Cartaz</th><th></th></tr></thead><tbody>
-  <?php foreach ($lista as $t): ?>
-    <tr><td><a class="lk-u" href="titulo.php?id=<?= $t['id'] ?>"><?= e($t['nome']) ?></a></td><td><?= $t['tipo'] === 'filme' ? 'Filme' : 'Série' ?></td><td><?= (int)$t['ano'] ?></td>
-      <td><small><?= e(generos_titulo($t['id'])) ?></small></td><td><?= $t['media'] ? number_format((float)$t['media'], 1) : '–' ?></td><td><?= url_imagem($t['cartaz']) ? '✓' : '—' ?></td>
-      <td class="ac"><a class="btn ghost sm" href="admin_titulo.php?id=<?= $t['id'] ?>">Editar</a>
-        <form method="post" class="inline" data-confirm="Remover <?= e($t['nome']) ?>? As avaliações e listas deste título também são apagadas."><?= campo_csrf() ?><input type="hidden" name="op" value="apagar_titulo"><input type="hidden" name="id" value="<?= $t['id'] ?>"><button class="btn ghost sm">Remover</button></form></td></tr>
-  <?php endforeach; ?>
-  </tbody></table></div>
-  <p class="cr" style="margin-top:12px"><?= $total ?> título<?= $total === 1 ? '' : 's' ?></p>
-  <?= paginacao($total, $pag, 25, array_filter(['s' => 'titulos', 'q' => $q])) ?>
-
-<?php elseif ($sec === 'series'):
-    $lista = linhas("SELECT t.*, (SELECT COUNT(*) FROM temporadas s WHERE s.titulo_id = t.id) AS n_temp, (SELECT SUM(episodios) FROM temporadas s WHERE s.titulo_id = t.id) AS n_ep
-                     FROM titulos t WHERE t.tipo = 'serie' ORDER BY t.nome");
-?>
-  <div class="tscroll"><table><thead><tr><th>Série</th><th>Estreia</th><th>Temporadas</th><th>Episódios</th><th>Estado</th><th></th></tr></thead><tbody>
-  <?php foreach ($lista as $t): ?>
-    <tr><td><?= e($t['nome']) ?></td><td><?= (int)$t['ano'] ?></td><td><?= (int)$t['n_temp'] ?></td><td><?= (int)$t['n_ep'] ?></td>
-      <td><?= $t['em_curso'] ? '<span class="badge" style="--c:150">Em curso</span>' : '<span class="badge" style="--c:215">Terminada</span>' ?></td>
-      <td class="ac"><a class="btn ghost sm" href="admin_titulo.php?id=<?= $t['id'] ?>#temporadas">Gerir temporadas</a></td></tr>
-  <?php endforeach; ?>
-  </tbody></table></div>
-
-<?php elseif ($sec === 'projetos'):
-    [$lista, $total, $pag] = paginado('SELECT p.*, u.nome AS dono, (SELECT COUNT(*) FROM projeto_equipa e WHERE e.projeto_id = p.id) AS membros FROM projetos p JOIN utilizadores u ON u.id = p.dono_id', [], 'ORDER BY criado_em DESC, id DESC', 25);
-?>
-  <div class="tscroll"><table><thead><tr><th>Projeto</th><th>Dono</th><th>Tipo</th><th>Estado</th><th>Membros</th><th></th></tr></thead><tbody>
-  <?php foreach ($lista as $p): ?>
-    <tr><td><a class="lk-u" href="projeto.php?id=<?= $p['id'] ?>"><?= e($p['titulo']) ?></a></td><td><?= e($p['dono']) ?></td><td><?= e($p['tipo']) ?></td><td><?= badge_estado($p['estado']) ?></td><td><?= (int)$p['membros'] ?></td>
-      <td class="ac"><a class="btn ghost sm" href="projeto_editar.php?id=<?= $p['id'] ?>">Editar</a>
-        <form method="post" class="inline" data-confirm="Remover o projeto <?= e($p['titulo']) ?>?"><?= campo_csrf() ?><input type="hidden" name="op" value="apagar_projeto"><input type="hidden" name="id" value="<?= $p['id'] ?>"><button class="btn ghost sm">Remover</button></form></td></tr>
-  <?php endforeach; ?>
-  </tbody></table></div>
-  <?= paginacao($total, $pag, 25, ['s' => 'projetos']) ?>
-
-<?php elseif ($sec === 'denuncias'):
-    [$lista, $total, $pag] = paginado("SELECT d.*, u.nome AS quem, CASE WHEN d.estado = 'pendente' THEN 0 ELSE 1 END AS ordem_estado FROM denuncias d JOIN utilizadores u ON u.id = d.utilizador_id", [], 'ORDER BY ordem_estado, criado_em DESC', 25);
-    $tipos = ['publicacao' => 'Publicação', 'comentario' => 'Comentário', 'review' => 'Review', 'mensagem' => 'Mensagem'];
-?>
-  <?php if (!$lista): ?><p class="empty">Não há denúncias.</p><?php endif; ?>
-  <div class="tscroll"><table><thead><tr><th>Tipo</th><th>Conteúdo</th><th>Autor</th><th>Denunciado por</th><th>Motivo</th><th>Estado</th><th></th></tr></thead><tbody>
-  <?php foreach ($lista as $d): $alvo = conteudo_denunciado($d); $autor = $alvo ? linha('SELECT nome, bloqueado FROM utilizadores WHERE id = ?', [$alvo['autor_id']]) : null; ?>
-    <tr><td><?= $tipos[$d['tipo']] ?></td><td class="txt"><?= $alvo ? e(mb_strimwidth($alvo['texto'], 0, 120, '…')) : '<i class="muted">(já removido)</i>' ?></td>
-      <td><?= $autor ? e($autor['nome']) . ($autor['bloqueado'] ? ' 🚫' : '') : '—' ?></td><td><?= e($d['quem']) ?></td><td><?= e($d['motivo']) ?></td><td><?= badge_estado($d['estado']) ?></td>
-      <td class="ac"><?php if ($d['estado'] === 'pendente'): ?>
-        <form method="post" class="inline"><?= campo_csrf() ?><input type="hidden" name="op" value="denuncia"><input type="hidden" name="id" value="<?= $d['id'] ?>">
-          <button class="btn ghost sm" name="acao" value="ignorar">Ignorar</button>
-          <?php if ($alvo): ?><button class="btn ghost sm" name="acao" value="apagar">Apagar conteúdo</button>
-          <?php if ($autor && !$autor['bloqueado']): ?><button class="btn ghost sm" name="acao" value="bloquear">Bloquear autor</button><?php endif; endif; ?>
-        </form><?php endif; ?></td></tr>
-  <?php endforeach; ?>
-  </tbody></table></div>
-  <?= paginacao($total, $pag, 25, ['s' => 'denuncias']) ?>
-<?php endif; ?>
+  <?php if ($t && $t['tipo'] === 'serie'): ?>
+    <div class="box" id="temporadas"><h3>Temporadas</h3>
+      <?php if (!$temporadas): ?><p class="empty">Ainda não há temporadas.</p><?php endif; ?>
+      <?php foreach ($temporadas as $s): ?>
+        <div class="rv li"><div><b>Temporada <?= (int)$s['numero'] ?></b> <small><?= (int)$s['ano'] ?> · <?= (int)$s['episodios'] ?> episódios</small></div>
+          <form method="post" class="inline" data-confirm="Remover a temporada <?= (int)$s['numero'] ?>?"><?= campo_csrf() ?><input type="hidden" name="op" value="rem_temporada"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="temporada" value="<?= $s['id'] ?>"><button class="btn ghost sm">Remover</button></form></div>
+      <?php endforeach; ?>
+      <form method="post" class="inline-form"><?= campo_csrf() ?><input type="hidden" name="op" value="temporada"><input type="hidden" name="id" value="<?= $id ?>">
+        <input type="number" name="numero" min="1" value="<?= count($temporadas) + 1 ?>" placeholder="N.º" required aria-label="Número">
+        <input type="number" name="ano" min="1900" value="<?= date('Y') ?>" placeholder="Ano" required aria-label="Ano">
+        <input type="number" name="episodios" min="1" placeholder="Episódios" required aria-label="Episódios">
+        <button class="btn ghost sm">Adicionar / atualizar</button></form>
+      <small class="muted">Para alterar uma temporada, escreve o mesmo número com os novos valores.</small>
+    </div>
+  <?php endif; ?>
 </div></div>
 <?php require 'rodape.php'; ?>
