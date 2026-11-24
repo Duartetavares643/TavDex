@@ -139,6 +139,15 @@ function exigir_admin(): void
 // Segurança
 // ---------------------------------------------------------------------
 
+/**
+ * Endereço de um ficheiro CSS ou JS com a data em que foi alterado (ex.: style.css?v=1795533166).
+ * Quando o ficheiro muda, o endereço muda, e o browser vai buscar a versão nova em vez da da cache.
+ */
+function versao(string $ficheiro): string
+{
+    return $ficheiro . '?v=' . (@filemtime(__DIR__ . '/' . $ficheiro) ?: 0);
+}
+
 /** Escapa texto para HTML (evita ataques XSS). */
 function e($texto): string
 {

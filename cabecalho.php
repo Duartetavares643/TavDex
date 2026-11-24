@@ -18,7 +18,7 @@ $menu = ['index.php' => 'Início', 'catalogo.php?tipo=filme' => 'Filmes', 'catal
   try { var t = localStorage.getItem('tema'); if (t) document.documentElement.dataset.tema = t; } catch (e) {}
 </script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="<?= versao('style.css') ?>">
 </head>
 <body class="<?= e_admin() ? 'is-admin' : '' ?>">
 <header class="nav">
