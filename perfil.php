@@ -1,5 +1,9 @@
 <?php
 // Passo 9 – Página de perfil dos utilizadores (com seguir utilizadores)
+//  · cabeçalho com o banner (cenário de cinema ou imagem própria), foto e nome de exibição
+//    (cabecalho_perfil() em lib.php; o desenho do cenário é feito pelo banner-perfil.js);
+//  · "Segue-te", géneros favoritos e botão Partilhar;
+//  · privacidade: o dono pode esconder as listas e os seguidores (Definições).
 require 'lib.php';
 
 $nome = $_GET['u'] ?? (eu()['nome'] ?? '');
@@ -19,6 +23,12 @@ $meu = eu() && (int)eu()['id'] === $id;
 $n_seguidores = (int)valor('SELECT COUNT(*) FROM seguidores WHERE seguido_id = ?', [$id]);
 $n_seguindo = (int)valor('SELECT COUNT(*) FROM seguidores WHERE seguidor_id = ?', [$id]);
 $sigo = eu() && !$meu && valor('SELECT COUNT(*) FROM seguidores WHERE seguidor_id = ? AND seguido_id = ?', [eu()['id'], $id]);
+$segue_te = eu() && !$meu && valor('SELECT COUNT(*) FROM seguidores WHERE seguidor_id = ? AND seguido_id = ?', [$id, eu()['id']]);
+
+// Privacidade escolhida pelo dono nas Definições (o dono e os administradores veem sempre tudo)
+$ve_tudo = $meu || e_admin();
+$ver_listas = $ve_tudo || $p['mostrar_listas'];
+$ver_seguidores = $ve_tudo || $p['mostrar_seguidores'];
 
 /** Títulos de uma lista do utilizador. */
 function lista_de(int $id, string $tipo): array
@@ -31,6 +41,8 @@ $vistos = lista_de($id, 'visto');
 $avaliacoes = linhas('SELECT a.*, t.nome, t.id AS tid FROM avaliacoes a JOIN titulos t ON t.id = a.titulo_id WHERE a.utilizador_id = ? ORDER BY a.criado_em DESC', [$id]);
 $projetos = linhas(SQL_PROJETOS . ' WHERE p.dono_id = ? OR p.id IN (SELECT projeto_id FROM projeto_equipa WHERE utilizador_id = ?) ORDER BY p.criado_em DESC', [$id, $id]);
 $seguidores = linhas('SELECT u.* FROM seguidores s JOIN utilizadores u ON u.id = s.seguidor_id WHERE s.seguido_id = ? ORDER BY s.criado_em DESC', [$id]);
+$a_seguir = linhas('SELECT u.* FROM seguidores s JOIN utilizadores u ON u.id = s.seguido_id WHERE s.seguidor_id = ? ORDER BY s.criado_em DESC', [$id]);
+$generos_favoritos = array_column(linhas('SELECT g.nome FROM utilizador_generos ug JOIN generos g ON g.id = ug.genero_id WHERE ug.utilizador_id = ? ORDER BY g.nome', [$id]), 'nome');
 $recomendados = $meu ? recomendacoes($id, 10) : [];
 $compat = eu() && !$meu ? compatibilidade((int)eu()['id'], $id) : null;
 
@@ -47,50 +59,74 @@ function grelha(array $titulos, string $vazio): string
     return '<div class="grid g5">' . implode('', array_map('cartao_titulo', $titulos)) . '</div>';
 }
 
-$titulo = $p['nome'];
+/** Lista de pessoas (seguidores / a seguir). */
+function lista_pessoas(array $pessoas, string $vazio): string
+{
+    if (!$pessoas) return '<p class="empty">' . e($vazio) . '</p>';
+    $html = '<div class="ulist">';
+    foreach ($pessoas as $s) {
+        $html .= '<a class="rv" href="perfil.php?u=' . urlencode($s['nome']) . '">' . avatar($s) . '<span><b>' . e(nome_visivel($s)) . '</b> <small class="muted">@' . e($s['nome']) . '</small></span></a>';
+    }
+    return $html . '</div>';
+}
+
+// Textos para quando o dono escondeu as listas ou os seguidores
+$listas_privadas = '<p class="empty">@' . e($p['nome']) . ' escolheu não mostrar as suas listas.</p>';
+$seguidores_privados = '<p class="empty">@' . e($p['nome']) . ' escolheu não mostrar quem segue e quem o segue.</p>';
+$so_tu_listas = $meu && !$p['mostrar_listas'] ? '<p class="so-tu">🔒 Só tu vês isto</p>' : '';
+$so_tu_seguidores = $meu && !$p['mostrar_seguidores'] ? '<p class="so-tu">🔒 Só tu vês isto</p>' : '';
+
+// Botões do cabeçalho
+if ($meu) {
+    $acoes = '<a class="btn ghost sm" href="editar_perfil.php">✎ Editar perfil</a>';
+} elseif (eu()) {
+    $acoes = '<form method="post" action="acoes.php" class="inline">' . campo_csrf() . '<input type="hidden" name="acao" value="seguir"><input type="hidden" name="id" value="' . $id . '">'
+        . '<button class="btn ' . ($sigo ? 'ghost' : 'primary') . ' sm">' . ($sigo ? 'A seguir ✓' : '+ Seguir') . '</button></form>'
+        . '<a class="btn ghost sm" href="chat.php?com=' . $id . '">Mensagem</a>';
+} else {
+    $acoes = '<a class="btn primary sm" href="login.php?voltar=' . urlencode('perfil.php?u=' . $p['nome']) . '">+ Seguir</a>';
+}
+$acoes .= '<button class="btn ghost sm" type="button" data-copiar="' . e(URL_SITE . '/perfil.php?u=' . urlencode($p['nome'])) . '">Partilhar</button>';
+
+// Perfil acabado de criar: cartão de boas-vindas só para o dono
+$perfil_vazio = $meu && !$p['bio'] && !$avaliacoes && !$favoritos && !$n_seguidores && !$n_seguindo;
+
+$titulo = nome_visivel($p) . ' (@' . $p['nome'] . ')';
+$com_banner = true;   // o rodapé carrega o banner-perfil.js
 require 'cabecalho.php';
 ?>
 <div class="content"><div class="left">
-  <div class="box pbn" style="--h:<?= (int)$p['cor'] ?>">
-    <?= avatar($p, 'l') ?>
-    <div class="pinfo">
-      <h2><?= e($p['nome']) ?> <?php if ($p['papel'] === 'admin'): ?><span class="badge" style="--c:330">Admin</span><?php endif; ?></h2>
-      <small class="hd">Membro desde <?= date('m/Y', strtotime($p['criado_em'])) ?><?= $p['localizacao'] ? ' · 📍 ' . e($p['localizacao']) : '' ?></small>
-      <?php if ($p['bio']): ?><p class="bio"><?= e($p['bio']) ?></p><?php endif; ?>
-    </div>
-    <?php if ($meu): ?>
-      <a class="btn ghost sm" href="editar_perfil.php">✎ Editar perfil</a>
-    <?php elseif (eu()): ?>
-      <div class="btns">
-        <form method="post" action="acoes.php" class="inline"><?= campo_csrf() ?><input type="hidden" name="acao" value="seguir"><input type="hidden" name="id" value="<?= $id ?>">
-          <button class="btn <?= $sigo ? 'ghost' : 'primary' ?> sm"><?= $sigo ? 'A seguir ✓' : '+ Seguir' ?></button></form>
-        <a class="btn ghost sm" href="chat.php?com=<?= $id ?>">Mensagem</a>
-      </div>
-    <?php endif; ?>
-  </div>
+  <?= cabecalho_perfil($p, [
+      'acoes' => $acoes,
+      'segue_te' => $segue_te,
+      'generos' => $generos_favoritos,
+      'contagens' => ['seguidores' => $n_seguidores, 'a_seguir' => $n_seguindo, 'avaliacoes' => count($avaliacoes), 'vistos' => count($vistos), 'projetos' => count($projetos)],
+  ]) ?>
 
-  <div class="pstats">
-    <div class="box ps"><b><?= $n_seguidores ?></b><span>Seguidores</span></div>
-    <div class="box ps"><b><?= $n_seguindo ?></b><span>A seguir</span></div>
-    <div class="box ps"><b><?= count($avaliacoes) ?></b><span>Avaliações</span></div>
-    <div class="box ps"><b><?= count($vistos) ?></b><span>Vistos</span></div>
-    <div class="box ps"><b><?= count($projetos) ?></b><span>Projetos</span></div>
-  </div>
+  <?php if ($perfil_vazio): ?>
+    <div class="box cta boas-vindas"><div>
+      <b>Bem-vindo ao TavDex, <?= e(nome_visivel($p)) ?>!</b>
+      <p>O teu perfil ainda está vazio. Avalia o que já viste, segue outras pessoas e conta um pouco sobre ti.</p></div>
+      <div class="btns"><a class="btn primary sm" href="catalogo.php">Explorar o catálogo</a>
+        <a class="btn ghost sm" href="comunidade.php">Ver a comunidade</a>
+        <a class="btn ghost sm" href="editar_perfil.php">Completar o perfil</a></div></div>
+  <?php endif; ?>
 
   <div class="dcols"><div>
     <div class="tabsbox">
       <div class="tabs">
-        <button data-tab="fav" class="on">Favoritos (<?= count($favoritos) ?>)</button>
-        <button data-tab="ver">Para ver (<?= count($para_ver) ?>)</button>
-        <button data-tab="vis">Vistos (<?= count($vistos) ?>)</button>
+        <button data-tab="fav" class="on">Favoritos<?= $ver_listas ? ' (' . count($favoritos) . ')' : '' ?></button>
+        <button data-tab="ver">Para ver<?= $ver_listas ? ' (' . count($para_ver) . ')' : '' ?></button>
+        <button data-tab="vis">Vistos<?= $ver_listas ? ' (' . count($vistos) . ')' : '' ?></button>
         <button data-tab="ava">Avaliações</button>
         <button data-tab="prj">Projetos</button>
         <?php if ($meu): ?><button data-tab="recomendados">Recomendados</button><?php endif; ?>
         <button data-tab="seg">Seguidores</button>
+        <button data-tab="aseg">A seguir</button>
       </div>
-      <div data-pane="fav"><?= grelha($favoritos, 'Ainda não há favoritos.') ?></div>
-      <div data-pane="ver" hidden><?= grelha($para_ver, 'A lista está vazia.') ?></div>
-      <div data-pane="vis" hidden><?= grelha($vistos, 'Ainda não marcou nada como visto.') ?></div>
+      <div data-pane="fav"><?= $ver_listas ? $so_tu_listas . grelha($favoritos, 'Ainda não há favoritos.') : $listas_privadas ?></div>
+      <div data-pane="ver" hidden><?= $ver_listas ? $so_tu_listas . grelha($para_ver, 'A lista está vazia.') : $listas_privadas ?></div>
+      <div data-pane="vis" hidden><?= $ver_listas ? $so_tu_listas . grelha($vistos, 'Ainda não marcou nada como visto.') : $listas_privadas ?></div>
       <div data-pane="ava" hidden>
         <?php if (!$avaliacoes): ?><p class="empty">Ainda não avaliou nenhum título.</p><?php endif; ?>
         <?php foreach ($avaliacoes as $a): ?>
@@ -102,10 +138,8 @@ require 'cabecalho.php';
         <?php if (!$projetos): ?><p class="empty">Sem projetos.</p><?php else: ?><div class="pjc"><?php foreach ($projetos as $pr) echo cartao_projeto($pr); ?></div><?php endif; ?>
       </div>
       <?php if ($meu): ?><div data-pane="recomendados" hidden><?= grelha($recomendados, 'Avalia alguns títulos para receberes recomendações.') ?></div><?php endif; ?>
-      <div data-pane="seg" hidden>
-        <?php if (!$seguidores): ?><p class="empty">Ainda não tem seguidores.</p><?php endif; ?>
-        <div class="ulist"><?php foreach ($seguidores as $s): ?><a class="rv" href="perfil.php?u=<?= urlencode($s['nome']) ?>"><?= avatar($s) ?><b><?= e($s['nome']) ?></b></a><?php endforeach; ?></div>
-      </div>
+      <div data-pane="seg" hidden><?= $ver_seguidores ? $so_tu_seguidores . lista_pessoas($seguidores, 'Ainda não tem seguidores.') : $seguidores_privados ?></div>
+      <div data-pane="aseg" hidden><?= $ver_seguidores ? $so_tu_seguidores . lista_pessoas($a_seguir, 'Ainda não segue ninguém.') : $seguidores_privados ?></div>
     </div>
   </div><div>
     <?php if ($compat): ?>

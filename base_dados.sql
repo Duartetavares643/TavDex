@@ -14,17 +14,31 @@ USE TavDex;
 -- ---------------------------------------------------------------------
 
 -- Contas dos utilizadores (a palavra-passe é guardada encriptada com password_hash)
+-- (password_hash fica NULL nas contas criadas só com o Google)
 CREATE TABLE utilizadores (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(20) NOT NULL UNIQUE,
+    nome VARCHAR(20) NOT NULL UNIQUE,                -- @nome de utilizador
+    nome_exibicao VARCHAR(50) NULL,                  -- nome que aparece no perfil (NULL = mostra o @nome)
     email VARCHAR(120) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
+    email_verificado BOOLEAN NOT NULL DEFAULT 0,     -- 1 = confirmou o email pelo link (ou entrou com o Google)
+    email_pendente VARCHAR(120) NULL,                -- email novo à espera de confirmação
+    password_hash VARCHAR(255) NULL,
+    google_id VARCHAR(50) NULL UNIQUE,               -- conta Google ligada (identificador "sub")
+    google_email VARCHAR(120) NULL,
     bio VARCHAR(160) NOT NULL DEFAULT '',
     localizacao VARCHAR(40) NOT NULL DEFAULT '',
     cor SMALLINT NOT NULL DEFAULT 330,              -- cor do avatar (0 a 359)
+    foto MEDIUMBLOB NULL,                            -- foto de perfil (JPEG 512×512)
+    foto_versao INT NOT NULL DEFAULT 0,              -- muda sempre que a foto muda (0 = sem foto)
+    tema_banner ENUM('colina','pipocas','claquete','pelicula','marquise') NOT NULL DEFAULT 'colina',   -- cenário do banner
+    banner MEDIUMBLOB NULL,                          -- imagem própria do banner (JPEG 1500×500)
+    banner_versao INT NOT NULL DEFAULT 0,            -- muda sempre que a imagem do banner muda (0 = sem imagem)
+    mostrar_listas BOOLEAN NOT NULL DEFAULT 1,       -- privacidade: favoritos, para ver e vistos visíveis no perfil
+    mostrar_seguidores BOOLEAN NOT NULL DEFAULT 1,   -- privacidade: seguidores e "a seguir" visíveis no perfil
     papel ENUM('utilizador','admin') NOT NULL DEFAULT 'utilizador',
     bloqueado BOOLEAN NOT NULL DEFAULT 0,
     notif_email BOOLEAN NOT NULL DEFAULT 0,          -- receber notificações por email
+    ultimo_login DATETIME NULL,
     criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -35,6 +49,30 @@ CREATE TABLE recuperacoes (
     token_hash CHAR(64) NOT NULL,
     expira_em DATETIME NOT NULL,
     usado BOOLEAN NOT NULL DEFAULT 0,
+    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE
+);
+
+-- Links de confirmação do email (registo e mudança de email). O token é guardado em hash SHA-256.
+CREATE TABLE verificacao_email (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilizador_id INT NOT NULL,
+    email VARCHAR(120) NOT NULL,                     -- email que este link confirma
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expira_em DATETIME NOT NULL,
+    usado BOOLEAN NOT NULL DEFAULT 0,
+    criado_em DATETIME NOT NULL,
+    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE
+);
+
+-- "Manter sessão iniciada": um token por dispositivo, guardado num cookie (aqui só o hash)
+CREATE TABLE sessoes_lembradas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilizador_id INT NOT NULL,
+    seletor CHAR(24) NOT NULL UNIQUE,                -- parte pública do cookie (para encontrar a linha)
+    token_hash CHAR(64) NOT NULL,                    -- hash SHA-256 da parte secreta
+    dispositivo VARCHAR(120) NOT NULL DEFAULT '',
+    expira_em DATETIME NOT NULL,
+    criado_em DATETIME NOT NULL,
     FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE
 );
 
@@ -80,6 +118,15 @@ CREATE TABLE titulo_generos (
     genero_id INT NOT NULL,
     PRIMARY KEY (titulo_id, genero_id),
     FOREIGN KEY (titulo_id) REFERENCES titulos(id) ON DELETE CASCADE,
+    FOREIGN KEY (genero_id) REFERENCES generos(id) ON DELETE CASCADE
+);
+
+-- Géneros favoritos escolhidos por cada utilizador nas Definições (até 3)
+CREATE TABLE utilizador_generos (
+    utilizador_id INT NOT NULL,
+    genero_id INT NOT NULL,
+    PRIMARY KEY (utilizador_id, genero_id),
+    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE,
     FOREIGN KEY (genero_id) REFERENCES generos(id) ON DELETE CASCADE
 );
 

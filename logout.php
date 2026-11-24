@@ -8,6 +8,10 @@ require 'lib.php';
 /** Apaga a sessão atual e começa uma nova, vazia. */
 function terminar_sessao(): void
 {
+    // "Manter sessão iniciada": apaga o token deste browser (os outros dispositivos continuam)
+    if (!empty($_SESSION['seletor'])) sql('DELETE FROM sessoes_lembradas WHERE seletor = ?', [$_SESSION['seletor']]);
+    if (preg_match('/^([a-f0-9]{24}):/', $_COOKIE[COOKIE_LEMBRAR] ?? '', $m)) sql('DELETE FROM sessoes_lembradas WHERE seletor = ?', [$m[1]]);
+    apagar_cookie_lembrar();
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $p = session_get_cookie_params();

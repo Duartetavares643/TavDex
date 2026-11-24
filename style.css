@@ -458,20 +458,7 @@ a.tg:hover { background: var(--surface-3); }
 .pp small { color: var(--muted); font-size: 12px; }
 .rate { gap: 12px; }
 
-/* Perfil */
-.pbn { display: flex; align-items: center; gap: 24px; padding: 28px; position: relative; overflow: hidden;
-  background: radial-gradient(circle at 90% 0%, rgba(196, 43, 216, .22), transparent 55%), radial-gradient(circle at 0% 100%, rgba(255, 45, 85, .14), transparent 50%), var(--surface); }
-.pbn .av.l { width: 96px; height: 96px; font-size: 38px; box-shadow: 0 0 0 4px var(--surface), 0 10px 30px rgba(196, 43, 216, .35); }
-.pinfo { flex: 1; min-width: 0; }
-.pinfo h2 { font-size: 26px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.hd { color: var(--muted); font-size: 13px; }
-.bio { margin-top: 8px; color: var(--text-2); font-size: 14px; }
-.pstats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 14px 0; }
-.ps { text-align: center; padding: 16px 8px; margin: 0; }
-.ps b { display: block; font: 400 34px/1 "Bebas Neue", "Inter", sans-serif; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.ps span { font-size: 12px; color: var(--muted); }
-.epv { display: flex; align-items: center; gap: 16px; }
-.epv b { display: block; color: var(--text); margin-bottom: 8px; }
+/* Perfil (o cabeçalho com banner está na secção 10) */
 .sw label { display: inline-block; cursor: pointer; }
 .sw input { position: absolute; opacity: 0; }
 .sw i { display: inline-block; width: 28px; height: 28px; margin-right: 4px; border-radius: 50%; border: 2px solid transparent; transition: transform var(--t); }
@@ -573,9 +560,6 @@ a.tg:hover { background: var(--surface-3); }
   .dh { flex-direction: column; padding: 22px; gap: 20px; }
   .dh .poster { width: 150px; }
   .dh h1 { font-size: 42px; }
-  .pbn { flex-direction: column; text-align: center; padding: 24px 18px; }
-  .pinfo h2 { justify-content: center; }
-  .pstats { grid-template-columns: repeat(3, 1fr); }
   .msgx { grid-template-columns: 1fr; height: auto; }
   .convs { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
   .cv { flex: 0 0 200px; border-bottom: 0; border-right: 1px solid var(--line); }
@@ -603,8 +587,6 @@ a.tg:hover { background: var(--surface-3); }
   .sc { padding: 14px; gap: 10px; }
   .si { width: 38px; height: 38px; font-size: 17px; }
   .sc b { font-size: 28px; }
-  .pstats { gap: 8px; }
-  .ps b { font-size: 28px; }
   .cms { margin-left: 6px; padding-left: 12px; }
   .cd { flex-wrap: wrap; }
   .cd > .badge, .cd .cact { margin-left: 48px; }
@@ -616,7 +598,6 @@ a.tg:hover { background: var(--surface-3); }
 }
 @media (max-width: 380px) {
   .bl span { display: none; }
-  .pstats { grid-template-columns: repeat(2, 1fr); }
   .g5 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 }
 
@@ -708,12 +689,6 @@ a.tg:hover { background: var(--surface-3); }
 .pjv-txt p { font-size: 13px; line-height: 1.5; color: var(--text-2); }
 .pjv-pe { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
-/* Perfil com faixa colorida no topo */
-.pbn { flex-wrap: wrap; align-items: flex-end; padding: 0 28px 24px; background: var(--surface); }
-.pbn::before { content: ""; flex: 0 0 calc(100% + 56px); height: 130px; margin: 0 -28px;
-  background: radial-gradient(circle at 82% 0%, hsl(var(--h, 330) 85% 58% / .85), transparent 60%), linear-gradient(120deg, hsl(var(--h, 330) 60% 24%), hsl(calc(var(--h, 330) + 60) 55% 12%)); }
-.pbn .av.l { margin-top: -52px; }
-
 /* Imagens no formulário de títulos */
 .imgs-ver { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; }
 .fprev { flex: 1; aspect-ratio: 16 / 9; border-radius: var(--raio-s); background: var(--surface-2) center / cover no-repeat; }
@@ -734,8 +709,6 @@ a.tg:hover { background: var(--surface-3); }
   .det .poster { width: 150px; }
   .det h1 { font-size: 50px; }
   .det .desc { font-size: 15px; }
-  .pbn { flex-direction: column; align-items: center; padding: 0 18px 22px; }
-  .pbn::before { flex: 0 0 110px; width: calc(100% + 36px); margin: 0 -18px; }
 }
 @media (max-width: 600px) {
   .hrow.cartazes { grid-auto-columns: 44%; }
@@ -793,3 +766,368 @@ a.plat:hover { background: rgba(255, 255, 255, .16); }
 
 /* Campo-armadilha contra robôs (fica invisível para as pessoas) */
 .hp { position: absolute !important; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* =====================================================================
+   10. CONTAS, PERFIL E DEFINIÇÕES (vindo da versão Node.js)
+   ===================================================================== */
+
+/* Avatar com foto */
+.av.foto { overflow: hidden; }
+.av.foto img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+/* Botão do Google (o "G" colorido oficial) */
+.btn.google { background: var(--surface-2); border-color: var(--line-2); color: var(--text); gap: 10px; }
+.btn.google:hover { background: var(--surface-3); border-color: var(--muted); }
+.g-logo { width: 18px; height: 18px; flex: none; }
+
+/* Separador "ou" entre o Google e o formulário */
+.sep-ou { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; margin: 2px 0; }
+.sep-ou::before, .sep-ou::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }
+.sem-conta { align-self: center; font-size: 13px; color: var(--muted); }
+
+/* Palavra-passe com o botão Ver/Ocultar */
+.campo-pw { position: relative; display: flex; width: 100%; }
+.campo-pw input { padding-right: 78px !important; }
+.ver-pw { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; color: var(--muted);
+  font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.ver-pw:hover { color: var(--text); background: var(--surface-3); }
+
+/* Barra de força da palavra-passe */
+.forca { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; align-items: center; margin-top: -4px; }
+.forca i { height: 4px; border-radius: 4px; background: var(--line-2); transition: background var(--t); }
+.forca span { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+.forca[data-n="1"] i:nth-child(-n+1) { background: var(--red); }
+.forca[data-n="2"] i:nth-child(-n+2) { background: var(--gold); }
+.forca[data-n="3"] i:nth-child(-n+3), .forca[data-n="4"] i:nth-child(-n+4) { background: var(--ok); }
+
+/* Campos com erro (aria-invalid) e a mensagem por baixo */
+[aria-invalid="true"] { border-color: var(--red) !important; box-shadow: 0 0 0 3px rgba(255, 45, 85, .14) !important; }
+input[type=checkbox][aria-invalid="true"] { outline: 2px solid var(--red); outline-offset: 2px; }
+.erro-campo { display: block; color: var(--red-2); font-size: 12.5px; font-weight: 500; margin-top: -4px; }
+
+/* Requisitos da palavra-passe ao vivo (✓ verde quando cumprido, ○ cinzento quando falta) */
+.requisitos { list-style: none; margin: -2px 0 2px; padding: 0; display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); text-align: left; }
+.requisitos li { display: flex; gap: 7px; align-items: baseline; }
+.requisitos li > span[aria-hidden] { width: 14px; flex: none; text-align: center; font-weight: 700; }
+.requisitos li.ok { color: var(--ok); }
+.requisitos li.falta { color: var(--red-2); }
+/* Notas por baixo dos campos ("não coincidem", "Querias dizer…?", "✓ Disponível") */
+.nota-campo { display: block; font-size: 12.5px; color: var(--text-2); margin-top: -4px; min-height: 0; overflow-wrap: anywhere; }
+.nota-campo:empty { display: none; }
+.nota-campo.erro { color: var(--red-2); font-weight: 500; }
+.nota-campo.ok { color: var(--ok); font-weight: 500; }
+.nota-campo .lk { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; cursor: pointer; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Janela "Inicia sessão para continuar" */
+dialog.modal { border: 1px solid var(--line-2); border-radius: 20px; padding: 0; background: var(--surface); color: var(--text);
+  width: min(420px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+dialog.modal::backdrop { background: rgba(8, 7, 11, .7); backdrop-filter: blur(3px); }
+.modal-in { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 30px 26px 22px; text-align: center; }
+.modal-logo { width: 64px; height: 64px; border-radius: 50%; box-shadow: 0 0 30px rgba(196, 43, 216, .4); }
+.modal-in h2 { font: 400 30px/1.05 "Bebas Neue", "Inter", sans-serif; letter-spacing: .03em; }
+.modal-txt { color: var(--text-2); font-size: 14px; }
+.modal-btns { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 4px; }
+.modal-btns .btn { width: 100%; }
+.modal-fechar { background: none; border: 0; color: var(--muted); font-size: 13px; cursor: pointer; padding: 6px; }
+.modal-fechar:hover { color: var(--text); }
+
+/* Perfil: cartão de boas-vindas */
+.boas-vindas { flex-wrap: wrap; margin-top: 0; }
+.boas-vindas .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Definições: perfil + pré-visualização lado a lado */
+.def-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.pre-perfil { position: sticky; top: 90px; display: flex; flex-direction: column; gap: 12px; }
+.foto-campo { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.foto-campo small { flex-basis: 100%; }
+.foto-campo .btn { cursor: pointer; }
+
+/* Proteção da conta */
+.protecao { list-style: none; display: grid; gap: 8px; margin: 0; padding: 0; }
+.protecao li { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--text-2); }
+.protecao b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; flex: none; }
+.protecao .ok b { background: rgba(61, 214, 140, .16); color: var(--ok); }
+.protecao .aviso b { background: rgba(245, 181, 10, .16); color: var(--gold); }
+
+/* Contas ligadas e sessões */
+.conta-ligada .cl-nome { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.conta-ligada .g-logo { width: 26px; height: 26px; }
+.conta-ligada small { overflow-wrap: anywhere; }
+.sessao .agora { color: var(--ok); font-weight: 600; }
+.sessao small { overflow-wrap: anywhere; }
+
+@media (max-width: 900px) {
+  .def-cols { grid-template-columns: 1fr; }
+  .pre-perfil { position: static; order: -1; }
+}
+@media (max-width: 600px) {
+  .boas-vindas .btns .btn { flex: 1 1 100%; }
+  .modal-in { padding: 24px 18px 18px; }
+}
+
+/* Páginas de texto (privacidade, termos) */
+.texto-legal h3 { margin: 18px 0 8px; }
+.texto-legal p { margin-bottom: 8px; line-height: 1.6; }
+.lista-simples { margin: 0 0 8px 20px; color: var(--text-2); line-height: 1.7; }
+
+/* =====================================================================
+   11. BANNER E CABEÇALHO DO PERFIL (passo 9)
+
+   • O desenho é uma ilustração em SVG (vetorial, nítida em qualquer ecrã),
+     feita pelo banner-perfil.js com o tamanho da caixa e animada com CSS.
+   • Há 5 cenários de cinema, escolhidos com data-tema no banner:
+       colina | pipocas | claquete | pelicula | marquise
+   • A cor do letreiro TAVDEX segue a cor do avatar: style="--h: <cor_avatar>".
+   • A pessoa também pode pôr uma imagem sua (.pbanner__foto), que tapa o cenário.
+   • "Container queries": o perfil adapta-se à largura da caixa onde
+     está, por isso fica bem no telemóvel e em colunas estreitas.
+   ===================================================================== */
+
+.pperfil {
+    container: pperfil / inline-size;
+    --h: 330;
+}
+
+/* ---------- Banner ---------- */
+.pbanner {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4.2 / 1;
+    min-height: 150px;
+    max-height: 230px;
+    overflow: hidden;
+    border-radius: 16px 16px 0 0;
+    background: #0b0618;                 /* cor enquanto o JavaScript não desenha */
+    isolation: isolate;                  /* as camadas do banner não passam por cima do avatar */
+}
+/* Imagem própria do banner: tapa o cenário desenhado (que fica parado por baixo) */
+.pbanner__foto {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+.pbanner:has(.pbanner__foto) .pbanner__arte { visibility: hidden; }
+.pbanner:has(.pbanner__foto) .pbanner__arte * { animation: none !important; }
+.pbanner__arte {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+/* Miniatura (escolha do cenário nas Definições) */
+.pbanner--mini {
+    aspect-ratio: 2.3 / 1;
+    min-height: 0;
+    max-height: none;
+    border-radius: 10px;
+}
+/* Vinheta suave por cima do desenho (escurece um pouco as bordas) */
+.pbanner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 50% 40%, transparent 62%, rgba(0,0,0,.32));
+}
+
+/* ---------- Cabeçalho: avatar sobreposto ao banner ---------- */
+.phead {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    padding: 0 24px;
+    margin-top: -56px;
+}
+.phead__av {
+    flex: none;
+    width: 112px;
+    height: 112px;
+    border-radius: 50%;
+    border: 5px solid var(--surface, #141319);
+    background: hsl(var(--h) 70% 45%);
+    box-shadow: 0 0 0 1px hsl(var(--h) 90% 60% / .35), 0 10px 30px rgba(0,0,0,.45);
+    display: grid;
+    place-items: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 54px;
+    color: #fff;
+    object-fit: cover;
+}
+.phead__info { min-width: 0; padding-bottom: 6px; }
+.phead__nome {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38px;
+    line-height: 1;
+    letter-spacing: .02em;
+    overflow-wrap: anywhere;
+}
+.phead__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: var(--text-2, #9b97a6);
+}
+.phead__meta span + span::before { content: "·"; margin-right: 10px; opacity: .6; }
+.phead__acoes { margin-left: auto; padding-bottom: 8px; display: flex; gap: 8px; }
+
+.pbio { margin: 0; padding: 14px 24px 0; font-size: 15px; line-height: 1.6; }
+
+/* Números do perfil em cartões com ícone (5 lado a lado) */
+.pnums {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 18px 24px 0;
+    list-style: none;
+    color: var(--text-2, #9b97a6);
+}
+.pnums li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+}
+.pnums .ic {
+    grid-row: span 2;
+    width: 34px; height: 34px;
+    padding: 8px;
+    border-radius: 10px;
+    background: hsl(var(--h) 70% 50% / .14);
+    color: hsl(var(--h) 75% 62%);
+}
+.pnums b { font: 400 24px/1 "Bebas Neue", "Inter", sans-serif; letter-spacing: .02em; color: var(--text, #f2f0f5); }
+.pnums small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Ícones de traço simples (perfil e separadores) */
+svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- Telemóvel / caixa estreita (até 600 px) ---------- */
+@container pperfil (max-width: 600px) {
+    .pbanner { aspect-ratio: 2.3 / 1; border-radius: 14px 14px 0 0; }
+
+    .phead {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 10px;
+        padding: 0 16px;
+        margin-top: -50px;
+    }
+    .phead__av { width: 96px; height: 96px; font-size: 46px; border-width: 4px; }
+    .phead__info { padding-bottom: 0; }
+    .phead__nome { font-size: 30px; }
+    .phead__meta { justify-content: center; gap: 2px 12px; font-size: 13px; }
+    .phead__meta span + span::before { display: none; }
+    .phead__acoes { margin: 4px 0 0; padding: 0; width: 100%; }
+    .phead__acoes > * { flex: 1; justify-content: center; }
+
+    .pbio { padding: 12px 20px 0; text-align: center; font-size: 14.5px; }
+
+    /* no telemóvel: 5 colunas compactas, com o ícone em cima */
+    .pnums { gap: 6px; padding: 16px 14px 0; }
+    .pnums li { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px; text-align: center; min-width: 0; }
+    .pnums .ic { width: 26px; height: 26px; padding: 5px; border-radius: 8px; }
+    .pnums b { font-size: 20px; }
+    .pnums small { font-size: 10.5px; max-width: 100%; }
+}
+
+/* ---------- Cartão do perfil e escolha do cenário nas Definições ---------- */
+
+/* Cartão onde fica o perfil (o banner fica escuro nos dois modos, de propósito) */
+.cartao-perfil { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding-bottom: 22px; margin-bottom: 14px; overflow: hidden; }
+.phead__nome .badge { font: 600 12px/1.6 "Inter", sans-serif; letter-spacing: 0; vertical-align: middle; margin-left: 6px; }
+.phead__acoes .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.phead__acoes .btn { white-space: nowrap; }
+
+/* Definições: escolha do cenário (5 cenários, 2 por linha: assim cada miniatura tem
+   largura suficiente para o TAVDEX caber) */
+.temas-banner { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tema-op { position: relative; display: block !important; cursor: pointer; }
+.tema-op input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.tema-op__caixa { display: flex; flex-direction: column; gap: 6px; padding: 5px; border: 2px solid var(--line-2);
+  border-radius: 13px; background: var(--surface-2); transition: border-color var(--t), box-shadow var(--t); }
+.tema-op__nome { font-size: 12.5px; font-weight: 600; color: var(--text-2); text-align: center; line-height: 1.25; }
+.tema-op:hover .tema-op__caixa { border-color: var(--muted); }
+.tema-op input:checked + .tema-op__caixa { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255, 45, 85, .16); }
+.tema-op input:checked + .tema-op__caixa .tema-op__nome { color: var(--text); }
+.tema-op input:focus-visible + .tema-op__caixa { outline: 2px solid var(--red); outline-offset: 3px; }
+
+/* Definições: pré-visualização com a mesma estrutura do perfil */
+.pre-perfil .cartao-perfil { margin: 0; }
+.pre-perfil .pbio:empty { display: none; }
+
+/* Janela "Tens alterações por guardar" (usa o estilo do dialog.modal) */
+.modal-aviso .modal-btns { flex-direction: row; flex-wrap: wrap; }
+.modal-aviso .modal-btns .btn { flex: 1 1 140px; width: auto; }
+
+/* =====================================================================
+   12. CONTAS MAIS SEGURAS (confirmação do email, sessões, perfil e Definições)
+   ===================================================================== */
+
+/* "Confirma o teu email", "Terminar sessão" e "Link inválido" */
+.confirmar-email { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.confirmar-email .modal-logo { margin-bottom: 4px; }
+.confirmar-email p { margin: 0; overflow-wrap: anywhere; }
+.confirmar-email .btn { width: 100%; max-width: 320px; }
+.confirmar-email .msg:empty { display: none; }
+.fm-simples { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 360px; text-align: left; }
+.fm-simples label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-2); }
+.pw-conta { color: var(--red-2); overflow-wrap: anywhere; }
+
+/* Proteção da conta: linha só informativa ("Última alteração da palavra-passe") */
+.protecao .info b { background: var(--surface-2); color: var(--muted); }
+
+/* Definições: mudança de email à espera de confirmação */
+.email-pendente { padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(245, 181, 10, .35);
+  background: rgba(245, 181, 10, .08); font-size: 14px; color: var(--text-2); overflow-wrap: anywhere; }
+/* Login depois do registo: "Conta criada! Confirma o teu email" */
+.conta-criada { padding: 12px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
+  background: color-mix(in srgb, var(--ok) 10%, transparent); font-size: 14px; color: var(--text-2); text-align: left; overflow-wrap: anywhere; }
+.conta-criada > b { color: var(--ok); font-size: 15px; }
+.conta-criada p { margin: 4px 0 10px; }
+.email-pendente .lk { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; cursor: pointer; }
+
+/* Definições: géneros favoritos (até 3) */
+.generos-op { display: flex; flex-wrap: wrap; gap: 8px; }
+.generos-op .chip { position: relative; }
+.generos-op .chip input:disabled + span { opacity: .45; cursor: not-allowed; }
+.nota-nome { margin-top: -6px; }
+input[readonly] { opacity: .7; cursor: not-allowed; }
+
+/* Perfil: etiqueta "Segue-te", géneros favoritos e "Só tu vês isto" */
+.phead__nome .segue-te { font-size: 11px; }
+.ptags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 12px 24px 0; }
+.ptags li { padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--text-2);
+  background: var(--surface-2); border: 1px solid var(--line); }
+.ptags li small { color: var(--muted); font-weight: 500; margin-left: 3px; }
+.resumo .ptags { padding: 0; }
+.so-tu { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+.ver-mais { margin-top: 12px; }
+@container pperfil (max-width: 600px) { .ptags { justify-content: center; padding: 12px 16px 0; } }
+
+/* Link de confirmação em modo de desenvolvimento (sem servidor de email) */
+.flash.dev-link { border-style: dashed; border-color: var(--mag); background: var(--surface-2); }
+/* Linha com o nome à esquerda e o botão à direita (Contas ligadas) */
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+/* Definições: títulos dentro do formulário */
+.form > b { font-size: 14px; margin-top: 6px; }

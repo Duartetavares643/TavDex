@@ -39,7 +39,7 @@ $menu = ['index.php' => 'Início', 'catalogo.php?tipo=filme' => 'Filmes', 'catal
   <?php if ($u): ?>
     <a class="bell" href="notificacoes.php" aria-label="Notificações"><svg viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0112 0v6l2 2H4zM10 21h4"/></svg><?php if ($por_ler): ?><i><?= $por_ler ?></i><?php endif; ?></a>
     <div class="um">
-      <button class="ub" type="button"><?= avatar($u) ?><span class="nome"><?= e($u['nome']) ?></span> ▾</button>
+      <button class="ub" type="button"><?= avatar($u) ?><span class="nome"><?= e(nome_visivel($u)) ?></span> ▾</button>
       <div class="dd">
         <a href="perfil.php?u=<?= urlencode($u['nome']) ?>">Perfil</a>
         <a href="listas.php">As minhas listas</a>
@@ -57,3 +57,7 @@ $menu = ['index.php' => 'Início', 'catalogo.php?tipo=filme' => 'Filmes', 'catal
 </header>
 <main>
 <?= mostrar_avisos() ?>
+<?php if (MODO_DEV && !empty($_SESSION['link_dev'])): ?>
+  <div class="flash dev-link">Modo de desenvolvimento (sem servidor de email): <a class="lk" href="<?= e($_SESSION['link_dev']) ?>">abrir o link que seria enviado por email</a></div>
+  <?php unset($_SESSION['link_dev']); ?>
+<?php endif; ?>

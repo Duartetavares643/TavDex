@@ -5,6 +5,18 @@
 // =====================================================================
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/contas.php';   // contas: sessão, palavras-passe, emails, Google e imagens
+
+// Se a base de dados ainda for da versão anterior (faltam colunas ou tabelas novas),
+// mostra o que fazer em vez de um erro técnico.
+set_exception_handler(function (Throwable $e) {
+    $m = $e->getMessage();
+    if ($e instanceof PDOException && (stripos($m, 'Unknown column') !== false || stripos($m, "doesn't exist") !== false || stripos($m, 'no such') !== false)) {
+        http_response_code(500);
+        exit('<p style="font-family:sans-serif">A base de dados é de uma versão anterior do TavDex. Abre <a href="atualizar.php">atualizar.php</a> para a atualizar (não apaga dados).</p>');
+    }
+    throw $e;
+});
 
 // Sessão segura: o cookie não pode ser lido por JavaScript
 session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
@@ -81,6 +93,8 @@ function eu(): ?array
     static $u = false;
     if ($u === false) {
         $u = null;
+        // Sem sessão, mas com o cookie "Manter sessão iniciada": entra sozinho (contas.php)
+        if (empty($_SESSION['uid'])) entrar_com_cookie();
         if (!empty($_SESSION['uid'])) {
             $u = linha('SELECT * FROM utilizadores WHERE id = ?', [$_SESSION['uid']]);
             // Contas bloqueadas ou apagadas perdem a sessão
@@ -215,17 +229,151 @@ function tempo(?string $data): string
     return date('d/m/Y', strtotime($data));
 }
 
-/** Avatar redondo com a inicial e a cor do utilizador. */
+/**
+ * Dados extra de cada utilizador (nome de exibição e versão da foto), lidos UMA vez por página.
+ * Assim o avatar e o nome aparecem bem em todo o lado (comentários, chat, listas...)
+ * sem ser preciso mudar todas as consultas que só trazem o nome e a cor.
+ */
+function extras_utilizador(string $nome): array
+{
+    static $mapa = null;
+    if ($mapa === null) {
+        $mapa = [];
+        foreach (linhas('SELECT id, nome, nome_exibicao, foto_versao FROM utilizadores WHERE nome_exibicao IS NOT NULL OR foto_versao > 0') as $r) {
+            $mapa[$r['nome']] = $r;
+        }
+    }
+    return $mapa[$nome] ?? [];
+}
+
+/** Nome que aparece no site: o nome de exibição (ex.: "Duarte Tavares") ou, se não houver, o @nome. */
+function nome_visivel(array $u): string
+{
+    $exibicao = $u['nome_exibicao'] ?? (extras_utilizador($u['nome'] ?? '')['nome_exibicao'] ?? null);
+    return trim((string)$exibicao) !== '' ? $exibicao : ($u['nome'] ?? '');
+}
+
+/** Endereço da foto de perfil (ou null se não tiver). O ?v= muda com a foto, para o browser não mostrar a antiga. */
+function url_foto(array $u): ?string
+{
+    $extra = extras_utilizador($u['nome'] ?? '');
+    $versao = (int)($u['foto_versao'] ?? ($extra['foto_versao'] ?? 0));
+    $id = (int)(isset($u['foto_versao']) ? $u['id'] : ($extra['id'] ?? 0));
+    return $versao > 0 && $id ? 'imagem.php?u=' . $id . '&t=foto&v=' . $versao : null;
+}
+
+/** Endereço da imagem própria do banner (ou null se usar um cenário desenhado). */
+function url_banner(array $u): ?string
+{
+    $versao = (int)($u['banner_versao'] ?? 0);
+    return $versao > 0 ? 'imagem.php?u=' . (int)$u['id'] . '&t=banner&v=' . $versao : null;
+}
+
+/** Avatar redondo: a foto, se houver; senão a inicial na cor do utilizador. */
 function avatar(array $u, string $tamanho = 's'): string
 {
-    $letra = mb_strtoupper(mb_substr($u['nome'], 0, 1));
+    $foto = url_foto($u);
+    if ($foto) {
+        return '<span class="av ' . $tamanho . ' foto" style="--h:' . (int)$u['cor'] . '"><img src="' . e($foto) . '" alt="" loading="lazy"></span>';
+    }
+    $letra = mb_strtoupper(mb_substr(nome_visivel($u), 0, 1));
     return '<span class="av ' . $tamanho . '" style="--h:' . (int)$u['cor'] . '">' . e($letra) . '</span>';
 }
 
-/** Link para o perfil de um utilizador. */
+/** Link para o perfil de um utilizador (mostra o nome; o @nome aparece ao passar o rato). */
 function link_perfil(array $u): string
 {
-    return '<a class="lk-u" href="perfil.php?u=' . urlencode($u['nome']) . '">' . e($u['nome']) . '</a>';
+    return '<a class="lk-u" href="perfil.php?u=' . urlencode($u['nome']) . '" title="@' . e($u['nome']) . '">' . e(nome_visivel($u)) . '</a>';
+}
+
+// ---------------------------------------------------------------------
+// Cabeçalho do perfil com o banner (perfil público e pré-visualização nas Definições)
+// O desenho dos cenários é feito pelo banner-perfil.js (SVG animado).
+// ---------------------------------------------------------------------
+
+/** Os 5 cenários do banner (os mesmos valores da coluna utilizadores.tema_banner). */
+const TEMAS_BANNER = [
+    'colina' => 'Colina das estrelas',
+    'pipocas' => 'Sessão de pipocas',
+    'claquete' => 'Claquete antiga',
+    'pelicula' => 'Rolo de película',
+    'marquise' => 'Cinema à noite',
+];
+
+/** Só aceita um dos 5 cenários (senão, o primeiro). */
+function tema_valido(?string $tema): string
+{
+    return isset(TEMAS_BANNER[$tema]) ? $tema : 'colina';
+}
+
+/** Cor do avatar entre 0 e 359 (senão, a cor do site). */
+function cor_valida($cor): int
+{
+    $n = (int)round((float)$cor);
+    return $n >= 0 && $n <= 359 ? $n : 330;
+}
+
+/** Ícones de traço simples do perfil (seguidores, avaliações, ...). */
+function icone_perfil(string $nome): string
+{
+    $icones = [
+        'seguidores' => '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><circle cx="17" cy="9" r="2.8"/><path d="M15.6 14.3A5.5 5.5 0 0121.5 20"/>',
+        'aSeguir' => '<circle cx="10" cy="8" r="3.5"/><path d="M3.5 20a6.5 6.5 0 0113 0"/><path d="M16 11l2 2 4-4"/>',
+        'avaliacoes' => '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+        'vistos' => '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+        'projetos' => '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 9l2.4-5 15.2 2.4L21 9M8.5 4.6L7 9M14.5 5.5L13 9"/>',
+        'generos' => '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+    ];
+    return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . ($icones[$nome] ?? '') . '</svg>';
+}
+
+/**
+ * O cartão do perfil: banner (imagem própria ou cenário, na cor do dono), foto, nome,
+ * @nome, data, localização, biografia, géneros favoritos e números.
+ *  $op['acoes']     HTML dos botões (Editar perfil, ou Seguir / Mensagem)
+ *  $op['contagens'] [seguidores, a_seguir, avaliacoes, vistos, projetos] (ou null)
+ *  $op['segue_te']  esta pessoa segue quem está a ver
+ *  $op['generos']   nomes dos géneros favoritos
+ *  $op['id']        id do cartão (usado pela pré-visualização das Definições)
+ */
+function cabecalho_perfil(array $p, array $op = []): string
+{
+    $banner = url_banner($p);
+    $foto = url_foto($p);
+    $nome = nome_visivel($p);
+    $avatar = $foto
+        ? '<img class="phead__av" src="' . e($foto) . '" alt="Foto de @' . e($p['nome']) . '">'
+        : '<div class="phead__av" aria-hidden="true">' . e(mb_strtoupper(mb_substr($nome, 0, 1))) . '</div>';
+    $meta = '<span>@' . e($p['nome']) . '</span>';
+    if (!empty($p['criado_em'])) $meta .= '<span>Membro desde ' . date('m/Y', strtotime($p['criado_em'])) . '</span>';
+    if (!empty($p['localizacao'])) $meta .= '<span>📍 ' . e($p['localizacao']) . '</span>';
+    $selos = ($p['papel'] ?? '') === 'admin' ? '<span class="badge" style="--c:330">Admin</span>' : '';
+    if (!empty($op['segue_te'])) $selos .= '<span class="badge segue-te" style="--c:199">Segue-te</span>';
+
+    $html = '<section class="pperfil cartao-perfil"' . (isset($op['id']) ? ' id="' . e($op['id']) . '"' : '') . ' style="--h:' . cor_valida($p['cor'] ?? 330) . '">'
+        . '<div class="pbanner" data-tema="' . tema_valido($p['tema_banner'] ?? null) . '" aria-hidden="true">'
+        . ($banner ? '<img class="pbanner__foto" src="' . e($banner) . '" alt="">' : '') . '</div>'
+        . '<div class="phead">' . $avatar
+        . '<div class="phead__info"><h1 class="phead__nome">' . e($nome) . $selos . '</h1><p class="phead__meta">' . $meta . '</p></div>'
+        . '<div class="phead__acoes">' . ($op['acoes'] ?? '') . '</div></div>'
+        . '<p class="pbio">' . e($p['bio'] ?? '') . '</p>';
+    if (!empty($op['generos'])) {
+        $html .= '<ul class="ptags" aria-label="Géneros favoritos">';
+        foreach ($op['generos'] as $g) $html .= '<li>' . e($g) . '</li>';
+        $html .= '</ul>';
+    }
+    if (!empty($op['contagens'])) {
+        $c = $op['contagens'];
+        $cartao = fn($icone, $n, $rotulo, $id = '') => '<li>' . icone_perfil($icone) . '<b' . ($id ? ' id="' . $id . '"' : '') . '>' . (int)$n . '</b><small>' . $rotulo . '</small></li>';
+        $html .= '<ul class="pnums">'
+            . $cartao('seguidores', $c['seguidores'], 'Seguidores', 'n-seg')
+            . $cartao('aSeguir', $c['a_seguir'], 'A seguir')
+            . $cartao('avaliacoes', $c['avaliacoes'], 'Avaliações')
+            . $cartao('vistos', $c['vistos'], 'Vistos')
+            . $cartao('projetos', $c['projetos'], 'Projetos')
+            . '</ul>';
+    }
+    return $html . '</section>';
 }
 
 /** Estrelas de 1 a 5. */

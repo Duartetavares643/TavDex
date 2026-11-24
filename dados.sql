@@ -3547,3 +3547,8 @@ INSERT INTO denuncias (utilizador_id, tipo, alvo_id, motivo, estado) VALUES
 (2, 'comentario', 3, 'Spoilers', 'pendente'),
 (9, 'review', 26, 'Ofensivo', 'pendente'),
 (63, 'publicacao', 7, 'Spam', 'pendente');
+
+-- As contas de exemplo já têm o email confirmado (assim podem entrar logo)
+UPDATE utilizadores SET email_verificado = 1 WHERE id > 0;
+-- Nome que aparece no perfil do administrador
+UPDATE utilizadores SET nome_exibicao = 'Duarte Tavares', tema_banner = 'marquise' WHERE id = 1;

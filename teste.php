@@ -1,7 +1,7 @@
 <?php
 // =====================================================================
 //  TavDex – Página de teste (diagnóstico da instalação)
-//  Abre http://localhost/tavdex-php/teste.php para confirmar que o PHP,
+//  Abre http://localhost/tavdex/teste.php para confirmar que o PHP,
 //  a base de dados e as pastas estão prontos. Não altera nenhum dado.
 //  Só abre em modo de desenvolvimento (MODO_DEV = true) ou para administradores.
 // =====================================================================
@@ -84,7 +84,7 @@ try {
 if ($pdo) {
     $tabelas = ['utilizadores', 'recuperacoes', 'seguidores', 'generos', 'titulos', 'titulo_generos', 'temporadas', 'avaliacoes', 'listas', 'projetos',
                 'projeto_equipa', 'projeto_vagas', 'candidaturas', 'projeto_avaliacoes', 'publicacoes', 'comentarios', 'mensagens', 'notificacoes', 'notif_silenciadas', 'denuncias',
-                'plataformas', 'titulo_plataformas'];
+                'plataformas', 'titulo_plataformas', 'verificacao_email', 'sessoes_lembradas', 'utilizador_generos'];
     $contagem = [];
     $faltam = [];
     foreach ($tabelas as $t) {
@@ -95,7 +95,9 @@ if ($pdo) {
         }
     }
     $faltam
-        ? r($g, 'erro', count($faltam) . ' tabela(s) em falta', 'Faltam: ' . implode(', ', $faltam) . '. ' . (count($faltam) <= 2 && in_array('plataformas', $faltam, true) ? 'A base de dados é de uma versão anterior: executa atualizar_bd.sql.' : 'Importa de novo base_dados.sql e depois dados.sql.'))
+        ? r($g, 'erro', count($faltam) . ' tabela(s) em falta', 'Faltam: ' . implode(', ', $faltam) . '. ' . (count($faltam) <= 3 && !array_diff($faltam, ['verificacao_email', 'sessoes_lembradas', 'utilizador_generos'])
+            ? 'A base de dados é de uma versão anterior: abre <a class="lk" href="atualizar.php">atualizar.php</a> (não apaga dados).'
+            : (count($faltam) <= 2 && in_array('plataformas', $faltam, true) ? 'A base de dados é de uma versão anterior: executa atualizar_bd.sql.' : 'Importa de novo base_dados.sql e depois dados.sql.')))
         : r($g, 'ok', 'As ' . count($tabelas) . ' tabelas existem', 'Utilizadores: ' . $contagem['utilizadores'] . ' · títulos: ' . $contagem['titulos'] . ' · avaliações: ' . $contagem['avaliacoes'] . ' · projetos: ' . $contagem['projetos'] . ' · mensagens: ' . $contagem['mensagens'] . '.');
     if (!$faltam && $contagem['titulos'] === 0) r($g, 'aviso', 'A base de dados está vazia', 'Importa dados.sql para teres os dados de exemplo.');
 
@@ -104,6 +106,14 @@ if ($pdo) {
         r($g, 'ok', 'Colunas das imagens (fundo e TMDB)', 'A base de dados está atualizada.');
     } catch (PDOException $e) {
         if (!in_array('titulos', $faltam, true)) r($g, 'erro', 'Faltam as colunas das imagens', 'A base de dados é de uma versão anterior: executa atualizar_bd.sql.');
+    }
+
+    // Colunas do perfil com banner, foto, Google e confirmação do email
+    try {
+        $pdo->query('SELECT nome_exibicao, email_verificado, google_id, foto_versao, tema_banner, banner_versao, mostrar_listas FROM utilizadores LIMIT 1');
+        r($g, 'ok', 'Colunas das contas e do perfil', 'Banner, foto, nome de exibição, confirmação do email e Google.');
+    } catch (PDOException $e) {
+        if (!in_array('utilizadores', $faltam, true)) r($g, 'erro', 'Faltam as colunas das contas e do perfil', 'A base de dados é de uma versão anterior: abre <a class="lk" href="atualizar.php">atualizar.php</a> (não apaga dados).');
     }
 
     // Teste de escrita: insere uma publicação e anula logo (nada fica guardado)
@@ -148,7 +158,8 @@ $g = 'Ficheiros';
 $precisos = ['index.php', 'lib.php', 'config.php', 'cabecalho.php', 'rodape.php', 'registar.php', 'login.php', 'logout.php', 'recuperar.php', 'repor.php',
              'perfil.php', 'editar_perfil.php', 'catalogo.php', 'titulo.php', 'pesquisa.php', 'listas.php', 'projetos.php', 'projeto.php', 'projeto_novo.php',
              'projeto_editar.php', 'projeto_form.php', 'candidaturas.php', 'comunidade.php', 'chat.php', 'chat_api.php', 'notificacoes.php', 'admin.php',
-             'admin_titulo.php', 'acoes.php', '404.php', 'style.css', 'main.js', 'logo.png'];
+             'admin_titulo.php', 'acoes.php', '404.php', 'style.css', 'main.js', 'logo.png', 'contas.php', 'confirmar_email.php', 'google.php',
+             'imagem.php', 'termos.php', 'privacidade.php', 'atualizar.php', 'banner-perfil.js', 'regras-palavra-passe.js', 'regras-email.js'];
 $falta = array_values(array_filter($precisos, fn($f) => !is_file(__DIR__ . '/' . $f)));
 $falta
     ? r($g, 'erro', count($falta) . ' ficheiro(s) em falta', 'Faltam: ' . implode(', ', $falta) . '. Copia de novo a pasta completa.')
@@ -179,6 +190,15 @@ if (TMDB_CHAVE === '') {
         ? r($g, 'ok', 'Ligação ao TMDB', 'A chave é válida. No Painel → Filmes e séries, carrega em "Imagens do TMDB para todos".')
         : r($g, 'erro', 'O TMDB recusou o pedido', 'Confirma a chave em config.php (é a "API Key" v3) e a ligação à internet.');
 }
+google_configurado()
+    ? r($g, 'ok', 'Login com o Google configurado', 'Na Google Cloud Console, o URI de redirecionamento tem de ser ' . e(URL_SITE . '/google.php') . '.')
+    : r($g, 'info', 'Login com o Google não configurado', 'O botão "Continuar com Google" avisa que falta configurar. Ver o LEIA-ME.md e preencher GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET em config.php.');
+function_exists('imagecreatefromstring')
+    ? r($g, 'ok', 'Extensão gd', 'Usada para gravar a foto de perfil e a imagem do banner.')
+    : r($g, 'erro', 'Falta a extensão gd', 'Sem ela não é possível carregar a foto de perfil nem o banner: ativa extension=gd no php.ini.');
+is_file(__DIR__ . '/dados/palavras-passe-comuns.txt')
+    ? r($g, 'ok', 'Listas de segurança', 'Palavras-passe mais comuns e domínios de email descartáveis (pasta dados).')
+    : r($g, 'aviso', 'Falta a pasta dados', 'Copia a pasta dados (palavras-passe comuns e emails descartáveis) para a pasta do site.');
 MODO_DEV
     ? r($g, 'info', 'Email', 'Em modo de desenvolvimento os emails não são enviados (os links aparecem no ecrã).')
     : (ini_get('SMTP') || ini_get('sendmail_path')
@@ -197,8 +217,10 @@ foreach ($res as $x) $grupos[$x[0]][] = $x;
 // Testes à mão: páginas para abrir e o que fazer em cada uma
 $manuais = [
     ['index.php', 'Página inicial', 'O destaque muda sozinho e as filas de cartazes deslizam.'],
-    ['registar.php', 'Criar conta', 'Cria uma conta nova com uma palavra-passe de 8 caracteres com letras e números.'],
-    ['login.php', 'Entrar', 'Entra com rafa@mail.pt / tavdex123 e depois termina a sessão no menu.'],
+    ['registar.php', 'Criar conta', 'Cria uma conta nova (vê os requisitos da palavra-passe a ficar verdes) e confirma o email pelo link que aparece no ecrã.'],
+    ['login.php', 'Entrar', 'Entra com rafa@mail.pt / tavdex123 com "Manter sessão iniciada", fecha o browser, volta a abrir e confirma que continuas com sessão.'],
+    ['editar_perfil.php', 'Banner e foto', 'Nas Definições escolhe um cenário, uma cor e uma foto: a pré-visualização muda logo. Tenta sair sem guardar.'],
+    ['perfil.php?u=DuarteT', 'Perfil com banner', 'O banner anima, o TAVDEX fica na cor do avatar e funciona no telemóvel.'],
     ['recuperar.php', 'Recuperar palavra-passe', 'Pede o link para rafa@mail.pt e define uma palavra-passe nova.'],
     ['catalogo.php?tipo=filme', 'Catálogo', 'Experimenta os géneros, os filtros e a ordenação.'],
     ['titulo.php?id=1', 'Página de um filme', 'Adiciona aos favoritos e escreve uma review com spoiler.'],

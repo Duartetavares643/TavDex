@@ -10,7 +10,7 @@ define('BD_UTILIZADOR', 'root');
 define('BD_PASSWORD', '');           // no XAMPP a password do root está vazia
 
 // Endereço do site (usado nos emails de recuperação de palavra-passe)
-define('URL_SITE', 'http://localhost/tavdex-php');
+define('URL_SITE', 'http://localhost/tavdex');
 
 // Em desenvolvimento (XAMPP) não há servidor de email configurado.
 // Com MODO_DEV = true, o link de recuperação aparece no ecrã em vez de ser enviado.
@@ -27,5 +27,18 @@ define('EMAIL_SITE', 'nao-responder@tavdex.pt');
 define('TMDB_CHAVE', getenv('TAVDEX_TMDB_CHAVE') ?: '');   // ex.: '1a2b3c4d5e...'
 define('TMDB_API', getenv('TAVDEX_TMDB_API') ?: 'https://api.themoviedb.org/3');   // (getenv só é usado nos testes)
 define('TMDB_IMG', 'https://image.tmdb.org/t/p/');
+
+// Login com o Google (opcional). Sem estes dois valores o botão avisa que não está configurado.
+// Como obter: ver o LEIA-ME.md, secção "Login com o Google".
+// O "URI de redirecionamento" a registar na Google é URL_SITE + '/google.php'
+// (ex.: http://localhost/tavdex/google.php).
+define('GOOGLE_CLIENT_ID', getenv('TAVDEX_GOOGLE_ID') ?: '');
+define('GOOGLE_CLIENT_SECRET', getenv('TAVDEX_GOOGLE_SEGREDO') ?: '');
+
+// Verificações que usam a internet (se falharem, não bloqueiam o registo):
+//  VERIFICAR_FUGAS: a palavra-passe apareceu em fugas de dados? (Have I Been Pwned)
+//  VERIFICAR_DNS:   o domínio do email existe e recebe emails?
+define('VERIFICAR_FUGAS', true);
+define('VERIFICAR_DNS', true);
 
 date_default_timezone_set('Europe/Lisbon');
